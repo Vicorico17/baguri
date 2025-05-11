@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
+import { BackgroundPaths } from "@/components/ui/background-paths";
 
 function WaitlistModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [email, setEmail] = useState("");
@@ -102,10 +103,12 @@ function WaitlistModal({ open, onClose }: { open: boolean; onClose: () => void }
 export default function Home() {
   const [modalOpen, setModalOpen] = useState(false);
   return (
-    <main className="min-h-screen flex flex-col bg-zinc-950 text-neutral-100 relative overflow-hidden">
-      {/* Main content (z-10 to be above background) */}
+    <main className="relative min-h-screen overflow-hidden">
+      <BackgroundPaths />
+      {/* Optional: add a semi-transparent dark overlay for readability */}
+      {/* <div className="absolute inset-0 bg-zinc-950/80 z-10 pointer-events-none" /> */}
       <div className="relative z-10">
-        {/* Hero Section */}
+        {/* Main content (z-10 to be above background) */}
         <section className="flex flex-col items-center text-center px-4 mt-8 mb-12 gap-y-4">
           <Image
             src="/wlogo.png"
@@ -163,7 +166,7 @@ export default function Home() {
         </section>
 
         {/* Footer */}
-        <footer className="mt-auto w-full border-t border-zinc-800 py-8 px-4 flex flex-col items-center gap-4 bg-zinc-950">
+        <footer className="mt-auto w-full py-8 px-4 flex flex-col items-center gap-4">
           <div className="flex flex-col items-center gap-2 mb-2">
             <span className="text-xs text-neutral-500">Coming soon on</span>
             <div className="flex gap-2 flex-wrap justify-center">
