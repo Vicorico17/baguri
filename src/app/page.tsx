@@ -60,7 +60,7 @@ function WaitlistModal({ open, onClose }: { open: boolean; onClose: () => void }
           <div className="text-center space-y-3">
             <div className="text-2xl">🎉</div>
             <div className="font-semibold text-neutral-100">Congratulations for being so early.</div>
-            <div className="text-neutral-300 text-sm">We will notify you when we launch.<br />You just signed up for a <span className="font-bold text-amber-200">10% lifetime discount</span></div>
+            <div className="text-neutral-300 text-sm">We will notify you when we launch.<br />You just signed up for a <span className="font-bold text-amber-200"> 10% lifetime discount</span></div>
             <button 
               className="mt-4 bg-neutral-100 text-zinc-950 font-medium rounded-full px-6 py-2 shadow-sm hover:bg-neutral-200 transition"
               onClick={onClose}
@@ -119,19 +119,12 @@ export default function Home() {
             style={{ filter: "invert(1) brightness(2)" }}
             priority
           />
-          <p className="text-base md:text-2xl text-neutral-300 mb-4 md:mb-6 px-2">Romanian fashion, reimagined. Discover and shop limited drops from independent designers.</p>
+          <h2 className="text-base md:text-2xl text-neutral-300 mb-0 font-semibold">Romanian fashion, reimagined.</h2>
+          <p className="text-base md:text-2xl text-neutral-300 mb-4 md:mb-6 px-2">Discover and shop limited drops from independent designers.</p>
           <p className="mb-6 md:mb-8 text-sm md:text-lg text-neutral-400 px-2">
             Join the waitlist for exclusive
             <span className="inline-block ml-2 px-3 py-1 rounded-full bg-amber-200 text-zinc-900 font-semibold text-xs md:text-sm align-middle shadow-sm">lifetime discount</span>.
           </p>
-          <div className="w-full flex justify-center mb-2">
-            <button
-              className="inline-block w-full max-w-xs bg-neutral-100 text-zinc-950 font-medium rounded-full px-8 py-3 text-base md:text-lg shadow-sm hover:bg-neutral-200 transition"
-              onClick={() => setModalOpen(true)}
-            >
-              Join Waitlist
-            </button>
-          </div>
         </section>
 
         {/* For Shoppers & Designers */}
