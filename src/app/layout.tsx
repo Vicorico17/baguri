@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "baguri.ro",
   description:
-    "Starter template for using thirdweb SDK with Next.js App router",
+    "Romanaian fashion,reimagined ",
 };
 
 export default function RootLayout({
