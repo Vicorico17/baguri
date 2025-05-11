@@ -116,7 +116,7 @@ export default function Home() {
       {/* <div className="absolute inset-0 bg-zinc-950/80 z-10 pointer-events-none" /> */}
       <div className="relative z-10">
         {/* Main content (z-10 to be above background) */}
-        <section className="flex flex-col items-center text-center px-4 mt-8 mb-2 md:mb-6 gap-y-4">
+        <section className="flex flex-col items-center text-center px-4 mt-4 mb-2 md:mb-6 gap-y-4">
           <Image
             src="/wlogo.png"
             alt="Baguri.ro written logo"
@@ -140,7 +140,7 @@ export default function Home() {
           <div className="flex-1 bg-zinc-900 rounded-xl p-5 md:p-6 mb-4 md:mb-0">
             <h2 className="text-base md:text-lg font-semibold mb-3 text-neutral-200">🛍️ For Shoppers</h2>
             <ul className="space-y-3 text-neutral-300 text-sm md:text-base">
-              <li>Discover and shop limited drops from independent designers.</li>
+              <li>Discover and shop limited drops from independent designers</li>
               <li>Unique shopping experience</li>
               <li>Win free clothes through special events</li>
             </ul>
@@ -150,7 +150,7 @@ export default function Home() {
             <ul className="space-y-3 text-neutral-300 text-sm md:text-base">
               <li>Focus on your brand, we handle everything else</li>
               <li>Instant payments, no upfront fees</li>
-              <li>Get your fashion art seen. </li>
+              <li>Get your fashion art seen </li>
             </ul>
           </div>
         </section>
