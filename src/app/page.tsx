@@ -126,6 +126,15 @@ export default function Home() {
             <span className="inline-block ml-2 px-3 py-1 rounded-full bg-amber-200 text-zinc-900 font-semibold text-xs md:text-sm align-middle shadow-sm">lifetime discount</span>.
           </p>
         </section>
+        {/* Mobile-only Join Waitlist button */}
+        <div className="w-full flex justify-center mb-6 md:hidden">
+          <button
+            className="inline-block w-full max-w-xs bg-neutral-100 text-zinc-950 font-medium rounded-full px-8 py-3 text-base shadow-sm hover:bg-neutral-200 transition"
+            onClick={() => setModalOpen(true)}
+          >
+            Join Waitlist
+          </button>
+        </div>
 
         {/* For Shoppers & Designers */}
         <section className="flex flex-col md:flex-row gap-8 justify-center items-start px-4 mb-16 w-full max-w-3xl mx-auto">
@@ -148,7 +157,7 @@ export default function Home() {
         {/* Closing CTA */}
         <section className="flex flex-col items-center text-center px-4 mb-16 md:mb-20 gap-y-4">
           <h3 className="text-base md:text-2xl font-medium mb-2 md:mb-3 text-neutral-200">Be the first to experience the future of Romanian fashion.</h3>
-          <div className="w-full flex justify-center">
+          <div className="w-full justify-center hidden md:flex">
             <button
               className="inline-block w-full max-w-xs bg-neutral-100 text-zinc-950 font-medium rounded-full px-8 py-3 text-base md:text-lg shadow-sm hover:bg-neutral-200 transition"
               onClick={() => setModalOpen(true)}
