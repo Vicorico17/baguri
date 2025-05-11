@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "baguri.ro",
   description:
-    "Romanaian fashion,reimagined ",
+    "Romanian fashion,reimagined ",
 };
 
 export default function RootLayout({
