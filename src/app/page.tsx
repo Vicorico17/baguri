@@ -133,20 +133,7 @@ export default function Home() {
           </p>
         </section>
         {/* Mobile-only Join Waitlist button or success message (moved up, less margin) */}
-        <div className="w-full flex justify-center mb-1 md:hidden">
-          {waitlistJoined ? (
-            <div className="text-center text-green-400 font-semibold">
-              Awesome!<br />We will reach out at launch :)
-            </div>
-          ) : (
-            <button
-              className="inline-block w-full max-w-xs bg-neutral-100 text-zinc-950 font-medium rounded-full px-8 py-3 text-base shadow-sm hover:bg-neutral-200 transition"
-              onClick={() => setModalOpen(true)}
-            >
-              Join Waitlist
-            </button>
-          )}
-        </div>
+        {/* (Temporarily removed as per user request) */}
 
         {/* For Shoppers & Designers */}
         <section className="flex flex-col md:flex-row gap-8 justify-center items-start px-4 mb-16 w-full max-w-3xl mx-auto">
