@@ -106,11 +106,12 @@ export default function Home() {
       {/* Logo */}
       <header className="flex items-center px-4 pt-6 pb-2">
         <Image
-          src="/imgLogo.jpg"
+          src="/imglogo.png"
           alt="Baguri logo"
-          width={40}
-          height={40}
+          width={64}
+          height={64}
           className="rounded-sm object-contain"
+          style={{ filter: "invert(1) brightness(2)" }}
           priority
         />
       </header>
@@ -126,7 +127,7 @@ export default function Home() {
           style={{ filter: "invert(1) brightness(2)" }}
           priority
         />
-        <p className="text-base md:text-2xl text-neutral-300 mb-4 md:mb-6 px-2">Romanian fashion, reimagined. Discover, shop, and support independent local designers.</p>
+        <p className="text-base md:text-2xl text-neutral-300 mb-4 md:mb-6 px-2">Romanian fashion, reimagined. Discover and shop limited drops from independent designers.</p>
         <p className="mb-6 md:mb-8 text-sm md:text-lg text-neutral-400 px-2">
           Join the waitlist for exclusive early access &
           <span className="inline-block ml-2 px-3 py-1 rounded-full bg-amber-200 text-zinc-900 font-semibold text-xs md:text-sm align-middle shadow-sm">Lifetime discount</span>.
@@ -153,17 +154,14 @@ export default function Home() {
         <div className="flex-1 bg-zinc-900 rounded-xl p-5 md:p-6 mb-4 md:mb-0">
           <h2 className="text-base md:text-lg font-semibold mb-3 text-neutral-200">For Shoppers</h2>
           <ul className="space-y-2 text-neutral-300 text-sm md:text-base">
-            <li>• Exclusive limited drops</li>
-            <li>• Limited drops from independent Romanian designers</li>
+            <li>• Exclusive limited drops from independent Romanian designers</li>
             <li>• Unique shopping experience</li>
           </ul>
         </div>
         <div className="flex-1 bg-zinc-900 rounded-xl p-5 md:p-6">
           <h2 className="text-base md:text-lg font-semibold mb-3 text-neutral-200">For Designers</h2>
           <ul className="space-y-2 text-neutral-300 text-sm md:text-base">
-            <li>• Sell directly on the app</li>
-            <li>• You just create your clothes, we take care of everything else.</li>
-            <li>• Get promoted in-app and on social</li>
+            <li>• You just build your brand, we take care of everything else.</li>
           </ul>
         </div>
       </section>
@@ -171,7 +169,6 @@ export default function Home() {
       {/* Closing CTA */}
       <section className="flex flex-col items-center text-center px-4 mb-16 md:mb-20 gap-y-4">
         <h3 className="text-base md:text-2xl font-medium mb-2 md:mb-3 text-neutral-200">Be the first to experience the future of Romanian fashion.</h3>
-        <p className="mb-4 md:mb-6 text-neutral-400 text-sm md:text-base">Early access = exclusive perks & a lifetime discount.</p>
         <div className="w-full flex justify-center">
           <a
             href="#waitlist"
