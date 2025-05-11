@@ -144,6 +144,7 @@ export default function Home() {
             <h2 className="text-base md:text-lg font-semibold mb-3 text-neutral-200">For Designers</h2>
             <ul className="space-y-2 text-neutral-300 text-sm md:text-base">
               <li>• You just build your brand, we take care of everything else.</li>
+              <li>• Get paid instantly, no upfront fees.</li>
             </ul>
           </div>
         </section>
