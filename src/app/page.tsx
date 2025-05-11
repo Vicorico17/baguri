@@ -123,7 +123,7 @@ export default function Home() {
           <p className="text-base md:text-2xl text-neutral-300 mb-4 md:mb-6 px-2">Discover and shop limited drops from independent designers.</p>
           <p className="mb-6 md:mb-8 text-sm md:text-lg text-neutral-400 px-2">
             Join the waitlist for exclusive
-            <span className="inline-block ml-2 px-3 py-1 rounded-full bg-amber-200 text-zinc-900 font-semibold text-xs md:text-sm align-middle shadow-sm">lifetime discount</span>.
+            <span className="inline-block ml-2 px-3 py-1 rounded-full bg-amber-200 text-zinc-900 font-semibold text-xs md:text-sm align-middle shadow-sm">lifetime discount</span>
           </p>
         </section>
         {/* Mobile-only Join Waitlist button */}
@@ -139,17 +139,19 @@ export default function Home() {
         {/* For Shoppers & Designers */}
         <section className="flex flex-col md:flex-row gap-8 justify-center items-start px-4 mb-16 w-full max-w-3xl mx-auto">
           <div className="flex-1 bg-zinc-900 rounded-xl p-5 md:p-6 mb-4 md:mb-0">
-            <h2 className="text-base md:text-lg font-semibold mb-3 text-neutral-200">For Shoppers</h2>
-            <ul className="space-y-2 text-neutral-300 text-sm md:text-base">
-              <li>• Exclusive limited drops from independent Romanian designers</li>
-              <li>• Unique shopping experience</li>
+            <h2 className="text-base md:text-lg font-semibold mb-3 text-neutral-200">🛍️ For Shoppers</h2>
+            <ul className="space-y-3 text-neutral-300 text-sm md:text-base">
+              <li>Exclusive limited drops from independent Romanian designers</li>
+              <li>Unique shopping experience with one-tap checkout</li>
+              <li>Get free clothes through community giveaways and special events</li>
             </ul>
           </div>
           <div className="flex-1 bg-zinc-900 rounded-xl p-5 md:p-6">
-            <h2 className="text-base md:text-lg font-semibold mb-3 text-neutral-200">For Designers</h2>
-            <ul className="space-y-2 text-neutral-300 text-sm md:text-base">
-              <li>• You just build your brand, we take care of everything else.</li>
-              <li>• Get paid instantly, no upfront fees.</li>
+            <h2 className="text-base md:text-lg font-semibold mb-3 text-neutral-200">🎨 For Designers</h2>
+            <ul className="space-y-3 text-neutral-300 text-sm md:text-base">
+              <li>You focus on your brand — we handle everything else</li>
+              <li>Get paid instantly, no upfront fees</li>
+              <li>Get your fashion art seen. </li>
             </ul>
           </div>
         </section>
