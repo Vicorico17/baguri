@@ -134,7 +134,7 @@ export default function Home() {
           </p>
         </section>
         {/* Mobile-only Join Waitlist button or success message */}
-        <div className="w-full flex justify-center mb-6 md:hidden">
+        <div className="w-full flex justify-center mb-2 md:hidden">
           {waitlistJoined ? (
             <div className="text-center text-green-400 font-semibold">
               Awesome!<br />We will reach out at launch :)
@@ -154,7 +154,7 @@ export default function Home() {
           <div className="flex-1 bg-zinc-900 rounded-xl p-5 md:p-6 mb-4 md:mb-0">
             <h2 className="text-base md:text-lg font-semibold mb-3 text-neutral-200">🛍️ For Shoppers</h2>
             <ul className="space-y-3 text-neutral-300 text-sm md:text-base">
-              <li>Find exclusive limited drops from independent Romanian designers</li>
+              <li>Discover and shop limited drops from independent designers.</li>
               <li>Unique shopping experience</li>
               <li>Win free clothes through special events</li>
             </ul>
