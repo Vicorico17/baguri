@@ -127,7 +127,6 @@ export default function Home() {
             priority
           />
           <h2 className="text-base md:text-2xl text-neutral-300 mb-0 font-semibold">Romanian fashion, reimagined.</h2>
-          <p className="text-base md:text-2xl text-neutral-300 mb-4 md:mb-6 px-2">Discover and shop limited drops from independent designers.</p>
           <p className="mb-6 md:mb-8 text-sm md:text-lg text-neutral-400 px-2">
             Join the waitlist for exclusive
             <span className="inline-block ml-2 px-3 py-1 rounded-full bg-amber-200 text-zinc-900 font-semibold text-xs md:text-sm align-middle shadow-sm">lifetime discount</span>
