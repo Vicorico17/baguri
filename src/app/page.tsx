@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { BackgroundPaths } from "@/components/ui/background-paths";
 
-function WaitlistModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function WaitlistModal({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess?: () => void }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<null | "success" | "error" | "duplicate">(null);
   const [loading, setLoading] = useState(false);
@@ -29,6 +29,12 @@ function WaitlistModal({ open, onClose }: { open: boolean; onClose: () => void }
       return () => window.removeEventListener("keydown", handleEsc);
     }
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (status === "success" && onSuccess) {
+      onSuccess();
+    }
+  }, [status, onSuccess]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -102,6 +108,7 @@ function WaitlistModal({ open, onClose }: { open: boolean; onClose: () => void }
 
 export default function Home() {
   const [modalOpen, setModalOpen] = useState(false);
+  const [waitlistJoined, setWaitlistJoined] = useState(false);
   return (
     <main className="relative min-h-screen overflow-hidden">
       <BackgroundPaths />
@@ -126,14 +133,20 @@ export default function Home() {
             <span className="inline-block ml-2 px-3 py-1 rounded-full bg-amber-200 text-zinc-900 font-semibold text-xs md:text-sm align-middle shadow-sm">lifetime discount</span>
           </p>
         </section>
-        {/* Mobile-only Join Waitlist button */}
+        {/* Mobile-only Join Waitlist button or success message */}
         <div className="w-full flex justify-center mb-6 md:hidden">
-          <button
-            className="inline-block w-full max-w-xs bg-neutral-100 text-zinc-950 font-medium rounded-full px-8 py-3 text-base shadow-sm hover:bg-neutral-200 transition"
-            onClick={() => setModalOpen(true)}
-          >
-            Join Waitlist
-          </button>
+          {waitlistJoined ? (
+            <div className="text-center text-green-400 font-semibold">
+              Awesome!<br />We will reach out at launch :)
+            </div>
+          ) : (
+            <button
+              className="inline-block w-full max-w-xs bg-neutral-100 text-zinc-950 font-medium rounded-full px-8 py-3 text-base shadow-sm hover:bg-neutral-200 transition"
+              onClick={() => setModalOpen(true)}
+            >
+              Join Waitlist
+            </button>
+          )}
         </div>
 
         {/* For Shoppers & Designers */}
@@ -160,12 +173,18 @@ export default function Home() {
         <section className="flex flex-col items-center text-center px-4 mb-16 md:mb-20 gap-y-4">
           <h3 className="text-base md:text-2xl font-medium mb-2 md:mb-3 text-neutral-200">Be the first to experience the future of Romanian fashion.</h3>
           <div className="w-full justify-center hidden md:flex">
-            <button
-              className="inline-block w-full max-w-xs bg-neutral-100 text-zinc-950 font-medium rounded-full px-8 py-3 text-base md:text-lg shadow-sm hover:bg-neutral-200 transition"
-              onClick={() => setModalOpen(true)}
-            >
-              Join Waitlist
-            </button>
+            {waitlistJoined ? (
+              <div className="text-center text-green-400 font-semibold w-full max-w-xs mx-auto">
+                Awesome!<br />We will reach out at launch :)
+              </div>
+            ) : (
+              <button
+                className="inline-block w-full max-w-xs bg-neutral-100 text-zinc-950 font-medium rounded-full px-8 py-3 text-base md:text-lg shadow-sm hover:bg-neutral-200 transition"
+                onClick={() => setModalOpen(true)}
+              >
+                Join Waitlist
+              </button>
+            )}
           </div>
         </section>
 
@@ -184,7 +203,7 @@ export default function Home() {
           </div>
         </footer>
 
-        <WaitlistModal open={modalOpen} onClose={() => setModalOpen(false)} />
+        <WaitlistModal open={modalOpen} onClose={() => setModalOpen(false)} onSuccess={() => setWaitlistJoined(true)} />
       </div>
     </main>
   );
