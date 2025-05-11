@@ -102,99 +102,82 @@ function WaitlistModal({ open, onClose }: { open: boolean; onClose: () => void }
 export default function Home() {
   const [modalOpen, setModalOpen] = useState(false);
   return (
-    <main className="min-h-screen flex flex-col bg-zinc-950 text-neutral-100">
-      {/* Logo */}
-      <header className="flex items-center px-4 pt-6 pb-2">
-        <Image
-          src="/imglogo.png"
-          alt="Baguri logo"
-          width={64}
-          height={64}
-          className="rounded-sm object-contain"
-          style={{ filter: "invert(1) brightness(2)" }}
-          priority
-        />
-      </header>
-
-      {/* Hero Section */}
-      <section className="flex flex-col items-center text-center px-4 mt-8 mb-12 gap-y-4">
-        <Image
-          src="/wlogo.png"
-          alt="Baguri.ro written logo"
-          width={240}
-          height={60}
-          className="mx-auto mb-4 w-full max-w-[220px] md:max-w-[320px] h-12 md:h-16 object-contain"
-          style={{ filter: "invert(1) brightness(2)" }}
-          priority
-        />
-        <p className="text-base md:text-2xl text-neutral-300 mb-4 md:mb-6 px-2">Romanian fashion, reimagined. Discover and shop limited drops from independent designers.</p>
-        <p className="mb-6 md:mb-8 text-sm md:text-lg text-neutral-400 px-2">
-          Join the waitlist for exclusive early access &
-          <span className="inline-block ml-2 px-3 py-1 rounded-full bg-amber-200 text-zinc-900 font-semibold text-xs md:text-sm align-middle shadow-sm">Lifetime discount</span>.
-        </p>
-        <div className="w-full flex justify-center mb-2">
-          <button
-            className="inline-block w-full max-w-xs bg-neutral-100 text-zinc-950 font-medium rounded-full px-8 py-3 text-base md:text-lg shadow-sm hover:bg-neutral-200 transition"
-            onClick={() => setModalOpen(true)}
-          >
-            Join Waitlist
-          </button>
-        </div>
-        <div className="flex flex-col items-center gap-2 mt-2">
-          <span className="text-xs text-neutral-500">Coming soon</span>
-          <div className="flex gap-2">
-            <AppStoreBadge />
-            <GooglePlayBadge />
+    <main className="min-h-screen flex flex-col bg-zinc-950 text-neutral-100 relative overflow-hidden">
+      {/* Main content (z-10 to be above background) */}
+      <div className="relative z-10">
+        {/* Hero Section */}
+        <section className="flex flex-col items-center text-center px-4 mt-8 mb-12 gap-y-4">
+          <Image
+            src="/wlogo.png"
+            alt="Baguri.ro written logo"
+            width={240}
+            height={60}
+            className="mx-auto mb-4 w-full max-w-[220px] md:max-w-[320px] h-12 md:h-16 object-contain"
+            style={{ filter: "invert(1) brightness(2)" }}
+            priority
+          />
+          <p className="text-base md:text-2xl text-neutral-300 mb-4 md:mb-6 px-2">Romanian fashion, reimagined. Discover and shop limited drops from independent designers.</p>
+          <p className="mb-6 md:mb-8 text-sm md:text-lg text-neutral-400 px-2">
+            Join the waitlist for exclusive
+            <span className="inline-block ml-2 px-3 py-1 rounded-full bg-amber-200 text-zinc-900 font-semibold text-xs md:text-sm align-middle shadow-sm">lifetime discount</span>.
+          </p>
+          <div className="w-full flex justify-center mb-2">
+            <button
+              className="inline-block w-full max-w-xs bg-neutral-100 text-zinc-950 font-medium rounded-full px-8 py-3 text-base md:text-lg shadow-sm hover:bg-neutral-200 transition"
+              onClick={() => setModalOpen(true)}
+            >
+              Join Waitlist
+            </button>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* For Shoppers & Designers */}
-      <section className="flex flex-col md:flex-row gap-8 justify-center items-start px-4 mb-16 w-full max-w-3xl mx-auto">
-        <div className="flex-1 bg-zinc-900 rounded-xl p-5 md:p-6 mb-4 md:mb-0">
-          <h2 className="text-base md:text-lg font-semibold mb-3 text-neutral-200">For Shoppers</h2>
-          <ul className="space-y-2 text-neutral-300 text-sm md:text-base">
-            <li>• Exclusive limited drops from independent Romanian designers</li>
-            <li>• Unique shopping experience</li>
-          </ul>
-        </div>
-        <div className="flex-1 bg-zinc-900 rounded-xl p-5 md:p-6">
-          <h2 className="text-base md:text-lg font-semibold mb-3 text-neutral-200">For Designers</h2>
-          <ul className="space-y-2 text-neutral-300 text-sm md:text-base">
-            <li>• You just build your brand, we take care of everything else.</li>
-          </ul>
-        </div>
-      </section>
-
-      {/* Closing CTA */}
-      <section className="flex flex-col items-center text-center px-4 mb-16 md:mb-20 gap-y-4">
-        <h3 className="text-base md:text-2xl font-medium mb-2 md:mb-3 text-neutral-200">Be the first to experience the future of Romanian fashion.</h3>
-        <div className="w-full flex justify-center">
-          <a
-            href="#waitlist"
-            className="inline-block w-full max-w-xs bg-neutral-100 text-zinc-950 font-medium rounded-full px-8 py-3 text-base md:text-lg shadow-sm hover:bg-neutral-200 transition"
-          >
-            Join Waitlist
-          </a>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="mt-auto w-full border-t border-zinc-800 py-8 px-4 flex flex-col items-center gap-4 bg-zinc-950">
-        <div className="flex flex-col items-center gap-2 mb-2">
-          <span className="text-xs text-neutral-500">Coming soon on</span>
-          <div className="flex gap-2 flex-wrap justify-center">
-            <AppStoreBadge small />
-            <GooglePlayBadge small />
+        {/* For Shoppers & Designers */}
+        <section className="flex flex-col md:flex-row gap-8 justify-center items-start px-4 mb-16 w-full max-w-3xl mx-auto">
+          <div className="flex-1 bg-zinc-900 rounded-xl p-5 md:p-6 mb-4 md:mb-0">
+            <h2 className="text-base md:text-lg font-semibold mb-3 text-neutral-200">For Shoppers</h2>
+            <ul className="space-y-2 text-neutral-300 text-sm md:text-base">
+              <li>• Exclusive limited drops from independent Romanian designers</li>
+              <li>• Unique shopping experience</li>
+            </ul>
           </div>
-        </div>
-        <div className="flex gap-4 mt-2 justify-center">
-          <SocialIcon type="instagram" url="https://www.instagram.com/baguri.ro" />
-          <SocialIcon type="tiktok" url="https://tiktok.com/@baguri.ro" />
-        </div>
-      </footer>
+          <div className="flex-1 bg-zinc-900 rounded-xl p-5 md:p-6">
+            <h2 className="text-base md:text-lg font-semibold mb-3 text-neutral-200">For Designers</h2>
+            <ul className="space-y-2 text-neutral-300 text-sm md:text-base">
+              <li>• You just build your brand, we take care of everything else.</li>
+            </ul>
+          </div>
+        </section>
 
-      <WaitlistModal open={modalOpen} onClose={() => setModalOpen(false)} />
+        {/* Closing CTA */}
+        <section className="flex flex-col items-center text-center px-4 mb-16 md:mb-20 gap-y-4">
+          <h3 className="text-base md:text-2xl font-medium mb-2 md:mb-3 text-neutral-200">Be the first to experience the future of Romanian fashion.</h3>
+          <div className="w-full flex justify-center">
+            <a
+              href="#waitlist"
+              className="inline-block w-full max-w-xs bg-neutral-100 text-zinc-950 font-medium rounded-full px-8 py-3 text-base md:text-lg shadow-sm hover:bg-neutral-200 transition"
+            >
+              Join Waitlist
+            </a>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="mt-auto w-full border-t border-zinc-800 py-8 px-4 flex flex-col items-center gap-4 bg-zinc-950">
+          <div className="flex flex-col items-center gap-2 mb-2">
+            <span className="text-xs text-neutral-500">Coming soon on</span>
+            <div className="flex gap-2 flex-wrap justify-center">
+              <AppStoreBadge small />
+              <GooglePlayBadge small />
+            </div>
+          </div>
+          <div className="flex gap-4 mt-2 justify-center">
+            <SocialIcon type="instagram" url="https://www.instagram.com/baguri.ro" />
+            <SocialIcon type="tiktok" url="https://www.tiktok.com/@baguri.ro" />
+          </div>
+        </footer>
+
+        <WaitlistModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      </div>
     </main>
   );
 }
