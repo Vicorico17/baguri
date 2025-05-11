@@ -149,12 +149,12 @@ export default function Home() {
         <section className="flex flex-col items-center text-center px-4 mb-16 md:mb-20 gap-y-4">
           <h3 className="text-base md:text-2xl font-medium mb-2 md:mb-3 text-neutral-200">Be the first to experience the future of Romanian fashion.</h3>
           <div className="w-full flex justify-center">
-            <a
-              href="#waitlist"
+            <button
               className="inline-block w-full max-w-xs bg-neutral-100 text-zinc-950 font-medium rounded-full px-8 py-3 text-base md:text-lg shadow-sm hover:bg-neutral-200 transition"
+              onClick={() => setModalOpen(true)}
             >
               Join Waitlist
-            </a>
+            </button>
           </div>
         </section>
 
