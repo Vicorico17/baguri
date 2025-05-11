@@ -132,8 +132,8 @@ export default function Home() {
             <span className="inline-block ml-2 px-3 py-1 rounded-full bg-amber-200 text-zinc-900 font-semibold text-xs md:text-sm align-middle shadow-sm">lifetime discount</span>
           </p>
         </section>
-        {/* Mobile-only Join Waitlist button or success message */}
-        <div className="w-full flex justify-center mb-4 md:hidden">
+        {/* Mobile-only Join Waitlist button or success message (moved up, less margin) */}
+        <div className="w-full flex justify-center mb-2 md:hidden">
           {waitlistJoined ? (
             <div className="text-center text-green-400 font-semibold">
               Awesome!<br />We will reach out at launch :)
@@ -171,6 +171,21 @@ export default function Home() {
         {/* Closing CTA */}
         <section className="flex flex-col items-center text-center px-4 mb-16 md:mb-20 gap-y-4">
           <h3 className="text-base md:text-2xl font-medium mb-2 md:mb-3 text-neutral-200">Be the first to experience the future of Romanian fashion.</h3>
+          {/* Mobile-only Join Waitlist button or success message under CTA */}
+          <div className="w-full flex justify-center mb-2 md:hidden">
+            {waitlistJoined ? (
+              <div className="text-center text-green-400 font-semibold">
+                Awesome!<br />We will reach out at launch :)
+              </div>
+            ) : (
+              <button
+                className="inline-block w-full max-w-xs bg-neutral-100 text-zinc-950 font-medium rounded-full px-8 py-3 text-base shadow-sm hover:bg-neutral-200 transition"
+                onClick={() => setModalOpen(true)}
+              >
+                Join Waitlist
+              </button>
+            )}
+          </div>
           <div className="w-full justify-center hidden md:flex">
             {waitlistJoined ? (
               <div className="text-center text-green-400 font-semibold w-full max-w-xs mx-auto">
