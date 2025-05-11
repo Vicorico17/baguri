@@ -66,7 +66,11 @@ function WaitlistModal({ open, onClose, onSuccess }: { open: boolean; onClose: (
           <div className="text-center space-y-3">
             <div className="text-2xl">🎉</div>
             <div className="font-semibold text-neutral-100">Congratulations for being so early!</div>
-            <div className="text-neutral-300 text-sm"><span className="font-bold text-amber-200">You just signed up for a 10% lifetime discount!</span><br />We will notify you when we relaunch.</div>
+            <div className="text-neutral-300 text-sm">
+              You just signed up for a<br />
+              <span className="font-bold text-amber-200">10% lifetime discount!</span><br />
+              We will notify you when we relaunch.
+            </div>
             <button 
               className="mt-4 bg-neutral-100 text-zinc-950 font-medium rounded-full px-6 py-2 shadow-sm hover:bg-neutral-200 transition"
               onClick={onClose}
