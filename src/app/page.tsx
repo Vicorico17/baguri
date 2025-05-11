@@ -141,16 +141,16 @@ export default function Home() {
           <div className="flex-1 bg-zinc-900 rounded-xl p-5 md:p-6 mb-4 md:mb-0">
             <h2 className="text-base md:text-lg font-semibold mb-3 text-neutral-200">🛍️ For Shoppers</h2>
             <ul className="space-y-3 text-neutral-300 text-sm md:text-base">
-              <li>Exclusive limited drops from independent Romanian designers</li>
-              <li>Unique shopping experience with one-tap checkout</li>
-              <li>Get free clothes through community giveaways and special events</li>
+              <li>Find exclusive limited drops from independent Romanian designers</li>
+              <li>Unique shopping experience</li>
+              <li>Win free clothes through special events</li>
             </ul>
           </div>
           <div className="flex-1 bg-zinc-900 rounded-xl p-5 md:p-6">
             <h2 className="text-base md:text-lg font-semibold mb-3 text-neutral-200">🎨 For Designers</h2>
             <ul className="space-y-3 text-neutral-300 text-sm md:text-base">
-              <li>You focus on your brand — we handle everything else</li>
-              <li>Get paid instantly, no upfront fees</li>
+              <li>Focus on your brand, we handle everything else</li>
+              <li>Instant payments, no upfront fees</li>
               <li>Get your fashion art seen. </li>
             </ul>
           </div>
