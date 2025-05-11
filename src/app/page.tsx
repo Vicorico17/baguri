@@ -65,7 +65,7 @@ function WaitlistModal({ open, onClose, onSuccess }: { open: boolean; onClose: (
         {status === "success" ? (
           <div className="text-center space-y-3">
             <div className="text-2xl">🎉</div>
-            <div className="font-semibold text-neutral-100">Congratulations for being so early!</div>
+            <div className="font-semibold text-neutral-100">Congratulations on being so early!</div>
             <div className="text-neutral-300 text-sm">
               You just signed up for a<br />
               <span className="font-bold text-amber-200">10% lifetime discount!</span>
@@ -131,7 +131,7 @@ export default function Home() {
           />
           <h2 className="text-base md:text-2xl text-neutral-300 mb-0 font-semibold">Romanian fashion, reimagined.</h2>
           <p className="mb-6 md:mb-8 text-sm md:text-lg text-neutral-400 px-2">
-            Join the waitlist for exclusive
+            Join the waitlist for an exclusive
             <span className="inline-block ml-2 px-3 py-1 rounded-full bg-amber-200 text-zinc-900 font-semibold text-xs md:text-sm align-middle shadow-sm">lifetime discount</span>
           </p>
         </section>
