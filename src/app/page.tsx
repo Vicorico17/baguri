@@ -116,7 +116,7 @@ export default function Home() {
       {/* <div className="absolute inset-0 bg-zinc-950/80 z-10 pointer-events-none" /> */}
       <div className="relative z-10">
         {/* Main content (z-10 to be above background) */}
-        <section className="flex flex-col items-center text-center px-4 mt-8 mb-12 gap-y-4">
+        <section className="flex flex-col items-center text-center px-4 mt-8 mb-6 gap-y-4">
           <Image
             src="/wlogo.png"
             alt="Baguri.ro written logo"
@@ -133,7 +133,7 @@ export default function Home() {
           </p>
         </section>
         {/* Mobile-only Join Waitlist button or success message */}
-        <div className="w-full flex justify-center mb-2 md:hidden">
+        <div className="w-full flex justify-center mb-4 md:hidden">
           {waitlistJoined ? (
             <div className="text-center text-green-400 font-semibold">
               Awesome!<br />We will reach out at launch :)
@@ -188,7 +188,7 @@ export default function Home() {
         </section>
 
         {/* Footer */}
-        <footer className="mt-auto w-full py-8 px-4 flex flex-col items-center gap-4">
+        <footer className="mt-auto w-full py-4 px-4 flex flex-col items-center gap-4">
           <div className="flex flex-col items-center gap-2 mb-2">
             <span className="text-xs text-neutral-500">Coming soon on</span>
             <div className="flex gap-2 flex-wrap justify-center">
