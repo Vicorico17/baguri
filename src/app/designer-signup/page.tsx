@@ -269,7 +269,7 @@ export default function DesignerSignup() {
                             />
                           )}
                           {cv.image_url && (
-                            <img src={cv.image_url} alt={cv.color} className="h-8 w-8 rounded-full mt-1 border border-amber-200" />
+                            <Image src={cv.image_url} alt={cv.color} width={32} height={32} className="h-8 w-8 rounded-full mt-1 border border-amber-200 object-cover" />
                           )}
                           {p.color_variants.length > 1 && (
                             <button

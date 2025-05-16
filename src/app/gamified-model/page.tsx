@@ -19,7 +19,7 @@ export default function GamifiedModel() {
         <div className="w-full max-w-xl bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl p-8 flex flex-col z-10 items-center">
           <h1 className="text-3xl font-bold text-white mb-4 text-center">Baguri Gamified Fee Model</h1>
           <p className="text-neutral-200 text-center mb-6 max-w-lg">
-            Our platform uses a gamified fee structure to reward your growth. The more you sell, the lower your fee rate becomes. Here's how it works:
+            Our platform uses a gamified fee structure to reward your growth. The more you sell, the lower your fee rate becomes. Here&apos;s how it works:
           </p>
           <div className="w-full">
             <table className="w-full text-left border-separate border-spacing-y-2">

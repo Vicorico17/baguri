@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import FileUploader from '../src/components/ui/FileUploader';
+import Image from "next/image";
 
 export default function FileUploadTest() {
   const [logoUrl, setLogoUrl] = useState('');
@@ -19,7 +20,7 @@ export default function FileUploadTest() {
           <p>Uploaded Logo URL:</p>
           <a href={logoUrl} target="_blank" rel="noopener noreferrer">{logoUrl}</a>
           <br />
-          <img src={logoUrl} alt="Uploaded Logo" style={{ maxWidth: 200, marginTop: 8 }} />
+          <Image src={logoUrl} alt="Uploaded Logo" width={200} height={80} style={{ marginTop: 8, objectFit: 'contain' }} />
         </div>
       )}
     </div>
