@@ -185,10 +185,11 @@ function ShopContent() {
               />
             </Link>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
+              {/* All Designers - Hidden on mobile */}
               <Link 
                 href="/designers"
-                className="px-4 py-2 border border-zinc-600 text-white rounded-full font-medium hover:border-zinc-500 transition"
+                className="hidden md:flex px-4 py-2 border border-zinc-600 text-white rounded-full font-medium hover:border-zinc-500 transition"
               >
                 All Designers
               </Link>
@@ -196,15 +197,15 @@ function ShopContent() {
               {loading && !designerProfile && !cachedUser ? (
                 <div className="w-8 h-8 bg-zinc-800 rounded-full animate-pulse"></div>
               ) : designerProfile || cachedUser ? (
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 md:gap-3">
                   <Link 
                     href="/designer-dashboard"
-                    className="flex items-center gap-3 px-4 py-2 bg-zinc-800 border border-zinc-700 text-white rounded-full font-medium hover:bg-zinc-700 transition group"
+                    className="flex items-center gap-2 md:gap-3 px-2 md:px-4 py-2 bg-zinc-800 border border-zinc-700 text-white rounded-full font-medium hover:bg-zinc-700 transition group"
                   >
                     <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-amber-600 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-lg">
                       {(designerProfile?.email || cachedUser?.email)?.charAt(0).toUpperCase() || 'D'}
                     </div>
-                    <div className="flex flex-col items-start">
+                    <div className="hidden md:flex flex-col items-start">
                       <span className="text-sm font-medium text-white">
                         {designerProfile?.user_metadata?.full_name || 
                          cachedUser?.user_metadata?.full_name || 
@@ -220,9 +221,10 @@ function ShopContent() {
               ) : (
                 <Link 
                   href="/designer-auth"
-                  className="px-4 py-2 bg-white text-zinc-900 rounded-full font-medium hover:bg-zinc-200 transition"
+                  className="px-2 md:px-4 py-2 bg-white text-zinc-900 rounded-full font-medium hover:bg-zinc-200 transition text-xs md:text-sm"
                 >
-                  Become a Designer
+                  <span className="hidden sm:inline">Become a Designer</span>
+                  <span className="sm:hidden">Designer</span>
                 </Link>
               )}
               
@@ -230,7 +232,7 @@ function ShopContent() {
                 onClick={() => setIsCartOpen(true)}
                 className="relative p-2 hover:bg-zinc-800 rounded-full transition"
               >
-                <ShoppingCart size={24} />
+                <ShoppingCart size={20} className="md:w-6 md:h-6" />
                 {cartItemCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-white text-zinc-900 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                     {cartItemCount}

@@ -28,46 +28,36 @@ export default function MainPage() {
         </div>
 
         {/* Main Choices */}
-        <div className="w-full max-w-2xl grid md:grid-cols-2 gap-6">
+        <div className="w-full max-w-2xl grid md:grid-cols-2 gap-4 md:gap-6">
           {/* Shop */}
           <Link
             href="/shop"
-            className="group relative bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 rounded-2xl p-8 hover:border-white/50 transition-all duration-300 hover:bg-zinc-900"
+            className="group relative bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 rounded-xl md:rounded-2xl p-4 md:p-8 hover:border-white/50 transition-all duration-300 hover:bg-zinc-900"
           >
-            <div className="flex flex-col items-center text-center space-y-4">
-              <div className="p-4 bg-white/10 rounded-full group-hover:bg-white/20 transition-colors">
-                <ShoppingBag size={32} className="text-white" />
+            <div className="flex flex-col items-center text-center space-y-2 md:space-y-4">
+              <div className="flex items-center gap-3 px-4 md:px-6 py-2 md:py-3 bg-white/10 rounded-full text-lg md:text-xl font-bold text-white group-hover:bg-white/20 group-hover:text-white transition-colors">
+                <ShoppingBag size={20} className="text-white md:w-6 md:h-6" />
+                <span>Shop →</span>
               </div>
-                              <h2 className="text-2xl font-bold text-white group-hover:text-white transition-colors">
-                Shop
-                </h2>
-              <p className="text-zinc-400 group-hover:text-zinc-300 transition-colors">
+              <p className="text-zinc-400 group-hover:text-zinc-300 transition-colors text-sm md:text-base leading-tight md:leading-normal">
                 Discover unique pieces from independent Romanian designers. Limited drops, exclusive collections.
               </p>
-                              <div className="mt-4 px-6 py-2 bg-white/10 rounded-full text-sm text-zinc-300 group-hover:bg-white/20 group-hover:text-white transition-colors">
-                Browse Collection →
-                </div>
             </div>
           </Link>
 
           {/* Designers */}
           <Link
             href="/designers"
-            className="group relative bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 rounded-2xl p-8 hover:border-white/50 transition-all duration-300 hover:bg-zinc-900"
+            className="group relative bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 rounded-xl md:rounded-2xl p-4 md:p-8 hover:border-white/50 transition-all duration-300 hover:bg-zinc-900"
           >
-            <div className="flex flex-col items-center text-center space-y-4">
-              <div className="p-4 bg-white/10 rounded-full group-hover:bg-white/20 transition-colors">
-                <Palette size={32} className="text-white" />
+            <div className="flex flex-col items-center text-center space-y-2 md:space-y-4">
+              <div className="flex items-center gap-3 px-4 md:px-6 py-2 md:py-3 bg-white/10 rounded-full text-lg md:text-xl font-bold text-white group-hover:bg-white/20 group-hover:text-white transition-colors">
+                <Palette size={20} className="text-white md:w-6 md:h-6" />
+                <span>Designers →</span>
               </div>
-              <h2 className="text-2xl font-bold text-white group-hover:text-white transition-colors">
-                Designers
-              </h2>
-              <p className="text-zinc-400 group-hover:text-zinc-300 transition-colors">
+              <p className="text-zinc-400 group-hover:text-zinc-300 transition-colors text-sm md:text-base leading-tight md:leading-normal">
                 Meet our talented creators and explore their unique collections from across Romania.
               </p>
-              <div className="mt-4 px-6 py-2 bg-white/10 rounded-full text-sm text-zinc-300 group-hover:bg-white/20 group-hover:text-white transition-colors">
-                Meet Designers →
-              </div>
             </div>
           </Link>
         </div>
