@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThirdwebProvider } from "thirdweb/react";
 import Head from "next/head";
+import { AppProviders } from "@/contexts/AppProviders";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,7 +24,11 @@ export default function RootLayout({
         <link rel="icon" href="/imglogo.png" />
       </Head>
       <body className={inter.className}>
-        <ThirdwebProvider>{children}</ThirdwebProvider>
+        <ThirdwebProvider>
+          <AppProviders>
+            {children}
+          </AppProviders>
+        </ThirdwebProvider>
       </body>
     </html>
   );

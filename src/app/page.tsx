@@ -190,6 +190,16 @@ export default function Home() {
               </button>
             )}
           </div>
+          
+          {/* Early Access Link */}
+          <div className="mt-6 flex justify-center">
+            <Link
+              href="/main"
+              className="inline-block bg-amber-200/10 border border-amber-200/30 text-amber-200 font-medium rounded-full px-6 py-2 text-sm hover:bg-amber-200/20 hover:border-amber-200/50 transition"
+            >
+              Try Early Access →
+            </Link>
+          </div>
         </section>
 
         {/* Footer */}
