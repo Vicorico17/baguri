@@ -534,7 +534,7 @@ function DesignerDashboardContent() {
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div className="space-y-4">
                           <div>
-                            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                            <label className="text-sm font-medium mb-2 flex items-center gap-2">
                               <ProgressCircle isComplete={!!profile.brandName.trim()} />
                               Brand Name *
                             </label>
@@ -559,7 +559,7 @@ function DesignerDashboardContent() {
                           </div>
                           
                           <div>
-                            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                            <label className="text-sm font-medium mb-2 flex items-center gap-2">
                               <ProgressCircle isComplete={!!profile.shortDescription.trim()} />
                               Short Description *
                             </label>
@@ -592,7 +592,7 @@ function DesignerDashboardContent() {
                           </div>
 
                           <div>
-                            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                            <label className="text-sm font-medium mb-2 flex items-center gap-2">
                               <ProgressCircle isComplete={!!profile.longDescription.trim()} />
                               About Your Brand
                             </label>
@@ -618,7 +618,7 @@ function DesignerDashboardContent() {
 
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                              <label className="text-sm font-medium mb-2 flex items-center gap-2">
                                 <ProgressCircle isComplete={!!profile.city.trim()} />
                                 City
                               </label>
@@ -647,7 +647,7 @@ function DesignerDashboardContent() {
                               )}
                             </div>
                             <div>
-                              <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                              <label className="text-sm font-medium mb-2 flex items-center gap-2">
                                 <ProgressCircle isComplete={!!profile.yearFounded && profile.yearFounded > 1900} />
                                 Year Founded
                               </label>
@@ -676,7 +676,7 @@ function DesignerDashboardContent() {
                         <div className="space-y-4">
                           {/* Logo Upload */}
                           <div>
-                            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                            <label className="text-sm font-medium mb-2 flex items-center gap-2">
                               <ProgressCircle isComplete={!!profile.logoUrl.trim()} />
                               Brand Logo *
                             </label>
@@ -796,7 +796,7 @@ function DesignerDashboardContent() {
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                          <label className="text-sm font-medium mb-2 flex items-center gap-2">
                             <ProgressCircle isComplete={!!profile.instagramHandle.trim()} />
                             Instagram Handle
                           </label>
@@ -825,7 +825,7 @@ function DesignerDashboardContent() {
                         </div>
                         
                         <div>
-                          <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                          <label className="text-sm font-medium mb-2 flex items-center gap-2">
                             <ProgressCircle isComplete={!!profile.tiktokHandle?.trim()} />
                             TikTok Handle
                           </label>
@@ -910,7 +910,7 @@ function DesignerDashboardContent() {
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div className="space-y-4">
                               <div>
-                                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                                <label className="text-sm font-medium mb-2 flex items-center gap-2">
                                   <ProgressCircle isComplete={!!product.name.trim()} />
                                   Product Name *
                                 </label>
@@ -929,7 +929,7 @@ function DesignerDashboardContent() {
                               </div>
 
                               <div>
-                                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                                <label className="text-sm font-medium mb-2 flex items-center gap-2">
                                   <ProgressCircle isComplete={!!product.description.trim()} />
                                   Description
                                 </label>
@@ -943,7 +943,7 @@ function DesignerDashboardContent() {
                               </div>
 
                               <div>
-                                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                                <label className="text-sm font-medium mb-2 flex items-center gap-2">
                                   <ProgressCircle isComplete={!!product.price && product.price > 0} />
                                   Price (RON) *
                                 </label>
@@ -961,7 +961,7 @@ function DesignerDashboardContent() {
                             <div className="space-y-4">
                               {/* Stock Status */}
                               <div>
-                                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                                <label className="text-sm font-medium mb-2 flex items-center gap-2">
                                   <ProgressCircle isComplete={!!product.stockStatus} />
                                   Stock Status *
                                 </label>
@@ -990,7 +990,7 @@ function DesignerDashboardContent() {
 
                               {/* Sizes */}
                               <div>
-                                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                                <label className="text-sm font-medium mb-2 flex items-center gap-2">
                                   <ProgressCircle isComplete={product.sizes.length > 0} />
                                   Available Sizes
                                 </label>
@@ -1013,7 +1013,7 @@ function DesignerDashboardContent() {
 
                               {/* Colors */}
                               <div>
-                                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                                <label className="text-sm font-medium mb-2 flex items-center gap-2">
                                   <ProgressCircle isComplete={product.colors.some(color => color.name.trim())} />
                                   Available Colors
                                 </label>
@@ -1132,7 +1132,7 @@ function DesignerDashboardContent() {
                   <div className="px-6 pb-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                        <label className="text-sm font-medium mb-2 flex items-center gap-2">
                           <ProgressCircle isComplete={!!profile.username.trim()} />
                           Username
                         </label>
@@ -1157,7 +1157,7 @@ function DesignerDashboardContent() {
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                        <label className="text-sm font-medium mb-2 flex items-center gap-2">
                           <ProgressCircle isComplete={!!profile.password.trim()} />
                           Password
                         </label>
@@ -1182,7 +1182,7 @@ function DesignerDashboardContent() {
                       </div>
                       
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                        <label className="text-sm font-medium mb-2 flex items-center gap-2">
                           <ProgressCircle isComplete={!!profile.email.trim()} />
                           Email Address
                         </label>
