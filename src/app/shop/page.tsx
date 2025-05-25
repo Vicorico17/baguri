@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingCart, Heart, X, Plus, Minus } from 'lucide-react';
+import { ShoppingCart, Heart, X, Plus, Minus, User } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { CartSidebar as GlobalCartSidebar } from '@/components/CartSidebar';
+import { DesignerAuthProvider, useDesignerAuth } from '@/contexts/DesignerAuthContext';
+import { supabase } from '@/lib/supabase';
 
 // Placeholder component for images
 // Stock status display component
@@ -108,28 +110,52 @@ const mockProducts = [
   },
 ];
 
-export default function ShopPage() {
+function ShopContent() {
   const [selectedDesigner, setSelectedDesigner] = useState<number | null>(null);
   const [showUpcoming, setShowUpcoming] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [showAllDesigners, setShowAllDesigners] = useState(false);
-  const [designerProfile, setDesignerProfile] = useState<any>(null);
+  const [initialLoad, setInitialLoad] = useState(true);
+  const [cachedUser, setCachedUser] = useState<any>(null);
   
   // Use global cart
   const { cartItemCount, setIsCartOpen, addToCart } = useCart();
+  
+  // Use designer auth context
+  const { user: designerProfile, loading } = useDesignerAuth();
 
-  // Check if designer is logged in
+  // Check for cached user data on initial load for faster UI
   useEffect(() => {
-    const designerSession = localStorage.getItem('baguri-designer-session');
-    if (designerSession) {
+    const checkCachedSession = async () => {
       try {
-        const session = JSON.parse(designerSession);
-        setDesignerProfile(session.user);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setCachedUser(session.user);
+        } else {
+          setCachedUser(null);
+        }
       } catch (error) {
-        console.error('Error parsing designer session:', error);
+        // Ignore errors, just don't show cached user
+        setCachedUser(null);
       }
-    }
+    };
+    
+    checkCachedSession();
   }, []);
+
+  // Clear cached user when designer profile is null (logged out)
+  useEffect(() => {
+    if (!designerProfile && !loading) {
+      setCachedUser(null);
+    }
+  }, [designerProfile, loading]);
+
+  // Reduce initial loading time for better UX
+  useEffect(() => {
+    if (!loading) {
+      setInitialLoad(false);
+    }
+  }, [loading]);
 
   const filteredProducts = mockProducts.filter(product => {
     const designerFilter = selectedDesigner === null || product.designer.name === mockDesigners.find(d => d.id === selectedDesigner)?.name;
@@ -145,8 +171,8 @@ export default function ShopPage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-40 border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+      <header className="fixed top-0 left-0 right-0 z-40 border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm h-20">
+        <div className="max-w-7xl mx-auto px-4 py-4 h-full">
           <div className="flex items-center justify-between">
             <Link href="/">
               <Image
@@ -167,16 +193,30 @@ export default function ShopPage() {
                 All Designers
               </Link>
               
-              {designerProfile ? (
-                <Link 
-                  href="/designer-dashboard"
-                  className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-full font-medium hover:bg-amber-700 transition"
-                >
-                  <div className="w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center text-xs font-bold">
-                    {designerProfile.email?.charAt(0).toUpperCase() || 'D'}
-                  </div>
-                  Designer Dashboard
-                </Link>
+              {loading && !designerProfile && !cachedUser ? (
+                <div className="w-8 h-8 bg-zinc-800 rounded-full animate-pulse"></div>
+              ) : designerProfile || cachedUser ? (
+                <div className="flex items-center gap-3">
+                  <Link 
+                    href="/designer-dashboard"
+                    className="flex items-center gap-3 px-4 py-2 bg-zinc-800 border border-zinc-700 text-white rounded-full font-medium hover:bg-zinc-700 transition group"
+                  >
+                    <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-amber-600 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-lg">
+                      {(designerProfile?.email || cachedUser?.email)?.charAt(0).toUpperCase() || 'D'}
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-medium text-white">
+                        {designerProfile?.user_metadata?.full_name || 
+                         cachedUser?.user_metadata?.full_name || 
+                         (designerProfile?.email || cachedUser?.email)?.split('@')[0] || 
+                         'Designer'}
+                      </span>
+                      <span className="text-xs text-zinc-400 group-hover:text-zinc-300">
+                        Dashboard
+                      </span>
+                    </div>
+                  </Link>
+                </div>
               ) : (
                 <Link 
                   href="/designer-auth"
@@ -203,7 +243,7 @@ export default function ShopPage() {
       </header>
 
       {/* Designer Filter Bar */}
-      <div className="fixed top-16 left-0 right-0 z-30 border-b border-zinc-800 bg-zinc-900/30 backdrop-blur-sm">
+      <div className="fixed top-20 left-0 right-0 z-30 border-b border-zinc-800 bg-zinc-900/30 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center gap-4 overflow-x-auto">
             <div className="flex items-center gap-2 mr-4">
@@ -272,7 +312,7 @@ export default function ShopPage() {
       </div>
 
       {/* Products Grid */}
-      <main className="max-w-7xl mx-auto px-4 py-8 pt-32">
+      <main className="max-w-7xl mx-auto px-4 py-8 pt-44">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredProducts.map((product) => (
             <div key={product.id} className="group cursor-pointer" onClick={() => setSelectedProduct(product)}>
@@ -454,4 +494,12 @@ function ProductModal({ product, onClose, onAddToCart }: {
       </div>
     </div>
   );
-} 
+}
+
+export default function ShopPage() {
+  return (
+    <DesignerAuthProvider>
+      <ShopContent />
+    </DesignerAuthProvider>
+  );
+}

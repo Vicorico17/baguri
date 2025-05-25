@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { ArrowLeft, Edit, Send, CheckCircle, Clock, XCircle, Upload, LogOut, Plus, X, Instagram, Globe, Camera, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { BrandShowcase } from "@/components/ui/brand-showcase";
+import { ProgressCircle } from "@/components/ui/progress-circle";
 import { DesignerAuthProvider, useDesignerAuth } from '@/contexts/DesignerAuthContext';
 
 // Product stock status options
@@ -533,7 +534,10 @@ function DesignerDashboardContent() {
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div className="space-y-4">
                           <div>
-                            <label className="block text-sm font-medium mb-2">Brand Name *</label>
+                            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                              <ProgressCircle isComplete={!!profile.brandName.trim()} />
+                              Brand Name *
+                            </label>
                             {!isEditMode && profile.brandName ? (
                               <div className="px-4 py-3 text-white font-medium">
                                 {profile.brandName}
@@ -555,7 +559,10 @@ function DesignerDashboardContent() {
                           </div>
                           
                           <div>
-                            <label className="block text-sm font-medium mb-2">Short Description *</label>
+                            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                              <ProgressCircle isComplete={!!profile.shortDescription.trim()} />
+                              Short Description *
+                            </label>
                             {!isEditMode && profile.shortDescription ? (
                               <div className="px-4 py-3 text-zinc-300 leading-relaxed">
                                 {profile.shortDescription}
@@ -585,7 +592,10 @@ function DesignerDashboardContent() {
                           </div>
 
                           <div>
-                            <label className="block text-sm font-medium mb-2">About Your Brand</label>
+                            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                              <ProgressCircle isComplete={!!profile.longDescription.trim()} />
+                              About Your Brand
+                            </label>
                             {!isEditMode && profile.longDescription ? (
                               <div className="px-4 py-3 text-zinc-300 leading-relaxed whitespace-pre-wrap">
                                 {profile.longDescription}
@@ -608,7 +618,10 @@ function DesignerDashboardContent() {
 
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-sm font-medium mb-2">City</label>
+                              <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                                <ProgressCircle isComplete={!!profile.city.trim()} />
+                                City
+                              </label>
                               {!isEditMode && profile.city ? (
                                 <div className="px-4 py-3 text-zinc-300">
                                   {profile.city}
@@ -634,7 +647,10 @@ function DesignerDashboardContent() {
                               )}
                             </div>
                             <div>
-                              <label className="block text-sm font-medium mb-2">Year Founded</label>
+                              <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                                <ProgressCircle isComplete={!!profile.yearFounded && profile.yearFounded > 1900} />
+                                Year Founded
+                              </label>
                               {!isEditMode && profile.yearFounded ? (
                                 <div className="px-4 py-3 text-zinc-300">
                                   {profile.yearFounded}
@@ -660,7 +676,10 @@ function DesignerDashboardContent() {
                         <div className="space-y-4">
                           {/* Logo Upload */}
                           <div>
-                            <label className="block text-sm font-medium mb-2">Brand Logo *</label>
+                            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                              <ProgressCircle isComplete={!!profile.logoUrl.trim()} />
+                              Brand Logo *
+                            </label>
                             <div className="relative">
                               {profile.logoUrl ? (
                                 <div className={`relative w-full h-32 border rounded-lg overflow-hidden ${
@@ -777,7 +796,10 @@ function DesignerDashboardContent() {
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium mb-2">Instagram Handle</label>
+                          <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                            <ProgressCircle isComplete={!!profile.instagramHandle.trim()} />
+                            Instagram Handle
+                          </label>
                           {!isEditMode && profile.instagramHandle ? (
                             <div className="flex items-center gap-3 px-4 py-3">
                               <Instagram size={20} className="text-zinc-400" />
@@ -803,7 +825,10 @@ function DesignerDashboardContent() {
                         </div>
                         
                         <div>
-                          <label className="block text-sm font-medium mb-2">TikTok Handle</label>
+                          <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                            <ProgressCircle isComplete={!!profile.tiktokHandle?.trim()} />
+                            TikTok Handle
+                          </label>
                           {!isEditMode && profile.tiktokHandle ? (
                             <div className="flex items-center gap-3 px-4 py-3">
                               <span className="text-zinc-400 text-sm font-bold">TT</span>
@@ -885,7 +910,10 @@ function DesignerDashboardContent() {
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div className="space-y-4">
                               <div>
-                                <label className="block text-sm font-medium mb-2">Product Name *</label>
+                                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                                  <ProgressCircle isComplete={!!product.name.trim()} />
+                                  Product Name *
+                                </label>
                                 <input
                                   type="text"
                                   value={product.name}
@@ -901,7 +929,10 @@ function DesignerDashboardContent() {
                               </div>
 
                               <div>
-                                <label className="block text-sm font-medium mb-2">Description</label>
+                                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                                  <ProgressCircle isComplete={!!product.description.trim()} />
+                                  Description
+                                </label>
                                 <textarea
                                   value={product.description}
                                   onChange={(e) => updateProduct(product.id, 'description', e.target.value)}
@@ -912,7 +943,10 @@ function DesignerDashboardContent() {
                               </div>
 
                               <div>
-                                <label className="block text-sm font-medium mb-2">Price (RON) *</label>
+                                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                                  <ProgressCircle isComplete={!!product.price && product.price > 0} />
+                                  Price (RON) *
+                                </label>
                                 <input
                                   type="number"
                                   value={product.price}
@@ -927,7 +961,10 @@ function DesignerDashboardContent() {
                             <div className="space-y-4">
                               {/* Stock Status */}
                               <div>
-                                <label className="block text-sm font-medium mb-2">Stock Status *</label>
+                                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                                  <ProgressCircle isComplete={!!product.stockStatus} />
+                                  Stock Status *
+                                </label>
                                 <div className="space-y-2">
                                   {STOCK_STATUS_OPTIONS.map((option) => (
                                     <label key={option.value} className="flex items-center gap-3 cursor-pointer">
@@ -953,7 +990,10 @@ function DesignerDashboardContent() {
 
                               {/* Sizes */}
                               <div>
-                                <label className="block text-sm font-medium mb-2">Available Sizes</label>
+                                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                                  <ProgressCircle isComplete={product.sizes.length > 0} />
+                                  Available Sizes
+                                </label>
                                 <div className="flex flex-wrap gap-2">
                                   {SIZES.map((size) => (
                                     <button
@@ -973,7 +1013,10 @@ function DesignerDashboardContent() {
 
                               {/* Colors */}
                               <div>
-                                <label className="block text-sm font-medium mb-2">Available Colors</label>
+                                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                                  <ProgressCircle isComplete={product.colors.some(color => color.name.trim())} />
+                                  Available Colors
+                                </label>
                                 <div className="space-y-4">
                                   {product.colors.map((color, colorIndex) => (
                                     <div key={colorIndex} className="border border-zinc-600 rounded-lg p-4 bg-zinc-800/50">
@@ -1089,7 +1132,10 @@ function DesignerDashboardContent() {
                   <div className="px-6 pb-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-sm font-medium mb-2">Username</label>
+                        <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                          <ProgressCircle isComplete={!!profile.username.trim()} />
+                          Username
+                        </label>
                         {!isEditMode && profile.username ? (
                           <div className="px-4 py-3 text-zinc-300">
                             {profile.username}
@@ -1111,7 +1157,10 @@ function DesignerDashboardContent() {
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium mb-2">Password</label>
+                        <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                          <ProgressCircle isComplete={!!profile.password.trim()} />
+                          Password
+                        </label>
                         {!isEditMode && profile.password ? (
                           <div className="px-4 py-3 text-zinc-300">
                             ••••••••
@@ -1133,7 +1182,10 @@ function DesignerDashboardContent() {
                       </div>
                       
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-2">Email Address</label>
+                        <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                          <ProgressCircle isComplete={!!profile.email.trim()} />
+                          Email Address
+                        </label>
                         {!isEditMode && profile.email ? (
                           <div className="px-4 py-3 text-zinc-300">
                             {profile.email}

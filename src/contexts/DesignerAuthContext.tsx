@@ -72,10 +72,12 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      // Set loading to false immediately when we have session data
+      // Profile loading can happen in background
+      setLoading(false);
       if (session?.user) {
         fetchDesignerProfile(session.user.id).then(setDesignerProfile);
       }
-      setLoading(false);
     });
 
     // Listen for auth changes
@@ -154,10 +156,23 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
   };
 
   const signOut = async () => {
-    setLoading(true);
-    await supabase.auth.signOut();
-    setDesignerProfile(null);
-    setLoading(false);
+    try {
+      // Clear state immediately for better UX
+      setDesignerProfile(null);
+      setUser(null);
+      setSession(null);
+      setLoading(false);
+      
+      // Then sign out from Supabase
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Error during sign out:', error);
+      // Even if signOut fails, clear the local state
+      setDesignerProfile(null);
+      setUser(null);
+      setSession(null);
+      setLoading(false);
+    }
   };
 
   const value: DesignerAuthContextType = {
