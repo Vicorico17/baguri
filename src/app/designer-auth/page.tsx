@@ -13,7 +13,6 @@ function DesignerAuthForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [redirectCountdown, setRedirectCountdown] = useState(3);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -23,27 +22,17 @@ function DesignerAuthForm() {
   const router = useRouter();
   const { signIn, signUp, signOut, loading, user, designerProfile } = useDesignerAuth();
 
-  // Auto-redirect to dashboard only if user has designer profile and visits this page
-  // Give them time to see options and choose to sign out if needed
+  // Auto-redirect to dashboard if user is already logged in
+  // But prevent redirect loops by checking if we're not already redirecting
   useEffect(() => {
-    if (user && !loading && designerProfile) {
-      // Countdown timer
-      const countdownInterval = setInterval(() => {
-        setRedirectCountdown(prev => {
-          if (prev <= 1) {
-            clearInterval(countdownInterval);
-            router.push('/designer-dashboard');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(countdownInterval);
-    } else {
-      setRedirectCountdown(3); // Reset countdown when conditions change
+    if (user && !loading) {
+      // Add a small delay to prevent rapid redirects
+      const redirectTimer = setTimeout(() => {
+        router.push('/designer-dashboard');
+      }, 100);
+      return () => clearTimeout(redirectTimer);
     }
-  }, [user, designerProfile, loading, router]);
+  }, [user, loading, router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -135,39 +124,18 @@ function DesignerAuthForm() {
       {/* Auth Form */}
       <div className="relative z-10 flex items-center justify-center min-h-[80vh] px-4 pt-20">
         <div className="w-full max-w-md">
-          {/* Already authenticated notice */}
-          {user && !loading && (
-            <div className="mb-6 p-6 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-center">
-              <h3 className="text-lg font-bold text-blue-400 mb-3">
-                You're already signed in!
-              </h3>
-              <p className="text-zinc-300 mb-4">
-                {designerProfile 
-                  ? `Redirecting to your dashboard in ${redirectCountdown} seconds...`
-                  : "Ready to complete your designer application?"
-                }
-              </p>
-              <div className="flex gap-3 justify-center">
-                {!designerProfile && (
-                  <Link 
-                    href="/designer-dashboard"
-                    className="px-4 py-2 bg-white text-zinc-900 rounded-lg font-medium hover:bg-zinc-200 transition"
-                  >
-                    Complete Profile
-                  </Link>
-                )}
-                <button
-                  onClick={signOut}
-                  className="px-4 py-2 bg-zinc-700 text-white rounded-lg font-medium hover:bg-zinc-600 transition"
-                >
-                  Sign Out
-                </button>
+          {/* Loading state */}
+          {loading && (
+            <div className="text-center">
+              <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
               </div>
+              <p className="text-zinc-400">Loading...</p>
             </div>
           )}
-
+          
           {/* Only show auth form if user is not authenticated */}
-          {!user && (
+          {!user && !loading && (
             <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl p-8">
               <div className="text-center mb-8">
               <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">

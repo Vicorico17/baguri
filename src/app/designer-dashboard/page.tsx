@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { ArrowLeft, Edit, Send, CheckCircle, Clock, XCircle, Upload, LogOut, Plus, X, Instagram, Globe, Camera, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { BrandShowcase } from "@/components/ui/brand-showcase";
+import { DesignerAuthProvider, useDesignerAuth } from '@/contexts/DesignerAuthContext';
 
 // Product stock status options
 const STOCK_STATUS_OPTIONS = [
@@ -80,11 +81,9 @@ function createEmptyProduct(): Product {
   };
 }
 
-export default function DesignerDashboard() {
+function DesignerDashboardContent() {
   const [profileData, setProfileData] = useState(mockDesignerProfile);
   const [isEditing, setIsEditing] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingSecondaryLogo, setUploadingSecondaryLogo] = useState(false);
@@ -93,6 +92,9 @@ export default function DesignerDashboard() {
   const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const router = useRouter();
+  
+  // Use the same auth context as the auth page
+  const { signOut, loading, user, designerProfile } = useDesignerAuth();
 
   const [profile, setProfile] = useState<DesignerProfileForm>({
     brandName: '',
@@ -111,25 +113,22 @@ export default function DesignerDashboard() {
     specialties: []
   });
 
+  // Redirect to auth if not authenticated
   useEffect(() => {
-    // Check if designer is authenticated
-    const designerSession = localStorage.getItem('baguri-designer-session');
-    if (designerSession) {
-      try {
-        const session = JSON.parse(designerSession);
-        setUser(session.user);
-        setProfile(prev => ({ ...prev, email: session.user?.email || '' }));
-        setIsAuthenticated(true);
-      } catch (error) {
-        router.push('/designer-auth');
-      }
-    } else {
+    if (!loading && !user) {
       router.push('/designer-auth');
     }
-  }, [router]);
+  }, [loading, user, router]);
+
+  // Set profile email when user is available
+  useEffect(() => {
+    if (user?.email) {
+      setProfile(prev => ({ ...prev, email: user.email || '' }));
+    }
+  }, [user]);
 
   const handleLogout = () => {
-    localStorage.removeItem('baguri-designer-session');
+    signOut();
     router.push('/designer-auth');
   };
 
@@ -334,11 +333,15 @@ export default function DesignerDashboard() {
     }));
   };
 
-  if (!isAuthenticated) {
+  // Show loading while checking authentication
+  if (loading || !user) {
     return (
       <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center">
         <div className="text-center">
-          <p className="text-zinc-400">Checking authentication...</p>
+          <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+          </div>
+          <p className="text-zinc-400">{loading ? 'Loading...' : 'Checking authentication...'}</p>
         </div>
       </div>
     );
@@ -1265,4 +1268,12 @@ function GuidelinesCard() {
       </div>
     </div>
   );
-} 
+}
+
+export default function DesignerDashboard() {
+  return (
+    <DesignerAuthProvider>
+      <DesignerDashboardContent />
+    </DesignerAuthProvider>
+  );
+}
