@@ -121,7 +121,7 @@ export default function ProductAutomationDemo() {
             <h2 className="text-xl font-bold mb-4">📝 Updated Code Example</h2>
             <div className="text-sm text-zinc-400 space-y-4">
               <div>
-                <p className="text-blue-400 mb-2">// Authentication Hook (src/hooks/useAuth.ts)</p>
+                <p className="text-blue-400 mb-2">&#47;&#47; Authentication Hook (src/hooks/useAuth.ts)</p>
                 <pre className="bg-zinc-800 p-4 rounded text-xs overflow-x-auto">
 {`export function useAuth() {
   const [authState, setAuthState] = useState({
@@ -137,7 +137,7 @@ export default function ProductAutomationDemo() {
               </div>
               
               <div>
-                <p className="text-green-400 mb-2">// Product Submission (src/components/ProductSubmissionForm.tsx)</p>
+                <p className="text-green-400 mb-2">&#47;&#47; Product Submission (src/components/ProductSubmissionForm.tsx)</p>
                 <pre className="bg-zinc-800 p-4 rounded text-xs overflow-x-auto">
 {`export function ProductSubmissionForm() {
   const { designer, isAuthenticated } = useAuth();

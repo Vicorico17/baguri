@@ -280,7 +280,7 @@ export function ProductSubmissionForm() {
                   <p className="text-green-300 font-medium">✅ REAL WORKING CHECKOUT!</p>
                   <p className="text-green-200 text-xs mt-1">
                     👆 Click the payment URL above to test the actual Stripe checkout.
-                    This is a real payment link that will take you to Stripe's secure checkout page.
+                    This is a real payment link that will take you to Stripe&apos;s secure checkout page.
                   </p>
                 </div>
                 <p className="text-green-300 mt-2">🎉 Your product is now ready for sale once approved!</p>

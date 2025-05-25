@@ -1260,7 +1260,7 @@ function ActionCard({ status, canSubmit, onSubmit, completionPercentage }: any) 
       
       {status === 'submitted' && (
         <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-          <p className="text-amber-400 text-sm">Your application is under review. We'll notify you within 2-3 business days.</p>
+          <p className="text-amber-400 text-sm">Your application is under review. We&apos;ll notify you within 2-3 business days.</p>
         </div>
       )}
       

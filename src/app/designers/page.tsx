@@ -165,7 +165,7 @@ export default function DesignersPage() {
         <div className="max-w-4xl mx-auto px-4">
           <h1 className="text-4xl md:text-5xl font-bold mb-6">Designers</h1>
           <p className="text-xl text-zinc-400 mb-8">
-            Meet the talented creators behind Romania's most innovative fashion brands
+            Meet the talented creators behind Romania&apos;s most innovative fashion brands
           </p>
         </div>
       </section>
