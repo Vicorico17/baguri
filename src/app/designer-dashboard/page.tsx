@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Edit, Send, CheckCircle, Clock, XCircle, Upload, LogOut, Plus, X, Instagram, Globe, Camera, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
+import { BrandShowcase } from "@/components/ui/brand-showcase";
 
 // Product stock status options
 const STOCK_STATUS_OPTIONS = [
@@ -15,6 +16,14 @@ const STOCK_STATUS_OPTIONS = [
 ];
 
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+
+// Romanian cities
+const ROMANIAN_CITIES = [
+  'Bucharest', 'Cluj-Napoca', 'Timișoara', 'Iași', 'Constanța', 'Craiova', 'Brașov', 'Galați', 
+  'Ploiești', 'Oradea', 'Braila', 'Arad', 'Pitești', 'Sibiu', 'Bacău', 'Târgu Mureș', 
+  'Baia Mare', 'Buzău', 'Botoșani', 'Satu Mare', 'Râmnicu Vâlcea', 'Drobeta-Turnu Severin',
+  'Suceava', 'Piatra Neamț', 'Târgu Jiu', 'Tulcea', 'Focșani', 'Bistrița', 'Reșița', 'Alba Iulia'
+];
 
 type ProductColor = {
   name: string;
@@ -36,9 +45,11 @@ type DesignerProfileForm = {
   brandName: string;
   shortDescription: string;
   longDescription: string;
-  location: string;
+  city: string;
   yearFounded: number;
   email: string;
+  username: string;
+  password: string;
   logoUrl: string;
   secondaryLogoUrl: string;
   instagramHandle: string;
@@ -79,6 +90,7 @@ export default function DesignerDashboard() {
   const [uploadingSecondaryLogo, setUploadingSecondaryLogo] = useState(false);
   const [brandDetailsOpen, setBrandDetailsOpen] = useState(true);
   const [productsOpen, setProductsOpen] = useState(true);
+  const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const router = useRouter();
 
@@ -86,9 +98,11 @@ export default function DesignerDashboard() {
     brandName: '',
     shortDescription: '',
     longDescription: '',
-    location: 'Bucharest, Romania',
+    city: 'Bucharest',
     yearFounded: new Date().getFullYear(),
     email: '',
+    username: '',
+    password: '',
     logoUrl: '',
     secondaryLogoUrl: '',
     instagramHandle: '',
@@ -225,7 +239,7 @@ export default function DesignerDashboard() {
     if (profile.longDescription) completed++;
     if (profile.logoUrl) completed++;
     if (profile.instagramHandle) completed++;
-    if (profile.location) completed++;
+    if (profile.city) completed++;
     if (profile.yearFounded) completed++;
     if (profile.products.some(p => p.name && p.price > 0)) completed++;
     if (profile.products.some(p => p.sizes.length > 0)) completed++;
@@ -426,12 +440,31 @@ export default function DesignerDashboard() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className={`p-3 rounded-full ${statusInfo.color}`}>
-                {statusInfo.icon}
-              </div>
+              <BrandShowcase 
+                logoUrl={profile.logoUrl}
+                brandName={profile.brandName}
+                size="lg"
+              />
               <div>
                 <h1 className="text-2xl font-bold">{profile.brandName || 'Your Designer Profile'}</h1>
+                <div className="flex items-center gap-4 mt-1 mb-2">
+                  {profile.city && (
+                    <div className="flex items-center gap-1 text-sm text-zinc-300">
+                      📍 {profile.city}
+                    </div>
+                  )}
+                  {profile.yearFounded && (
+                    <div className="flex items-center gap-1 text-sm text-zinc-300">
+                      📅 Est. {profile.yearFounded}
+                    </div>
+                  )}
+                </div>
                 <p className="text-zinc-400">{statusInfo.description}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className={`px-2 py-1 rounded-md text-xs font-medium ${statusInfo.color}`}>
+                    {statusInfo.text}
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -477,12 +510,11 @@ export default function DesignerDashboard() {
                   </button>
                   {brandDetailsOpen && isEditMode && (
                     <button
-                      onClick={handleSaveProfile}
-                      disabled={saving}
-                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition disabled:opacity-50 ml-4"
+                      onClick={() => setIsEditMode(false)}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition ml-4"
                     >
                       <Save size={16} />
-                      {saving ? 'Saving...' : 'Save Progress'}
+                      Save
                     </button>
                   )}
                 </div>
@@ -573,24 +605,29 @@ export default function DesignerDashboard() {
 
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-sm font-medium mb-2">Location</label>
-                              {!isEditMode && profile.location ? (
+                              <label className="block text-sm font-medium mb-2">City</label>
+                              {!isEditMode && profile.city ? (
                                 <div className="px-4 py-3 text-zinc-300">
-                                  {profile.location}
+                                  {profile.city}
                                 </div>
                               ) : (
-                                <input
-                                  type="text"
-                                  value={profile.location}
-                                  onChange={(e) => updateProfile('location', e.target.value)}
+                                <select
+                                  value={profile.city}
+                                  onChange={(e) => updateProfile('city', e.target.value)}
                                   disabled={!isEditMode}
                                   className={`w-full px-4 py-3 border rounded-lg transition ${
                                     isEditMode 
                                       ? 'bg-zinc-800 border-zinc-700 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent'
                                       : 'bg-zinc-700/50 border-zinc-600 text-zinc-300 cursor-not-allowed'
                                   }`}
-                                  placeholder="City, Romania"
-                                />
+                                >
+                                  <option value="">Select a city</option>
+                                  {ROMANIAN_CITIES.map((city) => (
+                                    <option key={city} value={city} className="bg-zinc-800">
+                                      {city}
+                                    </option>
+                                  ))}
+                                </select>
                               )}
                             </div>
                             <div>
@@ -1019,6 +1056,100 @@ export default function DesignerDashboard() {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Account Settings Section */}
+              <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl overflow-hidden">
+                <div className="p-6 flex items-center justify-between">
+                  <button
+                    onClick={() => setAccountSettingsOpen(!accountSettingsOpen)}
+                    className="flex items-center justify-between hover:bg-zinc-800/50 transition text-left flex-1 -mx-6 -my-6 px-6 py-6"
+                  >
+                    <div>
+                      <h2 className="text-2xl font-bold flex items-center gap-2">
+                        🔐 Account Settings
+                        {accountSettingsOpen ? (
+                          <ChevronUp size={24} className="text-zinc-400 ml-2" />
+                        ) : (
+                          <ChevronDown size={24} className="text-zinc-400 ml-2" />
+                        )}
+                      </h2>
+                      <p className="text-zinc-400 text-sm mt-1">Manage your login credentials</p>
+                    </div>
+                  </button>
+                </div>
+                
+                {accountSettingsOpen && (
+                  <div className="px-6 pb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Username</label>
+                        {!isEditMode && profile.username ? (
+                          <div className="px-4 py-3 text-zinc-300">
+                            {profile.username}
+                          </div>
+                        ) : (
+                          <input
+                            type="text"
+                            value={profile.username}
+                            onChange={(e) => updateProfile('username', e.target.value)}
+                            disabled={!isEditMode}
+                            className={`w-full px-4 py-3 border rounded-lg transition ${
+                              isEditMode 
+                                ? 'bg-zinc-800 border-zinc-700 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent'
+                                : 'bg-zinc-700/50 border-zinc-600 text-zinc-300 cursor-not-allowed'
+                            }`}
+                            placeholder="Your username"
+                          />
+                        )}
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Password</label>
+                        {!isEditMode && profile.password ? (
+                          <div className="px-4 py-3 text-zinc-300">
+                            ••••••••
+                          </div>
+                        ) : (
+                          <input
+                            type="password"
+                            value={profile.password}
+                            onChange={(e) => updateProfile('password', e.target.value)}
+                            disabled={!isEditMode}
+                            className={`w-full px-4 py-3 border rounded-lg transition ${
+                              isEditMode 
+                                ? 'bg-zinc-800 border-zinc-700 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent'
+                                : 'bg-zinc-700/50 border-zinc-600 text-zinc-300 cursor-not-allowed'
+                            }`}
+                            placeholder="Your password"
+                          />
+                        )}
+                      </div>
+                      
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium mb-2">Email Address</label>
+                        {!isEditMode && profile.email ? (
+                          <div className="px-4 py-3 text-zinc-300">
+                            {profile.email}
+                          </div>
+                        ) : (
+                          <input
+                            type="email"
+                            value={profile.email}
+                            onChange={(e) => updateProfile('email', e.target.value)}
+                            disabled={!isEditMode}
+                            className={`w-full px-4 py-3 border rounded-lg transition ${
+                              isEditMode 
+                                ? 'bg-zinc-800 border-zinc-700 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent'
+                                : 'bg-zinc-700/50 border-zinc-600 text-zinc-300 cursor-not-allowed'
+                            }`}
+                            placeholder="your.email@example.com"
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}

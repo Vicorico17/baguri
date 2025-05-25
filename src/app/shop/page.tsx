@@ -113,9 +113,23 @@ export default function ShopPage() {
   const [showUpcoming, setShowUpcoming] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [showAllDesigners, setShowAllDesigners] = useState(false);
+  const [designerProfile, setDesignerProfile] = useState<any>(null);
   
   // Use global cart
   const { cartItemCount, setIsCartOpen, addToCart } = useCart();
+
+  // Check if designer is logged in
+  useEffect(() => {
+    const designerSession = localStorage.getItem('baguri-designer-session');
+    if (designerSession) {
+      try {
+        const session = JSON.parse(designerSession);
+        setDesignerProfile(session.user);
+      } catch (error) {
+        console.error('Error parsing designer session:', error);
+      }
+    }
+  }, []);
 
   const filteredProducts = mockProducts.filter(product => {
     const designerFilter = selectedDesigner === null || product.designer.name === mockDesigners.find(d => d.id === selectedDesigner)?.name;
@@ -152,12 +166,25 @@ export default function ShopPage() {
               >
                 All Designers
               </Link>
-              <Link 
-                href="/designer-auth"
-                className="px-4 py-2 bg-white text-zinc-900 rounded-full font-medium hover:bg-zinc-200 transition"
-              >
-                Become a Designer
-              </Link>
+              
+              {designerProfile ? (
+                <Link 
+                  href="/designer-dashboard"
+                  className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-full font-medium hover:bg-amber-700 transition"
+                >
+                  <div className="w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center text-xs font-bold">
+                    {designerProfile.email?.charAt(0).toUpperCase() || 'D'}
+                  </div>
+                  Designer Dashboard
+                </Link>
+              ) : (
+                <Link 
+                  href="/designer-auth"
+                  className="px-4 py-2 bg-white text-zinc-900 rounded-full font-medium hover:bg-zinc-200 transition"
+                >
+                  Become a Designer
+                </Link>
+              )}
               
               <button
                 onClick={() => setIsCartOpen(true)}
