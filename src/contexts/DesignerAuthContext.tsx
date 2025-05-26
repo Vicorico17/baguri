@@ -9,6 +9,7 @@ type DesignerAuthContextType = {
   session: Session | null;
   designerProfile: DesignerProfile | null;
   loading: boolean;
+  profileLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -22,74 +23,120 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
   const [session, setSession] = useState<Session | null>(null);
   const [designerProfile, setDesignerProfile] = useState<DesignerProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
+  
+  // Simple cache to prevent repeated profile fetches
+  const profileCacheRef = React.useRef<{ [userId: string]: DesignerProfile | null }>({});
 
-  // Fetch designer profile data
+  // Fetch designer profile data with better error handling and caching
   const fetchDesignerProfile = async (userId: string): Promise<DesignerProfile | null> => {
+    // Check cache first
+    if (profileCacheRef.current[userId] !== undefined) {
+      return profileCacheRef.current[userId];
+    }
+
     try {
-      // First get the designer_auth record
-      const { data: authData, error: authError } = await supabase
+      setProfileLoading(true);
+      
+      // Use a single query with joins to reduce database calls
+      const { data: profileData, error } = await supabase
         .from('designer_auth')
-        .select('*')
+        .select(`
+          *,
+          designers (*)
+        `)
         .eq('user_id', userId)
         .single();
 
-      if (authError || !authData) {
-        console.log('No designer auth record found for user:', userId);
+      if (error || !profileData) {
+        console.log('No designer profile found for user:', userId);
+        profileCacheRef.current[userId] = null;
         return null;
       }
 
-      // Then get the designer details
-      const { data: designerData, error: designerError } = await supabase
-        .from('designers')
-        .select('*')
-        .eq('id', authData.designer_id)
-        .single();
-
-      if (designerError || !designerData) {
-        console.error('Error fetching designer data:', designerError);
+      if (!profileData.designers) {
+        console.log('No designer data linked to auth record');
+        profileCacheRef.current[userId] = null;
         return null;
       }
 
-      return {
-        ...designerData,
-        auth: authData
+      const profile = {
+        ...profileData.designers,
+        auth: profileData
       } as DesignerProfile;
+
+      // Cache the result
+      profileCacheRef.current[userId] = profile;
+      return profile;
     } catch (error) {
       console.error('Error fetching designer profile:', error);
+      profileCacheRef.current[userId] = null;
       return null;
+    } finally {
+      setProfileLoading(false);
     }
   };
 
   const refreshProfile = async () => {
     if (user) {
+      // Clear cache for this user to force fresh fetch
+      delete profileCacheRef.current[user.id];
       const profile = await fetchDesignerProfile(user.id);
       setDesignerProfile(profile);
     }
   };
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      // Set loading to false immediately when we have session data
-      // Profile loading can happen in background
-      setLoading(false);
-      if (session?.user) {
-        fetchDesignerProfile(session.user.id).then(setDesignerProfile);
+    let mounted = true;
+
+    // Get initial session with faster loading
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false); // Set loading false immediately after getting session
+        
+        // Load profile in background if user exists - with debouncing
+        if (session?.user) {
+          // Small delay to prevent rapid successive calls
+          setTimeout(() => {
+            if (mounted) {
+              fetchDesignerProfile(session.user.id).then((profile) => {
+                if (mounted) {
+                  setDesignerProfile(profile);
+                }
+              });
+            }
+          }, 50);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (mounted) {
+          setLoading(false);
+        }
       }
-    });
+    };
+
+    initializeAuth();
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+      
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
         const profile = await fetchDesignerProfile(session.user.id);
-        setDesignerProfile(profile);
+        if (mounted) {
+          setDesignerProfile(profile);
+        }
       } else {
         setDesignerProfile(null);
       }
@@ -97,12 +144,14 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
     try {
-      setLoading(true);
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -115,15 +164,11 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
       return { error: null };
     } catch (error: any) {
       return { error: error.message || 'An error occurred during sign in' };
-    } finally {
-      setLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string, fullName: string): Promise<{ error: string | null }> => {
     try {
-      setLoading(true);
-      
       // First create the auth user
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -150,8 +195,6 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
       return { error: null };
     } catch (error: any) {
       return { error: error.message || 'An error occurred during sign up' };
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -161,7 +204,9 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
       setDesignerProfile(null);
       setUser(null);
       setSession(null);
-      setLoading(false);
+      
+      // Clear profile cache
+      profileCacheRef.current = {};
       
       // Then sign out from Supabase
       await supabase.auth.signOut();
@@ -171,7 +216,7 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
       setDesignerProfile(null);
       setUser(null);
       setSession(null);
-      setLoading(false);
+      profileCacheRef.current = {};
     }
   };
 
@@ -180,6 +225,7 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
     session,
     designerProfile,
     loading,
+    profileLoading,
     signIn,
     signUp,
     signOut,

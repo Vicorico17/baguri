@@ -13,6 +13,7 @@ function DesignerAuthForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [redirecting, setRedirecting] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -22,15 +23,11 @@ function DesignerAuthForm() {
   const router = useRouter();
   const { signIn, signUp, signOut, loading, user, designerProfile } = useDesignerAuth();
 
-  // Auto-redirect to dashboard if user is already logged in
-  // But prevent redirect loops by checking if we're not already redirecting
+  // Optimized redirect logic - immediate redirect when user is authenticated
   useEffect(() => {
     if (user && !loading) {
-      // Add a small delay to prevent rapid redirects
-      const redirectTimer = setTimeout(() => {
-        router.push('/designer-dashboard');
-      }, 100);
-      return () => clearTimeout(redirectTimer);
+      setRedirecting(true);
+      router.push('/designer-dashboard');
     }
   }, [user, loading, router]);
 
@@ -92,6 +89,23 @@ function DesignerAuthForm() {
     }
   };
 
+  // Show redirecting state when user is authenticated
+  if (user && !loading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-white">
+        <BackgroundPaths />
+        <div className="relative z-10 flex items-center justify-center min-h-screen px-4">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+            </div>
+            <p className="text-zinc-400">Redirecting to dashboard...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <BackgroundPaths />
@@ -115,8 +129,6 @@ function DesignerAuthForm() {
                 style={{ filter: "invert(1) brightness(2)" }}
               />
             </Link>
-            
-
           </div>
         </div>
       </header>
@@ -134,7 +146,7 @@ function DesignerAuthForm() {
             </div>
           )}
           
-          {/* Only show auth form if user is not authenticated */}
+          {/* Only show auth form if user is not authenticated and not loading */}
           {!user && !loading && (
             <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl p-8">
               <div className="text-center mb-8">
@@ -282,8 +294,6 @@ function DesignerAuthForm() {
                 }
               </button>
             </div>
-
-
 
             <div className="mt-6 text-center">
               <p className="text-xs text-zinc-500">

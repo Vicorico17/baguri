@@ -89,9 +89,10 @@ function DesignerDashboardContent() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingSecondaryLogo, setUploadingSecondaryLogo] = useState(false);
   const [brandDetailsOpen, setBrandDetailsOpen] = useState(true);
-  const [productsOpen, setProductsOpen] = useState(true);
+  const [productsOpen, setProductsOpen] = useState(false); // Start with products closed for faster initial load
   const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [dashboardReady, setDashboardReady] = useState(false);
   const router = useRouter();
   
   // Use the same auth context as the auth page
@@ -114,7 +115,7 @@ function DesignerDashboardContent() {
     specialties: []
   });
 
-  // Redirect to auth if not authenticated
+  // Optimized redirect logic - immediate redirect if not authenticated
   useEffect(() => {
     if (!loading && !user) {
       router.push('/designer-auth');
@@ -128,10 +129,105 @@ function DesignerDashboardContent() {
     }
   }, [user]);
 
+  // Mark dashboard as ready after initial render
+  useEffect(() => {
+    if (user && !loading) {
+      const timer = setTimeout(() => setDashboardReady(true), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [user, loading]);
+
   const handleLogout = () => {
     signOut();
     router.push('/designer-auth');
   };
+
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-white">
+        <BackgroundPaths />
+        <div className="relative z-10 flex items-center justify-center min-h-screen px-4">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+            </div>
+            <p className="text-zinc-400">Loading dashboard...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render anything if user is not authenticated (redirect will happen)
+  if (!user) {
+    return null;
+  }
+
+  // Show dashboard skeleton while components are loading
+  if (!dashboardReady) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-white">
+        <BackgroundPaths />
+        
+        {/* Header Skeleton */}
+        <header className="fixed top-0 left-0 right-0 z-40 border-b border-zinc-800 bg-zinc-900/95 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="w-24 h-6 bg-zinc-800 rounded animate-pulse"></div>
+              <div className="w-32 h-8 bg-zinc-800 rounded animate-pulse"></div>
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-6 bg-zinc-800 rounded animate-pulse"></div>
+                <div className="w-16 h-6 bg-zinc-800 rounded animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Status Banner Skeleton */}
+        <section className="relative z-10 py-6 pt-20 bg-zinc-900/50">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-20 bg-zinc-800 rounded-full animate-pulse"></div>
+                <div>
+                  <div className="w-48 h-8 bg-zinc-800 rounded animate-pulse mb-2"></div>
+                  <div className="w-32 h-4 bg-zinc-800 rounded animate-pulse"></div>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-32 h-16 bg-zinc-800 rounded animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Main Content Skeleton */}
+        <section className="relative z-10 py-8">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="grid lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 space-y-6">
+                <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl p-6">
+                  <div className="w-48 h-8 bg-zinc-800 rounded animate-pulse mb-6"></div>
+                  <div className="space-y-4">
+                    <div className="w-full h-12 bg-zinc-800 rounded animate-pulse"></div>
+                    <div className="w-full h-12 bg-zinc-800 rounded animate-pulse"></div>
+                    <div className="w-full h-24 bg-zinc-800 rounded animate-pulse"></div>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-6">
+                <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl p-6">
+                  <div className="w-32 h-6 bg-zinc-800 rounded animate-pulse mb-4"></div>
+                  <div className="w-full h-32 bg-zinc-800 rounded animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   const updateProfile = (field: keyof DesignerProfileForm, value: any) => {
     setProfile(prev => ({
@@ -333,20 +429,6 @@ function DesignerDashboardContent() {
       submittedAt: new Date().toISOString().split('T')[0]
     }));
   };
-
-  // Show loading while checking authentication
-  if (loading || !user) {
-    return (
-      <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
-            <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-          </div>
-          <p className="text-zinc-400">{loading ? 'Loading...' : 'Checking authentication...'}</p>
-        </div>
-      </div>
-    );
-  }
 
   const getStatusInfo = (status: string) => {
     switch (status) {
