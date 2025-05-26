@@ -9,6 +9,7 @@ import { BackgroundPaths } from "@/components/ui/background-paths";
 import { BrandShowcase } from "@/components/ui/brand-showcase";
 import { ProgressCircle } from "@/components/ui/progress-circle";
 import { DesignerAuthProvider, useDesignerAuth } from '@/contexts/DesignerAuthContext';
+import { designerService, type DesignerDashboardData, type DesignerProfileForm, type DesignerProduct } from '@/lib/designerService';
 
 // Product stock status options
 const STOCK_STATUS_OPTIONS = [
@@ -27,38 +28,7 @@ const ROMANIAN_CITIES = [
   'Suceava', 'Piatra Neamț', 'Târgu Jiu', 'Tulcea', 'Focșani', 'Bistrița', 'Reșița', 'Alba Iulia'
 ];
 
-type ProductColor = {
-  name: string;
-  images: string[];
-};
-
-type Product = {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  images: string[];
-  sizes: string[];
-  colors: ProductColor[];
-  stockStatus: 'in_stock' | 'made_to_order' | 'coming_soon';
-};
-
-type DesignerProfileForm = {
-  brandName: string;
-  shortDescription: string;
-  longDescription: string;
-  city: string;
-  yearFounded: number;
-  email: string;
-  username: string;
-  password: string;
-  logoUrl: string;
-  secondaryLogoUrl: string;
-  instagramHandle: string;
-  tiktokHandle: string;
-  products: Product[];
-  specialties: string[];
-};
+// Using types from designerService
 
 // Mock designer profile data
 const mockDesignerProfile = {
@@ -69,7 +39,7 @@ const mockDesignerProfile = {
   completionPercentage: 15
 };
 
-function createEmptyProduct(): Product {
+function createEmptyProduct(): DesignerProduct {
   return {
     id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
     name: '',
@@ -83,7 +53,7 @@ function createEmptyProduct(): Product {
 }
 
 function DesignerDashboardContent() {
-  const [profileData, setProfileData] = useState(mockDesignerProfile);
+  const [dashboardData, setDashboardData] = useState<DesignerDashboardData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -93,6 +63,7 @@ function DesignerDashboardContent() {
   const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [dashboardReady, setDashboardReady] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
   const router = useRouter();
   
   // Use the same auth context as the auth page
@@ -106,14 +77,18 @@ function DesignerDashboardContent() {
     yearFounded: new Date().getFullYear(),
     email: '',
     username: '',
-    password: '',
     logoUrl: '',
     secondaryLogoUrl: '',
     instagramHandle: '',
     tiktokHandle: '',
-    products: [createEmptyProduct()],
+    website: '',
     specialties: []
   });
+
+  const [products, setProducts] = useState<DesignerProduct[]>([createEmptyProduct()]);
+  const [status, setStatus] = useState<'draft' | 'submitted' | 'approved' | 'rejected'>('draft');
+  const [submittedAt, setSubmittedAt] = useState<string | null>(null);
+  const [completionPercentage, setCompletionPercentage] = useState(0);
 
   // Optimized redirect logic - immediate redirect if not authenticated
   useEffect(() => {
@@ -122,16 +97,36 @@ function DesignerDashboardContent() {
     }
   }, [loading, user, router]);
 
-  // Set profile email when user is available
+  // Load dashboard data when user is available
   useEffect(() => {
-    if (user?.email) {
-      setProfile(prev => ({ ...prev, email: user.email || '' }));
-    }
-  }, [user]);
+    const loadDashboardData = async () => {
+      if (!user?.id) return;
+      
+      setLoadingData(true);
+      try {
+        const data = await designerService.getDashboardData(user.id);
+        if (data) {
+          setDashboardData(data);
+          setProfile(data.profile);
+          setProducts(data.products);
+          setStatus(data.status);
+          setSubmittedAt(data.submittedAt);
+          setCompletionPercentage(data.completionPercentage);
+        } else {
+          // If no designer profile exists, set email from user
+          setProfile(prev => ({ ...prev, email: user.email || '' }));
+        }
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        // Fallback to setting email from user
+        setProfile(prev => ({ ...prev, email: user.email || '' }));
+      } finally {
+        setLoadingData(false);
+      }
+    };
 
-  // Mark dashboard as ready after initial render
-  useEffect(() => {
     if (user && !loading) {
+      loadDashboardData();
       const timer = setTimeout(() => setDashboardReady(true), 100);
       return () => clearTimeout(timer);
     }
@@ -237,37 +232,28 @@ function DesignerDashboardContent() {
     updateCompletionPercentage();
   };
 
-  const updateProduct = (productId: string, field: keyof Product, value: any) => {
-    setProfile(prev => ({
-      ...prev,
-      products: prev.products.map(product =>
-        product.id === productId
-          ? { ...product, [field]: value }
-          : product
-      )
-    }));
+  const updateProduct = (productId: string, field: keyof DesignerProduct, value: any) => {
+    setProducts(prev => prev.map(product =>
+      product.id === productId
+        ? { ...product, [field]: value }
+        : product
+    ));
     updateCompletionPercentage();
   };
 
   const addProduct = () => {
-    setProfile(prev => ({
-      ...prev,
-      products: [...prev.products, createEmptyProduct()]
-    }));
+    setProducts(prev => [...prev, createEmptyProduct()]);
   };
 
   const removeProduct = (productId: string) => {
-    if (profile.products.length > 1) {
-      setProfile(prev => ({
-        ...prev,
-        products: prev.products.filter(product => product.id !== productId)
-      }));
+    if (products.length > 1) {
+      setProducts(prev => prev.filter(product => product.id !== productId));
       updateCompletionPercentage();
     }
   };
 
   const handleSizeToggle = (productId: string, size: string) => {
-    const product = profile.products.find(p => p.id === productId);
+    const product = products.find(p => p.id === productId);
     if (!product) return;
 
     const newSizes = product.sizes.includes(size)
@@ -278,14 +264,14 @@ function DesignerDashboardContent() {
   };
 
   const addColor = (productId: string) => {
-    const product = profile.products.find(p => p.id === productId);
+    const product = products.find(p => p.id === productId);
     if (!product) return;
     
     updateProduct(productId, 'colors', [...product.colors, { name: '', images: [] }]);
   };
 
   const updateColor = (productId: string, colorIndex: number, value: string) => {
-    const product = profile.products.find(p => p.id === productId);
+    const product = products.find(p => p.id === productId);
     if (!product) return;
     
     const newColors = [...product.colors];
@@ -294,7 +280,7 @@ function DesignerDashboardContent() {
   };
 
   const removeColor = (productId: string, colorIndex: number) => {
-    const product = profile.products.find(p => p.id === productId);
+    const product = products.find(p => p.id === productId);
     if (!product || product.colors.length <= 1) return;
     
     const newColors = product.colors.filter((_, index) => index !== colorIndex);
@@ -302,7 +288,7 @@ function DesignerDashboardContent() {
   };
 
   const addColorImage = (productId: string, colorIndex: number, imageUrl: string) => {
-    const product = profile.products.find(p => p.id === productId);
+    const product = products.find(p => p.id === productId);
     if (!product) return;
     
     const newColors = [...product.colors];
@@ -314,7 +300,7 @@ function DesignerDashboardContent() {
   };
 
   const removeColorImage = (productId: string, colorIndex: number, imageIndex: number) => {
-    const product = profile.products.find(p => p.id === productId);
+    const product = products.find(p => p.id === productId);
     if (!product) return;
     
     const newColors = [...product.colors];
@@ -337,38 +323,40 @@ function DesignerDashboardContent() {
     if (profile.instagramHandle) completed++;
     if (profile.city) completed++;
     if (profile.yearFounded) completed++;
-    if (profile.products.some(p => p.name && p.price > 0)) completed++;
-    if (profile.products.some(p => p.sizes.length > 0)) completed++;
-    if (profile.products.some(p => p.colors.some(c => c.name.trim()))) completed++;
+    if (products.some(p => p.name && p.price > 0)) completed++;
+    if (products.some(p => p.sizes.length > 0)) completed++;
+    if (products.some(p => p.colors.some(c => c.name.trim()))) completed++;
 
     const percentage = Math.round((completed / total) * 100);
-    setProfileData(prev => ({ ...prev, completionPercentage: percentage }));
+    setCompletionPercentage(percentage);
   };
 
-  // Mock upload function for color images
+  // Real Supabase upload function for color images
   const handleColorImageUpload = async (file: File, productId: string, colorIndex: number) => {
+    if (!user?.id) return;
+    
     try {
-      // Mock upload - replace with real implementation
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const fileName = `product-${productId}-color-${colorIndex}-${Date.now()}`;
+      const result = await designerService.uploadFile(file, 'product-images', user.id, fileName);
       
-      // Create a temporary URL for the uploaded file (for preview purposes)
-      const objectUrl = URL.createObjectURL(file);
-      
-      // Add the image to the specific color
-      addColorImage(productId, colorIndex, objectUrl);
-      
-      // In a real implementation, you would upload to Supabase storage here
-      // const { data, error } = await supabase.storage
-      //   .from('product-images')
-      //   .upload(`${userId}/${productId}/color-${colorIndex}/${Date.now()}`, file);
-      
-    } catch (error) {
+      if (result.success && result.url) {
+        // Add the image to the specific color
+        addColorImage(productId, colorIndex, result.url);
+        console.log('Product image uploaded successfully');
+      } else {
+        console.error('Upload error:', result.error);
+        alert(`Error uploading product image: ${result.error}`);
+      }
+    } catch (error: any) {
       console.error('Upload error:', error);
+      alert(`Error uploading product image: ${error.message}`);
     }
   };
 
-  // Mock upload function - replace with real Supabase upload
+  // Real Supabase upload function
   const handleLogoUpload = async (file: File, isSecondary = false) => {
+    if (!user?.id) return;
+    
     if (isSecondary) {
       setUploadingSecondaryLogo(true);
     } else {
@@ -376,25 +364,23 @@ function DesignerDashboardContent() {
     }
 
     try {
-      // Mock upload - replace with real implementation
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const fileName = isSecondary ? 'secondary-logo' : 'logo';
+      const result = await designerService.uploadFile(file, 'logos', user.id, fileName);
       
-      // Create a temporary URL for the uploaded file (for preview purposes)
-      const objectUrl = URL.createObjectURL(file);
-      
-      if (isSecondary) {
-        updateProfile('secondaryLogoUrl', objectUrl);
+      if (result.success && result.url) {
+        if (isSecondary) {
+          updateProfile('secondaryLogoUrl', result.url);
+        } else {
+          updateProfile('logoUrl', result.url);
+        }
+        console.log(`${isSecondary ? 'Secondary logo' : 'Logo'} uploaded successfully`);
       } else {
-        updateProfile('logoUrl', objectUrl);
+        console.error('Upload error:', result.error);
+        alert(`Error uploading ${isSecondary ? 'secondary logo' : 'logo'}: ${result.error}`);
       }
-      
-      // In a real implementation, you would upload to Supabase storage here
-      // const { data, error } = await supabase.storage
-      //   .from('logos')
-      //   .upload(`${userId}/${isSecondary ? 'secondary-' : ''}logo-${Date.now()}`, file);
-      
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error);
+      alert(`Error uploading ${isSecondary ? 'secondary logo' : 'logo'}: ${error.message}`);
     } finally {
       if (isSecondary) {
         setUploadingSecondaryLogo(false);
@@ -405,29 +391,71 @@ function DesignerDashboardContent() {
   };
 
   const handleSaveProfile = async () => {
+    if (!user?.id) return;
+    
     setSaving(true);
     try {
-      // Here you would save to Supabase
-      console.log('Saving profile:', profile);
-      
-      // Simulate save delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Save profile data
+      const profileResult = await designerService.saveDesignerProfile(user.id, profile);
+      if (!profileResult.success) {
+        console.error('Error saving profile:', profileResult.error);
+        alert(`Error saving profile: ${profileResult.error}`);
+        return;
+      }
+
+      // Save products data
+      const productsResult = await designerService.saveDesignerProducts(user.id, products);
+      if (!productsResult.success) {
+        console.error('Error saving products:', productsResult.error);
+        alert(`Error saving products: ${productsResult.error}`);
+        return;
+      }
       
       // Update completion status
       updateCompletionPercentage();
-    } catch (error) {
+      console.log('Profile and products saved successfully');
+      
+      // Show success feedback (you can replace this with a toast notification)
+      const saveButton = document.querySelector('[data-save-button]');
+      if (saveButton) {
+        const originalText = saveButton.textContent;
+        saveButton.textContent = 'Saved!';
+        setTimeout(() => {
+          saveButton.textContent = originalText;
+        }, 2000);
+      }
+    } catch (error: any) {
       console.error('Error saving profile:', error);
+      alert(`Error saving profile: ${error.message}`);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleSubmitForReview = () => {
-    setProfileData(prev => ({
-      ...prev,
-      status: 'submitted' as "draft" | "submitted" | "approved" | "rejected",
-      submittedAt: new Date().toISOString().split('T')[0]
-    }));
+  const handleSubmitForReview = async () => {
+    if (!user?.id) return;
+    
+    try {
+      // First save current data
+      await handleSaveProfile();
+      
+      // Then submit for review
+      const result = await designerService.submitForReview(user.id);
+      if (result.success) {
+        // Reload dashboard data to get updated status
+        const updatedData = await designerService.getDashboardData(user.id);
+        if (updatedData) {
+          setStatus(updatedData.status);
+          setSubmittedAt(updatedData.submittedAt);
+        }
+        alert('Successfully submitted for review! Our team will review your application and get back to you soon.');
+      } else {
+        alert(`Error submitting for review: ${result.error}`);
+      }
+    } catch (error: any) {
+      console.error('Error submitting for review:', error);
+      alert(`Error submitting for review: ${error.message}`);
+    }
   };
 
   const getStatusInfo = (status: string) => {
@@ -470,8 +498,8 @@ function DesignerDashboardContent() {
     }
   };
 
-  const canSubmit = profileData.completionPercentage >= 80 && profileData.status === 'draft';
-  const statusInfo = getStatusInfo(profileData.status);
+  const canSubmit = completionPercentage >= 80 && status === 'draft';
+  const statusInfo = getStatusInfo(status);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
@@ -557,12 +585,12 @@ function DesignerDashboardContent() {
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <div className="text-sm text-zinc-400">Profile Completion</div>
-                <div className="text-xl font-bold">{profileData.completionPercentage}%</div>
+                <div className="text-xl font-bold">{completionPercentage}%</div>
               </div>
               <div className="w-32 h-2 bg-zinc-800 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-500"
-                  style={{ width: `${profileData.completionPercentage}%` }}
+                  style={{ width: `${completionPercentage}%` }}
                 />
               </div>
             </div>
@@ -975,11 +1003,11 @@ function DesignerDashboardContent() {
                 {productsOpen && (
                   <div className="px-6 pb-6">
                     <div className="space-y-6">
-                      {profile.products.map((product, index) => (
+                      {products.map((product, index) => (
                         <div key={product.id} className="border border-zinc-700 rounded-xl p-6 bg-zinc-800/50">
                           <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-medium">Product {index + 1}</h3>
-                            {profile.products.length > 1 && isEditMode && (
+                            {products.length > 1 && isEditMode && (
                               <button
                                 onClick={() => removeProduct(product.id)}
                                 className="text-red-400 hover:text-red-300 transition"
@@ -1238,30 +1266,7 @@ function DesignerDashboardContent() {
                         )}
                       </div>
                       
-                      <div>
-                        <label className="text-sm font-medium mb-2 flex items-center gap-2">
-                          <ProgressCircle isComplete={!!profile.password.trim()} />
-                          Password
-                        </label>
-                        {!isEditMode && profile.password ? (
-                          <div className="px-4 py-3 text-zinc-300">
-                            ••••••••
-                          </div>
-                        ) : (
-                          <input
-                            type="password"
-                            value={profile.password}
-                            onChange={(e) => updateProfile('password', e.target.value)}
-                            disabled={!isEditMode}
-                            className={`w-full px-4 py-3 border rounded-lg transition ${
-                              isEditMode 
-                                ? 'bg-zinc-800 border-zinc-700 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent'
-                                : 'bg-zinc-700/50 border-zinc-600 text-zinc-300 cursor-not-allowed'
-                            }`}
-                            placeholder="Your password"
-                          />
-                        )}
-                      </div>
+
                       
                       <div className="md:col-span-2">
                         <label className="text-sm font-medium mb-2 flex items-center gap-2">
@@ -1296,10 +1301,10 @@ function DesignerDashboardContent() {
             {/* Sidebar */}
             <div className="space-y-6">
               <ActionCard
-                status={profileData.status}
+                status={status}
                 canSubmit={canSubmit}
                 onSubmit={handleSubmitForReview}
-                completionPercentage={profileData.completionPercentage}
+                completionPercentage={completionPercentage}
               />
               
               <GuidelinesCard />

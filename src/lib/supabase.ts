@@ -11,6 +11,12 @@ export type Designer = {
   hunter_id?: string
   brand_name: string
   description?: string
+  short_description?: string
+  long_description?: string
+  city?: string
+  year_founded?: number
+  username?: string
+  specialties?: string[]
   email: string
   logo_url?: string
   secondary_logo_url?: string
@@ -23,9 +29,11 @@ export type Designer = {
   owns_rights?: boolean
   accept_terms?: boolean
   wants_ai_photos?: boolean
-  status?: 'pending' | 'approved' | 'rejected'
+  status?: 'draft' | 'submitted' | 'approved' | 'rejected'
   submitted_at?: string
   reviewed_at?: string
+  created_at?: string
+  updated_at?: string
 }
 
 export type DesignerAuth = {
@@ -34,6 +42,21 @@ export type DesignerAuth = {
   designer_id: string
   role: 'designer' | 'admin'
   is_approved: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type DesignerProduct = {
+  id: string
+  designer_id: string
+  name: string
+  description?: string
+  price: string
+  images?: string[]
+  sizes?: string[]
+  colors?: any[] // JSON field for color objects
+  stock_status: 'in_stock' | 'made_to_order' | 'coming_soon'
+  is_active: boolean
   created_at: string
   updated_at: string
 }
