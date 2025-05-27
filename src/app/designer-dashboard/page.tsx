@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -64,6 +64,7 @@ function DesignerDashboardContent() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [dashboardReady, setDashboardReady] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
   
   // Use the same auth context as the auth page
@@ -133,6 +134,15 @@ function DesignerDashboardContent() {
       loadDashboardData();
     }
   }, [user, loading]);
+
+  // Cleanup auto-save timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleLogout = () => {
     signOut();
@@ -232,6 +242,16 @@ function DesignerDashboardContent() {
       [field]: value
     }));
     updateCompletionPercentage();
+    
+    // Auto-save after a short delay when in edit mode
+    if (isEditMode) {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        handleSaveProfile();
+      }, 2000); // Auto-save after 2 seconds of inactivity
+    }
   };
 
   const updateProduct = (productId: string, field: keyof DesignerProduct, value: any) => {
@@ -241,6 +261,16 @@ function DesignerDashboardContent() {
         : product
     ));
     updateCompletionPercentage();
+    
+    // Auto-save after a short delay when in edit mode
+    if (isEditMode) {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        handleSaveProfile();
+      }, 2000); // Auto-save after 2 seconds of inactivity
+    }
   };
 
   const addProduct = () => {
@@ -415,9 +445,19 @@ function DesignerDashboardContent() {
       
       // Update completion status
       updateCompletionPercentage();
-      console.log('Profile and products saved successfully');
       
-      // Show success feedback (you can replace this with a toast notification)
+      // Reload dashboard data to ensure everything is synced
+      const updatedData = await designerService.getDashboardData(user.id);
+      if (updatedData) {
+        setDashboardData(updatedData);
+        setProfile(updatedData.profile);
+        setProducts(updatedData.products);
+        setStatus(updatedData.status);
+        setSubmittedAt(updatedData.submittedAt);
+        setCompletionPercentage(updatedData.completionPercentage);
+      }
+      
+      // Show success feedback
       const saveButton = document.querySelector('[data-save-button]');
       if (saveButton) {
         const originalText = saveButton.textContent;
@@ -426,6 +466,8 @@ function DesignerDashboardContent() {
           saveButton.textContent = originalText;
         }, 2000);
       }
+      
+      console.log('Profile and products saved successfully and data refreshed');
     } catch (error: any) {
       console.error('Error saving profile:', error);
       alert(`Error saving profile: ${error.message}`);
@@ -529,7 +571,13 @@ function DesignerDashboardContent() {
             
             <div className="flex items-center gap-4">
               <button
-                onClick={() => setIsEditMode(!isEditMode)}
+                onClick={async () => {
+                  if (isEditMode) {
+                    // Save any pending changes before switching to view mode
+                    await handleSaveProfile();
+                  }
+                  setIsEditMode(!isEditMode);
+                }}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
                   isEditMode 
                     ? 'bg-amber-600 text-white hover:bg-amber-700' 
@@ -537,8 +585,21 @@ function DesignerDashboardContent() {
                 }`}
               >
                 <Edit size={16} />
-                {isEditMode ? 'Lock Profile' : 'Edit Profile'}
+                {isEditMode ? 'View Mode' : 'Edit Profile'}
               </button>
+              
+              {isEditMode && (
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={saving}
+                  data-save-button
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Save size={16} />
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+              )}
+              
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-2 text-zinc-400 hover:text-white transition"
