@@ -93,7 +93,7 @@ function DesignerDashboardContent() {
   // Optimized redirect logic - immediate redirect if not authenticated
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/designer-auth');
+      router.replace('/designer-auth');
     }
   }, [loading, user, router]);
 
@@ -102,9 +102,11 @@ function DesignerDashboardContent() {
     const loadDashboardData = async () => {
       if (!user?.id) return;
       
+      console.log('Loading dashboard data for user:', user.id);
       setLoadingData(true);
       try {
         const data = await designerService.getDashboardData(user.id);
+        console.log('Dashboard data loaded:', data);
         if (data) {
           setDashboardData(data);
           setProfile(data.profile);
@@ -114,6 +116,7 @@ function DesignerDashboardContent() {
           setCompletionPercentage(data.completionPercentage);
         } else {
           // If no designer profile exists, set email from user
+          console.log('No designer profile found, setting default data');
           setProfile(prev => ({ ...prev, email: user.email || '' }));
         }
       } catch (error) {
@@ -122,13 +125,14 @@ function DesignerDashboardContent() {
         setProfile(prev => ({ ...prev, email: user.email || '' }));
       } finally {
         setLoadingData(false);
+        setDashboardReady(true); // Set ready immediately when data loading is done
+        console.log('Dashboard ready');
       }
     };
 
     if (user && !loading) {
+      console.log('User authenticated, loading dashboard');
       loadDashboardData();
-      const timer = setTimeout(() => setDashboardReady(true), 100);
-      return () => clearTimeout(timer);
     }
   }, [user, loading]);
 
@@ -159,8 +163,8 @@ function DesignerDashboardContent() {
     return null;
   }
 
-  // Show dashboard skeleton while components are loading
-  if (!dashboardReady) {
+  // Show dashboard skeleton while data is loading (but only if still loading data)
+  if (loadingData && !dashboardReady) {
     return (
       <div className="min-h-screen bg-zinc-950 text-white">
         <BackgroundPaths />

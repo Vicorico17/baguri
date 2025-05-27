@@ -27,7 +27,8 @@ function DesignerAuthForm() {
   useEffect(() => {
     if (user && !loading) {
       setRedirecting(true);
-      router.push('/designer-dashboard');
+      // Use replace instead of push to avoid back button issues
+      router.replace('/designer-dashboard');
     }
   }, [user, loading, router]);
 
@@ -100,6 +101,12 @@ function DesignerAuthForm() {
               <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
             </div>
             <p className="text-zinc-400">Redirecting to dashboard...</p>
+            <button 
+              onClick={() => router.replace('/designer-dashboard')}
+              className="mt-4 text-sm text-zinc-500 hover:text-zinc-300 underline"
+            >
+              Click here if not redirected automatically
+            </button>
           </div>
         </div>
       </div>

@@ -82,28 +82,8 @@ class DesignerService {
     try {
       const designerProfile = await this.getDesignerByUserId(userId);
       if (!designerProfile) {
-        // Return empty dashboard data for new users
-        return {
-          profile: {
-            brandName: '',
-            shortDescription: '',
-            longDescription: '',
-            city: 'Bucharest',
-            yearFounded: new Date().getFullYear(),
-            email: '',
-            username: '',
-            logoUrl: '',
-            secondaryLogoUrl: '',
-            instagramHandle: '',
-            tiktokHandle: '',
-            website: '',
-            specialties: [],
-          },
-          products: [],
-          status: 'draft',
-          submittedAt: null,
-          completionPercentage: 0,
-        };
+        // Return null for new users - let the dashboard handle the empty state
+        return null;
       }
 
       // Get products

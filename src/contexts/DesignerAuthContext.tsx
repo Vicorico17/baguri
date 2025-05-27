@@ -100,18 +100,13 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
         setUser(session?.user ?? null);
         setLoading(false); // Set loading false immediately after getting session
         
-        // Load profile in background if user exists - with debouncing
+        // Load profile in background if user exists - no delay needed
         if (session?.user) {
-          // Small delay to prevent rapid successive calls
-          setTimeout(() => {
+          fetchDesignerProfile(session.user.id).then((profile) => {
             if (mounted) {
-              fetchDesignerProfile(session.user.id).then((profile) => {
-                if (mounted) {
-                  setDesignerProfile(profile);
-                }
-              });
+              setDesignerProfile(profile);
             }
-          }, 50);
+          });
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
