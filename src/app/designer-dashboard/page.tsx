@@ -102,11 +102,9 @@ function DesignerDashboardContent() {
     const loadDashboardData = async () => {
       if (!user?.id) return;
       
-      console.log('Loading dashboard data for user:', user.id);
       setLoadingData(true);
       try {
         const data = await designerService.getDashboardData(user.id);
-        console.log('Dashboard data loaded:', data);
         if (data) {
           setDashboardData(data);
           setProfile(data.profile);
@@ -116,9 +114,11 @@ function DesignerDashboardContent() {
           setCompletionPercentage(data.completionPercentage);
         } else {
           // If no designer profile exists, set email from user
-          console.log('No designer profile found, setting default data');
           setProfile(prev => ({ ...prev, email: user.email || '' }));
         }
+        
+        // Always ensure email is synced with auth user
+        setProfile(prev => ({ ...prev, email: user.email || prev.email }));
       } catch (error) {
         console.error('Error loading dashboard data:', error);
         // Fallback to setting email from user
@@ -126,12 +126,10 @@ function DesignerDashboardContent() {
       } finally {
         setLoadingData(false);
         setDashboardReady(true); // Set ready immediately when data loading is done
-        console.log('Dashboard ready');
       }
     };
 
     if (user && !loading) {
-      console.log('User authenticated, loading dashboard');
       loadDashboardData();
     }
   }, [user, loading]);
@@ -1276,25 +1274,14 @@ function DesignerDashboardContent() {
                         <label className="text-sm font-medium mb-2 flex items-center gap-2">
                           <ProgressCircle isComplete={!!profile.email.trim()} />
                           Email Address
+                          <span className="text-xs text-zinc-500">(from your account)</span>
                         </label>
-                        {!isEditMode && profile.email ? (
-                          <div className="px-4 py-3 text-zinc-300">
-                            {profile.email}
-                          </div>
-                        ) : (
-                          <input
-                            type="email"
-                            value={profile.email}
-                            onChange={(e) => updateProfile('email', e.target.value)}
-                            disabled={!isEditMode}
-                            className={`w-full px-4 py-3 border rounded-lg transition ${
-                              isEditMode 
-                                ? 'bg-zinc-800 border-zinc-700 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent'
-                                : 'bg-zinc-700/50 border-zinc-600 text-zinc-300 cursor-not-allowed'
-                            }`}
-                            placeholder="your.email@example.com"
-                          />
-                        )}
+                        <div className="px-4 py-3 text-zinc-300 bg-zinc-700/50 border border-zinc-600 rounded-lg">
+                          {profile.email || user?.email || 'No email found'}
+                        </div>
+                        <p className="text-xs text-zinc-500 mt-1">
+                          Email is synced from your account and cannot be changed here
+                        </p>
                       </div>
                     </div>
                   </div>

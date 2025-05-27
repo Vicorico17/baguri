@@ -97,6 +97,9 @@ class DesignerService {
         console.error('Error fetching products:', productsError);
       }
 
+      // Get the current auth user to ensure email sync
+      const { data: { user } } = await supabase.auth.getUser();
+      
       // Convert database data to form format
       const profile: DesignerProfileForm = {
         brandName: designerProfile.brand_name || '',
@@ -104,7 +107,7 @@ class DesignerService {
         longDescription: designerProfile.long_description || designerProfile.description || '',
         city: designerProfile.city || '',
         yearFounded: designerProfile.year_founded || new Date().getFullYear(),
-        email: designerProfile.email || '',
+        email: user?.email || designerProfile.email || '', // Always use auth user's email as source of truth
         username: designerProfile.username || '',
         logoUrl: designerProfile.logo_url || '',
         secondaryLogoUrl: designerProfile.secondary_logo_url || '',
@@ -153,11 +156,18 @@ class DesignerService {
   // Save designer profile
   async saveDesignerProfile(userId: string, profileData: DesignerProfileForm): Promise<{ success: boolean; error?: string }> {
     try {
+      // Get the current auth user to ensure email sync
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        return { success: false, error: 'User not authenticated' };
+      }
+
       let designerProfile = await this.getDesignerByUserId(userId);
       
       // If no designer profile exists, create one
       if (!designerProfile) {
-        const createResult = await this.createDesignerProfile(userId, profileData.email, profileData.brandName || 'New Brand');
+        // Use the auth user's email as the source of truth
+        const createResult = await this.createDesignerProfile(userId, user.email || profileData.email, profileData.brandName || 'New Brand');
         if (!createResult.success) {
           return { success: false, error: createResult.error };
         }
@@ -168,7 +178,7 @@ class DesignerService {
         }
       }
 
-      // Update designers table
+      // Update designers table - always sync email with auth user
       const { error: updateError } = await supabase
         .from('designers')
         .update({
@@ -179,6 +189,7 @@ class DesignerService {
           city: profileData.city,
           year_founded: profileData.yearFounded,
           username: profileData.username,
+          email: user.email, // Always sync with auth user's email
           logo_url: profileData.logoUrl,
           secondary_logo_url: profileData.secondaryLogoUrl,
           instagram: profileData.instagramHandle,
@@ -299,12 +310,18 @@ class DesignerService {
   // Create designer profile for new user
   async createDesignerProfile(userId: string, email: string, brandName: string): Promise<{ success: boolean; error?: string; designerId?: string }> {
     try {
-      // First create the designer record
+      // Get the current auth user to ensure we use the correct email
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        return { success: false, error: 'User not authenticated' };
+      }
+
+      // First create the designer record - always use auth user's email
       const { data: designerData, error: designerError } = await supabase
         .from('designers')
         .insert({
           brand_name: brandName,
-          email: email,
+          email: user.email, // Always use auth user's email as source of truth
           status: 'draft',
         })
         .select()

@@ -8,7 +8,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 // Types for our database
 export type Designer = {
   id: string
-  hunter_id?: string
   brand_name: string
   description?: string
   short_description?: string
@@ -32,6 +31,7 @@ export type Designer = {
   status?: 'draft' | 'submitted' | 'approved' | 'rejected'
   submitted_at?: string
   reviewed_at?: string
+  rejection_reason?: string
   created_at?: string
   updated_at?: string
 }
