@@ -469,33 +469,41 @@ function DesignerDashboardContent() {
       <BackgroundPaths />
       
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-40 border-b border-zinc-800 bg-zinc-900/95 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+      <header className="fixed top-0 left-0 right-0 z-40 border-b border-zinc-800 bg-zinc-900/95 backdrop-blur-sm safe-area-top mobile-header">
+        <div className="max-w-7xl mx-auto px-4 py-4 mobile-px-3 mobile-py-3">
           <div className="flex items-center justify-between">
-            <Link href="/shop" className="flex items-center gap-2 text-zinc-400 hover:text-white transition">
+            {/* Mobile back button - separate from desktop */}
+            <Link href="/shop" className="md:flex items-center gap-2 text-zinc-400 hover:text-white transition mobile-touch-target hidden">
               <ArrowLeft size={20} />
-              Back to Shop
+              <span className="hidden sm:inline">Back to Shop</span>
             </Link>
             
-            <Link href="/">
+            {/* Mobile-only back button */}
+            <Link href="/shop" className="md:hidden flex items-center gap-1 text-zinc-400 hover:text-white transition mobile-touch-target">
+              <ArrowLeft size={18} />
+              <span className="text-sm">Shop</span>
+            </Link>
+            
+            <Link href="/" className="mobile-touch-target">
               <Image
                 src="/wlogo.png"
                 alt="Baguri"
                 width={120}
                 height={30}
-                className="h-8 w-auto object-contain"
+                className="h-8 w-auto object-contain mobile-h-6"
                 style={{ filter: "invert(1) brightness(2)" }}
               />
             </Link>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 mobile-gap-2">
               {!isEditMode ? (
               <button
                   onClick={() => setIsEditMode(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-white text-zinc-900 hover:bg-zinc-200 rounded-lg font-medium transition"
+                  className="flex items-center gap-2 px-4 py-2 bg-white text-zinc-900 hover:bg-zinc-200 rounded-lg font-medium transition mobile-touch-target mobile-px-3 mobile-py-2 mobile-text-sm"
               >
-                <Edit size={16} />
-                  Edit Profile
+                <Edit size={16} className="mobile-w-4 mobile-h-4" />
+                <span className="hidden sm:inline">Edit Profile</span>
+                <span className="sm:hidden">Edit</span>
               </button>
               ) : (
               <button
@@ -504,19 +512,20 @@ function DesignerDashboardContent() {
                     setIsEditMode(false);
                   }}
                   disabled={saving}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed mobile-touch-target mobile-px-3 mobile-py-2 mobile-text-sm mobile-loading"
               >
-                  <Save size={16} />
-                  {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : 'Save'}
+                  <Save size={16} className="mobile-w-4 mobile-h-4" />
+                  <span className="hidden sm:inline">{saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : 'Save'}</span>
+                  <span className="sm:hidden">{saveStatus === 'saving' ? '...' : saveStatus === 'saved' ? '✓' : 'Save'}</span>
               </button>
               )}
               
               <button
                 onClick={signOut}
-                className="flex items-center gap-2 px-4 py-2 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white rounded-lg font-medium transition"
+                className="flex items-center gap-2 px-4 py-2 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white rounded-lg font-medium transition mobile-touch-target mobile-px-3 mobile-py-2 mobile-text-sm"
               >
-                <LogOut size={16} />
-                Logout
+                <LogOut size={16} className="mobile-w-4 mobile-h-4" />
+                <span className="hidden md:inline">Logout</span>
               </button>
             </div>
           </div>
@@ -524,44 +533,45 @@ function DesignerDashboardContent() {
       </header>
 
       {/* Status Banner */}
-      <section className="relative z-10 py-6 pt-20 bg-zinc-900/50">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+      <section className="relative z-10 py-6 pt-20 bg-zinc-900/50 mobile-pt-16 mobile-py-4">
+        <div className="max-w-7xl mx-auto px-4 mobile-px-3">
+          <div className="flex items-center justify-between mobile-flex-col mobile-items-start mobile-gap-4">
+            <div className="flex items-center gap-4 mobile-gap-3 mobile-w-full">
               <BrandShowcase 
                 logoUrl={profile.logoUrl}
                 brandName={profile.brandName}
                 size="lg"
+                className="mobile-w-12 mobile-h-12"
               />
-              <div>
-                <h1 className="text-2xl font-bold">{profile.brandName || 'Your Designer Profile'}</h1>
-                <div className="flex items-center gap-4 mt-1 mb-2">
+              <div className="mobile-flex-1">
+                <h1 className="text-2xl font-bold mobile-text-xl mobile-line-clamp-2">{profile.brandName || 'Your Designer Profile'}</h1>
+                <div className="flex items-center gap-4 mt-1 mb-2 mobile-gap-3 mobile-flex-wrap">
                   {profile.city && (
-                    <div className="flex items-center gap-1 text-sm text-zinc-300">
+                    <div className="flex items-center gap-1 text-sm text-zinc-300 mobile-text-xs">
                       📍 {profile.city}
                     </div>
                   )}
                   {profile.yearFounded && (
-                    <div className="flex items-center gap-1 text-sm text-zinc-300">
+                    <div className="flex items-center gap-1 text-sm text-zinc-300 mobile-text-xs">
                       📅 Est. {profile.yearFounded}
                     </div>
                   )}
                 </div>
-                <p className="text-zinc-400">{statusInfo.description}</p>
+                <p className="text-zinc-400 mobile-text-sm mobile-line-clamp-2">{statusInfo.description}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <div className={`px-2 py-1 rounded-md text-xs font-medium ${statusInfo.color}`}>
+                  <div className={`px-2 py-1 rounded-md text-xs font-medium mobile-text-xs ${statusInfo.color}`}>
                     {statusInfo.text}
                   </div>
                 </div>
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="text-sm text-zinc-400">Profile Completion</div>
-                <div className="text-xl font-bold">{completionPercentage}%</div>
+            <div className="flex items-center gap-4 mobile-w-full mobile-justify-between mobile-bg-zinc-800/50 mobile-p-3 mobile-rounded-lg">
+              <div className="text-right mobile-text-left">
+                <div className="text-sm text-zinc-400 mobile-text-xs">Profile Completion</div>
+                <div className="text-xl font-bold mobile-text-lg">{completionPercentage}%</div>
               </div>
-              <div className="w-32 h-2 bg-zinc-800 rounded-full overflow-hidden">
+              <div className="w-32 h-2 bg-zinc-800 rounded-full overflow-hidden mobile-flex-1 mobile-ml-4">
                 <div 
                   className="h-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-500"
                   style={{ width: `${completionPercentage}%` }}
@@ -574,14 +584,14 @@ function DesignerDashboardContent() {
 
       {/* Error Display */}
       {error && (
-        <section className="relative z-10 py-4">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="bg-red-900/20 border border-red-700/50 rounded-lg p-4 flex items-center gap-3">
-              <div className="text-red-400">⚠️</div>
-              <div className="flex-1">
-                <div className="text-red-300 font-medium">Data Loading Error</div>
-                <div className="text-red-400 text-sm">{error}</div>
-                <div className="flex gap-2 mt-3">
+        <section className="relative z-10 py-4 mobile-py-3">
+          <div className="max-w-7xl mx-auto px-4 mobile-px-3">
+            <div className="bg-red-900/20 border border-red-700/50 rounded-lg p-4 flex items-center gap-3 mobile-p-3 mobile-flex-col mobile-items-start">
+              <div className="text-red-400 mobile-self-start">⚠️</div>
+              <div className="flex-1 mobile-w-full">
+                <div className="text-red-300 font-medium mobile-text-sm">Data Loading Error</div>
+                <div className="text-red-400 text-sm mobile-text-xs mobile-line-clamp-3">{error}</div>
+                <div className="flex gap-2 mt-3 mobile-gap-2 mobile-flex-wrap">
                   <button
                     onClick={() => {
                       setError(null);
@@ -605,19 +615,19 @@ function DesignerDashboardContent() {
                         loadDashboardData();
                       }
                     }}
-                    className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white text-sm rounded transition-colors"
+                    className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white text-sm rounded transition-colors mobile-touch-target mobile-text-xs"
                   >
                     Retry
                   </button>
                   <button
                     onClick={testDatabaseConnectivity}
-                    className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded transition-colors"
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded transition-colors mobile-touch-target mobile-text-xs"
                   >
                     Test Database
                   </button>
                 </div>
                 {dbTestResult && (
-                  <div className="mt-2 text-sm text-zinc-300 bg-zinc-800/50 p-2 rounded">
+                  <div className="mt-2 text-sm text-zinc-300 bg-zinc-800/50 p-2 rounded mobile-text-xs mobile-p-2">
                     {dbTestResult}
                   </div>
                 )}
@@ -628,27 +638,27 @@ function DesignerDashboardContent() {
       )}
 
       {/* Main Content */}
-      <section className="relative z-10 py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid lg:grid-cols-3 gap-8">
+      <section className="relative z-10 py-8 mobile-py-4 safe-area-bottom">
+        <div className="max-w-7xl mx-auto px-4 mobile-px-3">
+          <div className="grid lg:grid-cols-3 gap-8 mobile-grid-1 mobile-gap-4">
             
             {/* Profile Form */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-6 mobile-gap-4">
               
               {/* Brand Details Section */}
-              <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl overflow-hidden">
-                <div className="p-6 flex items-center justify-between">
+              <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl overflow-hidden mobile-rounded-lg mobile-card">
+                <div className="p-6 flex items-center justify-between mobile-p-4">
                   <button
                     onClick={() => setBrandDetailsOpen(!brandDetailsOpen)}
-                    className="flex items-center gap-2 hover:bg-zinc-800/50 transition text-left -mx-6 -my-6 px-6 py-6 flex-1"
+                    className="flex items-center gap-2 hover:bg-zinc-800/50 transition text-left -mx-6 -my-6 px-6 py-6 flex-1 mobile-touch-target mobile--mx-4 mobile--my-4 mobile-px-4 mobile-py-4"
                   >
-                    <h2 className="text-2xl font-bold flex items-center gap-2">
+                    <h2 className="text-2xl font-bold flex items-center gap-2 mobile-text-lg">
                       ✨ Brand Details
                     </h2>
                     {brandDetailsOpen ? (
-                      <ChevronUp size={24} className="text-zinc-400 ml-2" />
+                      <ChevronUp size={24} className="text-zinc-400 ml-2 mobile-w-5 mobile-h-5" />
                     ) : (
-                      <ChevronDown size={24} className="text-zinc-400 ml-2" />
+                      <ChevronDown size={24} className="text-zinc-400 ml-2 mobile-w-5 mobile-h-5" />
                     )}
                   </button>
                 </div>

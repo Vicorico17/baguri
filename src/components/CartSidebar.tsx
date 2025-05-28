@@ -3,7 +3,7 @@
 import { X, Plus, Minus } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { getStripePaymentUrl, hasStripeIntegration, getStripeData } from '@/lib/stripe';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // Placeholder component for images
 function PlaceholderImage({ type, className, alt }: { type: 'product' | 'logo'; className?: string; alt: string }) {
@@ -28,6 +28,19 @@ export function CartSidebar() {
   const { cart, isCartOpen, setIsCartOpen, updateCartItemQuantity, cartTotal } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Prevent body scroll when cart is open on mobile
+  useEffect(() => {
+    if (isCartOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isCartOpen]);
 
   const handleQuickCheckout = async () => {
     if (cart.length === 0) return;
@@ -83,40 +96,43 @@ export function CartSidebar() {
   if (!isCartOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex justify-end z-50" onClick={() => setIsCartOpen(false)}>
-      <div className="bg-zinc-900 w-full max-w-md h-full overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold">Shopping Cart</h2>
-            <button onClick={() => setIsCartOpen(false)} className="p-1 hover:bg-zinc-800 rounded">
+    <div className="fixed inset-0 bg-black/50 flex justify-end z-50 safe-area-inset" onClick={() => setIsCartOpen(false)}>
+      {/* Mobile handle bar - only visible on mobile */}
+      <div className="md:hidden absolute top-4 left-1/2 transform -translate-x-1/2 w-12 h-1 bg-white/30 rounded-full z-10"></div>
+      
+      <div className="bg-zinc-900 w-full max-w-md h-full overflow-y-auto mobile-cart-sidebar mobile-slide-up" onClick={e => e.stopPropagation()}>
+        <div className="p-6 mobile-p-4 safe-area-bottom">
+          <div className="flex justify-between items-center mb-6 mobile-mb-4">
+            <h2 className="text-xl font-bold mobile-text-lg">Shopping Cart</h2>
+            <button onClick={() => setIsCartOpen(false)} className="p-1 hover:bg-zinc-800 rounded mobile-touch-target">
               <X size={20} />
             </button>
           </div>
           
           {cart.length === 0 ? (
-            <p className="text-zinc-400 text-center py-8">Your cart is empty</p>
+            <p className="text-zinc-400 text-center py-8 mobile-py-6">Your cart is empty</p>
           ) : (
             <>
-              <div className="space-y-4 mb-6">
+              <div className="space-y-4 mb-6 mobile-gap-3 mobile-mb-4">
                 {cart.map((item, index) => {
                   const stripeData = getStripeData(item.id);
                   
                   return (
-                    <div key={`${item.id}-${item.size}-${item.color}-${index}`} className="flex gap-3 p-3 bg-zinc-800 rounded-lg">
+                    <div key={`${item.id}-${item.size}-${item.color}-${index}`} className="flex gap-3 p-3 bg-zinc-800 rounded-lg mobile-p-3 mobile-card">
                       <PlaceholderImage 
                         type="product" 
                         alt={item.name}
-                        className="w-15 h-20 rounded"
+                        className="w-15 h-20 rounded mobile-w-12 mobile-h-16"
                       />
                       <div className="flex-1">
-                        <h3 className="font-medium mb-1">{item.name}</h3>
-                        <p className="text-xs text-zinc-400 mb-1">{item.designer.name}</p>
+                        <h3 className="font-medium mb-1 mobile-text-sm mobile-line-clamp-2">{item.name}</h3>
+                        <p className="text-xs text-zinc-400 mb-1 mobile-truncate">{item.designer.name}</p>
                         <p className="text-xs text-zinc-400 mb-2">{item.size} • {item.color}</p>
                         
-                        {/* Stripe Integration Status */}
-                        <div className="mb-2">
+                        {/* Stripe Integration Status - Collapsible on mobile */}
+                        <div className="mb-2 mobile-collapsible">
                           {stripeData.source !== 'none' ? (
-                            <span className={`text-xs px-2 py-1 rounded ${
+                            <span className={`text-xs px-2 py-1 rounded mobile-text-xs ${
                               stripeData.source === 'dynamic' 
                                 ? 'bg-green-500/20 text-green-400' 
                                 : 'bg-blue-500/20 text-blue-400'
@@ -124,25 +140,25 @@ export function CartSidebar() {
                               {stripeData.source === 'dynamic' ? '🤖 Auto-integrated' : '📦 Pre-configured'}
                             </span>
                           ) : (
-                            <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400">
+                            <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400 mobile-text-xs">
                               ⚠️ No payment setup
                             </span>
                           )}
                         </div>
                         
                         <div className="flex items-center justify-between">
-                          <span className="font-bold">{item.price} lei</span>
-                          <div className="flex items-center gap-2">
+                          <span className="font-bold mobile-text-sm">{item.price} lei</span>
+                          <div className="flex items-center gap-2 mobile-gap-3">
                             <button
                               onClick={() => updateCartItemQuantity(item.id, item.size, item.color, item.quantity - 1)}
-                              className="p-1 hover:bg-zinc-700 rounded"
+                              className="p-1 hover:bg-zinc-700 rounded mobile-touch-target"
                             >
                               <Minus size={14} />
                             </button>
-                            <span className="w-8 text-center">{item.quantity}</span>
+                            <span className="w-8 text-center mobile-text-sm">{item.quantity}</span>
                             <button
                               onClick={() => updateCartItemQuantity(item.id, item.size, item.color, item.quantity + 1)}
-                              className="p-1 hover:bg-zinc-700 rounded"
+                              className="p-1 hover:bg-zinc-700 rounded mobile-touch-target"
                             >
                               <Plus size={14} />
                             </button>
@@ -154,20 +170,20 @@ export function CartSidebar() {
                 })}
               </div>
               
-              <div className="border-t border-zinc-700 pt-4 space-y-4">
-                <div className="flex justify-between items-center text-lg font-bold">
+              <div className="border-t border-zinc-700 pt-4 space-y-4 mobile-pt-3 mobile-gap-3">
+                <div className="flex justify-between items-center text-lg font-bold mobile-text-base">
                   <span>Total:</span>
                   <span>{cartTotal} lei</span>
                 </div>
                 
                 {error && (
-                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-                    <p className="text-red-400 text-sm">{error}</p>
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mobile-p-2">
+                    <p className="text-red-400 text-sm mobile-text-xs">{error}</p>
                   </div>
                 )}
                 
-                {/* Integration Status Summary */}
-                <div className="text-xs text-zinc-400 space-y-1">
+                {/* Integration Status Summary - Collapsible on mobile */}
+                <div className="text-xs text-zinc-400 space-y-1 mobile-collapsible mobile-text-xs">
                   <p className="font-medium">Payment Integration Status:</p>
                   {cart.map((item, index) => {
                     const stripeData = getStripeData(item.id);
@@ -176,7 +192,7 @@ export function CartSidebar() {
                         <span className={`w-2 h-2 rounded-full ${
                           stripeData.source !== 'none' ? 'bg-green-400' : 'bg-red-400'
                         }`}></span>
-                        <span>{item.name}: {
+                        <span className="mobile-truncate">{item.name}: {
                           stripeData.source === 'dynamic' ? 'Auto-created' :
                           stripeData.source === 'static' ? 'Pre-configured' :
                           'Missing integration'
@@ -186,20 +202,20 @@ export function CartSidebar() {
                   })}
                 </div>
                 
-                <div className="space-y-2">
+                <div className="space-y-2 mobile-gap-3">
                   <button 
                     onClick={handleQuickCheckout}
                     disabled={isProcessing || cart.length === 0}
-                    className={`w-full py-3 rounded-lg font-medium transition ${
+                    className={`w-full py-3 rounded-lg font-medium transition mobile-touch-target mobile-text-base ${
                       isProcessing 
-                        ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed' 
+                        ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed mobile-loading' 
                         : 'bg-white text-zinc-900 hover:bg-zinc-200'
                     }`}
                   >
                     {isProcessing ? 'Processing...' : 'Quick Checkout'}
                   </button>
                   
-                  <p className="text-xs text-zinc-500 text-center">
+                  <p className="text-xs text-zinc-500 text-center mobile-text-xs mobile-px-2">
                     ✨ Products with automated integration are ready for immediate checkout
                   </p>
                 </div>

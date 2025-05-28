@@ -171,10 +171,10 @@ function ShopContent() {
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-40 border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm h-20">
+      <header className="fixed top-0 left-0 right-0 z-40 border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm h-20 safe-area-top mobile-header">
         <div className="max-w-7xl mx-auto px-4 py-4 h-full">
           <div className="flex items-center justify-between">
-            <Link href="/">
+            <Link href="/" className="mobile-touch-target">
               <Image
                 src="/wlogo.png"
                 alt="Baguri"
@@ -189,24 +189,24 @@ function ShopContent() {
               {/* All Designers - Hidden on mobile */}
               <Link 
                 href="/designers"
-                className="hidden md:flex px-4 py-2 border border-zinc-600 text-white rounded-full font-medium hover:border-zinc-500 transition"
+                className="hidden md:flex px-4 py-2 border border-zinc-600 text-white rounded-full font-medium hover:border-zinc-500 transition mobile-touch-target"
               >
                 All Designers
               </Link>
               
               {loading && !authUser && !cachedUser ? (
-                <div className="w-8 h-8 bg-zinc-800 rounded-full animate-pulse"></div>
+                <div className="w-8 h-8 bg-zinc-800 rounded-full animate-pulse mobile-loading"></div>
               ) : authUser || cachedUser ? (
                 <div className="flex items-center gap-2 md:gap-3">
                   <Link 
                     href="/designer-dashboard"
-                    className="flex items-center gap-2 md:gap-3 px-2 md:px-4 py-2 bg-zinc-800 border border-zinc-700 text-white rounded-full font-medium hover:bg-zinc-700 transition group"
+                    className="flex items-center gap-2 md:gap-3 px-2 md:px-4 py-2 bg-zinc-800 border border-zinc-700 text-white rounded-full font-medium hover:bg-zinc-700 transition group mobile-touch-target"
                   >
                     <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-amber-600 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-lg">
                       {(authUser?.email || cachedUser?.email)?.charAt(0).toUpperCase() || 'D'}
                     </div>
                     <div className="hidden md:flex flex-col items-start">
-                      <span className="text-sm font-medium text-white">
+                      <span className="text-sm font-medium text-white mobile-truncate">
                         {authUser?.user_metadata?.full_name || 
                          cachedUser?.user_metadata?.full_name || 
                          (authUser?.email || cachedUser?.email)?.split('@')[0] || 
@@ -221,7 +221,7 @@ function ShopContent() {
               ) : (
                 <Link 
                   href="/designer-auth"
-                  className="px-2 md:px-4 py-2 bg-white text-zinc-900 rounded-full font-medium hover:bg-zinc-200 transition text-xs md:text-sm"
+                  className="px-2 md:px-4 py-2 bg-white text-zinc-900 rounded-full font-medium hover:bg-zinc-200 transition text-xs md:text-sm mobile-touch-target"
                 >
                   <span className="hidden sm:inline">Become a Designer</span>
                   <span className="sm:hidden">Designer</span>
@@ -230,7 +230,7 @@ function ShopContent() {
               
               <button
                 onClick={() => setIsCartOpen(true)}
-                className="relative p-2 hover:bg-zinc-800 rounded-full transition"
+                className="relative p-2 hover:bg-zinc-800 rounded-full transition mobile-touch-target"
               >
                 <ShoppingCart size={20} className="md:w-6 md:h-6" />
                 {cartItemCount > 0 && (
@@ -245,13 +245,13 @@ function ShopContent() {
       </header>
 
       {/* Designer Filter Bar */}
-      <div className="fixed top-20 left-0 right-0 z-30 border-b border-zinc-800 bg-zinc-900/30 backdrop-blur-sm">
+      <div className="fixed top-20 left-0 right-0 z-30 border-b border-zinc-800 bg-zinc-900/30 backdrop-blur-sm mobile-header">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-4 overflow-x-auto">
-            <div className="flex items-center gap-2 mr-4">
+          <div className="flex items-center gap-4 overflow-x-auto mobile-gap-3">
+            <div className="flex items-center gap-2 mr-4 mobile-gap-2">
               <button
                 onClick={() => setShowUpcoming(false)}
-                className={`px-3 py-1 rounded-full text-sm font-medium transition ${
+                className={`px-3 py-1 rounded-full text-sm font-medium transition mobile-touch-target ${
                   !showUpcoming ? 'bg-white text-zinc-900' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
                 }`}
               >
@@ -259,7 +259,7 @@ function ShopContent() {
               </button>
               <button
                 onClick={() => setShowUpcoming(true)}
-                className={`px-3 py-1 rounded-full text-sm font-medium transition ${
+                className={`px-3 py-1 rounded-full text-sm font-medium transition mobile-touch-target ${
                   showUpcoming ? 'bg-white text-zinc-900' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
                 }`}
               >
@@ -271,7 +271,7 @@ function ShopContent() {
             
             <button
               onClick={() => setSelectedDesigner(null)}
-              className={`px-4 py-2 rounded-full whitespace-nowrap transition ${
+              className={`px-4 py-2 rounded-full whitespace-nowrap transition mobile-touch-target ${
                 selectedDesigner === null
                   ? 'bg-white text-zinc-900'
                   : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
@@ -286,7 +286,7 @@ function ShopContent() {
                 <button
                   key={designer.id}
                   onClick={() => setSelectedDesigner(designer.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition mobile-touch-target ${
                     selectedDesigner === designer.id
                       ? 'bg-white text-zinc-900'
                       : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
@@ -297,14 +297,14 @@ function ShopContent() {
                     alt={designer.name}
                     className="w-6 h-6 rounded-full"
                   />
-                  {designer.name}
+                  <span className="mobile-text-sm">{designer.name}</span>
                 </button>
               ))}
             
             {!showAllDesigners && mockDesigners.length > 2 && (
               <button
                 onClick={() => setShowAllDesigners(true)}
-                className="px-3 py-2 text-zinc-400 hover:text-white transition text-sm"
+                className="px-3 py-2 text-zinc-400 hover:text-white transition text-sm mobile-touch-target"
               >
                 Show more
               </button>
@@ -314,10 +314,10 @@ function ShopContent() {
       </div>
 
       {/* Products Grid */}
-      <main className="max-w-7xl mx-auto px-4 py-8 pt-44">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <main className="max-w-7xl mx-auto px-4 py-8 pt-44 safe-area-bottom">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mobile-grid-2 mobile-gap-4">
           {filteredProducts.map((product) => (
-            <div key={product.id} className="group cursor-pointer" onClick={() => setSelectedProduct(product)}>
+            <div key={product.id} className="group cursor-pointer mobile-fade-in mobile-card" onClick={() => setSelectedProduct(product)}>
               <div className="relative aspect-[3/4] bg-zinc-800 rounded-lg overflow-hidden mb-3">
                 {product.isUpcoming && (
                   <div className="absolute top-2 left-2 bg-amber-200 text-zinc-900 px-2 py-1 rounded-full text-xs font-bold z-10">
@@ -325,7 +325,7 @@ function ShopContent() {
                   </div>
                 )}
                 <div className="absolute top-2 right-2 z-10">
-                  <button className="p-2 bg-black/50 hover:bg-black/70 rounded-full transition">
+                  <button className="p-2 bg-black/50 hover:bg-black/70 rounded-full transition mobile-touch-target">
                     <Heart size={16} className="text-white" />
                   </button>
                 </div>
@@ -336,10 +336,10 @@ function ShopContent() {
                 />
               </div>
               
-              <div className="space-y-2">
+              <div className="space-y-2 mobile-p-2">
                 <Link 
                   href={`/designer/${product.designer.logo}`}
-                  className="flex items-center gap-2 hover:text-white transition"
+                  className="flex items-center gap-2 hover:text-white transition mobile-touch-target"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <PlaceholderImage 
@@ -347,16 +347,16 @@ function ShopContent() {
                     alt={product.designer.name}
                     className="w-6 h-6 rounded-full"
                   />
-                  <span className="text-xs text-zinc-400 font-medium hover:text-white transition">{product.designer.name}</span>
+                  <span className="text-xs text-zinc-400 font-medium hover:text-white transition mobile-text-xs mobile-truncate">{product.designer.name}</span>
                 </Link>
                 
-                <h3 className="font-medium text-white group-hover:text-white transition">{product.name}</h3>
+                <h3 className="font-medium text-white group-hover:text-white transition mobile-text-sm mobile-line-clamp-2">{product.name}</h3>
                 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-lg">{product.price} lei</span>
+                    <span className="font-bold text-lg mobile-text-base">{product.price} lei</span>
                     {product.originalPrice && (
-                      <span className="text-sm text-zinc-500 line-through">{product.originalPrice} lei</span>
+                      <span className="text-sm text-zinc-500 line-through mobile-text-xs">{product.originalPrice} lei</span>
                     )}
                   </div>
                   <StockStatusBadge stockStatus={product.stockStatus} />
@@ -392,17 +392,17 @@ function ProductModal({ product, onClose, onAddToCart }: {
   const [selectedColor, setSelectedColor] = useState(product.colors[0]);
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
-      <div className="bg-zinc-900 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="p-6">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 safe-area-inset" onClick={onClose}>
+      <div className="bg-zinc-900 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto mobile-modal mobile-slide-up" onClick={e => e.stopPropagation()}>
+        <div className="p-6 mobile-p-4">
           <div className="flex justify-between items-start mb-4">
-            <h2 className="text-xl font-bold">{product.name}</h2>
-            <button onClick={onClose} className="p-1 hover:bg-zinc-800 rounded">
+            <h2 className="text-xl font-bold mobile-text-lg mobile-line-clamp-2">{product.name}</h2>
+            <button onClick={onClose} className="p-1 hover:bg-zinc-800 rounded mobile-touch-target">
               <X size={20} />
             </button>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 gap-6 mobile-grid-1 mobile-gap-4">
             <div className="aspect-[3/4] bg-zinc-800 rounded-lg overflow-hidden">
               <PlaceholderImage 
                 type="product" 
@@ -411,37 +411,37 @@ function ProductModal({ product, onClose, onAddToCart }: {
               />
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-4 mobile-gap-3">
               <Link 
                 href={`/designer/${product.designer.logo}`}
-                className="flex items-center gap-2 hover:text-white transition"
+                className="flex items-center gap-2 hover:text-white transition mobile-touch-target"
               >
                 <PlaceholderImage 
                   type="logo" 
                   alt={product.designer.name}
                   className="w-8 h-8 rounded-full"
                 />
-                <span className="text-zinc-400 font-medium hover:text-white transition">{product.designer.name}</span>
+                <span className="text-zinc-400 font-medium hover:text-white transition mobile-text-sm">{product.designer.name}</span>
               </Link>
               
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-2xl">{product.price} lei</span>
+                  <span className="font-bold text-2xl mobile-text-xl">{product.price} lei</span>
                   {product.originalPrice && (
-                    <span className="text-lg text-zinc-500 line-through">{product.originalPrice} lei</span>
+                    <span className="text-lg text-zinc-500 line-through mobile-text-base">{product.originalPrice} lei</span>
                   )}
                 </div>
                 <StockStatusBadge stockStatus={product.stockStatus} />
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-2">Size</label>
-                <div className="flex gap-2">
+                <label className="block text-sm font-medium mb-2 mobile-text-sm">Size</label>
+                <div className="flex gap-2 mobile-gap-2 flex-wrap">
                   {product.sizes.map((size: string) => (
                     <button
                       key={size}
                       onClick={() => setSelectedSize(size)}
-                      className={`px-3 py-2 border rounded-lg ${
+                      className={`px-3 py-2 border rounded-lg mobile-touch-target mobile-text-sm ${
                         selectedSize === size
                           ? 'border-white bg-white text-zinc-900'
                           : 'border-zinc-600 hover:border-zinc-500'
@@ -454,13 +454,13 @@ function ProductModal({ product, onClose, onAddToCart }: {
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-2">Color</label>
-                <div className="flex gap-2">
+                <label className="block text-sm font-medium mb-2 mobile-text-sm">Color</label>
+                <div className="flex gap-2 mobile-gap-2 flex-wrap">
                   {product.colors.map((color: string) => (
                     <button
                       key={color}
                       onClick={() => setSelectedColor(color)}
-                      className={`px-3 py-2 border rounded-lg ${
+                      className={`px-3 py-2 border rounded-lg mobile-touch-target mobile-text-sm ${
                         selectedColor === color
                           ? 'border-white bg-white text-zinc-900'
                           : 'border-zinc-600 hover:border-zinc-500'
@@ -475,7 +475,7 @@ function ProductModal({ product, onClose, onAddToCart }: {
               <button
                 onClick={() => onAddToCart(product, selectedSize, selectedColor)}
                 disabled={product.stockStatus === 'coming_soon'}
-                className={`w-full py-3 rounded-lg font-medium transition ${
+                className={`w-full py-3 rounded-lg font-medium transition mobile-touch-target mobile-text-base ${
                   product.stockStatus === 'coming_soon'
                     ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed'
                     : product.stockStatus === 'made_to_order'
