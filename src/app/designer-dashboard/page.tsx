@@ -112,8 +112,8 @@ function DesignerDashboardContent() {
   // Load dashboard data when user is available
   useEffect(() => {
     const loadDashboardData = async () => {
-      if (!user?.id || !designerProfile) {
-        console.log('Waiting for user and profile...', { user: !!user, designerProfile: !!designerProfile });
+      if (!user?.id) {
+        console.log('Waiting for user...', { user: !!user });
         return;
       }
 
@@ -131,19 +131,41 @@ function DesignerDashboardContent() {
           setStatus(data.status);
           setSubmittedAt(data.submittedAt);
           setCompletionPercentage(data.completionPercentage);
-          setDashboardReady(true);
         } else {
-          console.error('No dashboard data returned');
+          console.log('No dashboard data returned, using defaults for new user');
+          // Set default values for new users
+          setProfile({
+            brandName: '',
+            shortDescription: '',
+            longDescription: '',
+            city: '',
+            yearFounded: new Date().getFullYear(),
+            email: user.email || '',
+            logoUrl: '',
+            secondaryLogoUrl: '',
+            instagramHandle: '',
+            tiktokHandle: '',
+            website: '',
+            specialties: []
+          });
+          setProducts([createEmptyProduct()]);
+          setStatus('draft');
+          setSubmittedAt(null);
+          setCompletionPercentage(0);
         }
+        
+        setDashboardReady(true);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
+        // Even on error, set ready to true so user can see the form
+        setDashboardReady(true);
       } finally {
         setLoadingData(false);
       }
     };
 
     loadDashboardData();
-  }, [user?.id, designerProfile]);
+  }, [user?.id]); // Remove designerProfile dependency
 
   // Show loading state while checking authentication
   if (loading) {

@@ -25,12 +25,15 @@ function DesignerAuthForm() {
 
   // Optimized redirect logic - immediate redirect when user is authenticated
   useEffect(() => {
-    if (user && !loading) {
+    console.log('Auth page check:', { loading, user: !!user, redirecting });
+    
+    if (!loading && user && !redirecting) {
+      console.log('User authenticated, redirecting to dashboard...');
       setRedirecting(true);
       // Use replace instead of push to avoid back button issues
       router.replace('/designer-dashboard');
     }
-  }, [user, loading, router]);
+  }, [user, loading, redirecting, router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -113,6 +116,23 @@ function DesignerAuthForm() {
     );
   }
 
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-white">
+        <BackgroundPaths />
+        <div className="relative z-10 flex items-center justify-center min-h-screen px-4">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+            </div>
+            <p className="text-zinc-400">Checking authentication...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <BackgroundPaths />
@@ -143,18 +163,8 @@ function DesignerAuthForm() {
       {/* Auth Form */}
       <div className="relative z-10 flex items-center justify-center min-h-[80vh] px-4 pt-20">
         <div className="w-full max-w-md">
-          {/* Loading state */}
-          {loading && (
-            <div className="text-center">
-              <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-              </div>
-              <p className="text-zinc-400">Loading...</p>
-            </div>
-          )}
-          
-          {/* Only show auth form if user is not authenticated and not loading */}
-          {!user && !loading && (
+          {/* Only show auth form if user is not authenticated */}
+          {!user && (
             <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl p-8">
               <div className="text-center mb-8">
               <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
