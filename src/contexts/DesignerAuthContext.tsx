@@ -42,21 +42,13 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
       console.log('🔍 Fetching designer profile for user:', userId);
       setProfileLoading(true);
       
-      // First, test basic database connectivity
-      console.log('🔌 Testing database connectivity...');
-      const { data: testData, error: testError } = await supabase
-        .from('designer_auth')
-        .select('user_id')
-        .limit(1);
+      // Create a timeout promise to prevent hanging
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Database query timeout')), 8000); // 8 second timeout
+      });
       
-      if (testError) {
-        console.error('💥 Database connectivity test failed:', testError);
-        throw new Error(`Database connection failed: ${testError.message}`);
-      }
-      console.log('✅ Database connectivity test passed');
-      
-      // Use a single query with joins to reduce database calls
-      const { data: profileData, error } = await supabase
+      // Create the actual query promise
+      const queryPromise = supabase
         .from('designer_auth')
         .select(`
           *,
@@ -64,50 +56,39 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
         `)
         .eq('user_id', userId)
         .single();
-
-      console.log('🔍 Profile query result:', { 
-        hasData: !!profileData, 
-        hasError: !!error,
-        errorMessage: error?.message,
-        hasDesigners: !!profileData?.designers 
-      });
-
+      
+      console.log('🔌 Executing database query with timeout...');
+      
+      // Race between the query and timeout
+      const { data: authData, error } = await Promise.race([queryPromise, timeoutPromise]);
+      
+      console.log('📊 Query result:', { hasData: !!authData, error: error?.message });
+      
       if (error) {
-        if (error.code === 'PGRST116') {
-          // No rows found - this is normal for new users
-          console.log('ℹ️ No designer profile found for user:', userId);
-          profileCacheRef.current[userId] = null;
-          return null;
-        }
-        console.error('💥 Database error fetching profile:', error);
-        throw error;
+        console.error('💥 Database error:', error);
+        profileCacheRef.current[userId] = null;
+        return null;
       }
 
-      if (!profileData || !profileData.designers) {
-        console.log('ℹ️ No designer data found for user:', userId);
+      if (!authData || !authData.designers) {
+        console.log('❌ No designer profile found for user:', userId);
         profileCacheRef.current[userId] = null;
         return null;
       }
 
       const profile: DesignerProfile = {
-        ...profileData.designers,
-        auth: profileData
+        ...authData.designers,
+        auth: authData
       };
 
-      console.log('✅ Profile loaded successfully:', {
-        userId,
-        brandName: profile.brand_name,
-        status: profile.status
-      });
-
-      // Cache the result
+      console.log('✅ Designer profile loaded:', profile.brand_name);
       profileCacheRef.current[userId] = profile;
       return profile;
 
     } catch (error) {
       console.error('💥 Error fetching designer profile:', error);
-      // Don't cache errors, allow retry
-      throw error;
+      profileCacheRef.current[userId] = null;
+      return null;
     } finally {
       setProfileLoading(false);
     }

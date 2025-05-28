@@ -74,6 +74,7 @@ function DesignerDashboardContent() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [dashboardReady, setDashboardReady] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   
   // Use the same auth context as the auth page
@@ -121,23 +122,33 @@ function DesignerDashboardContent() {
     }
   }, [initialized, user, router]);
 
-  // Load dashboard data when user is available
+  // Load dashboard data
   useEffect(() => {
-    const loadDashboardData = async () => {
-      if (!user?.id) {
-        console.log('Waiting for user...', { user: !!user });
-        return;
-      }
+    if (!user?.id) return;
 
-      console.log('Loading dashboard data for user:', user.id);
-      setLoadingData(true);
-      
+    console.log('Loading dashboard data for user:', user.id);
+    
+    const loadDashboardData = async () => {
       try {
-        const data = await designerService.getDashboardData(user.id);
-        console.log('Dashboard data loaded:', data);
+        setLoadingData(true);
+        
+        // Create a timeout promise to prevent hanging
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Dashboard data loading timeout')), 10000); // 10 second timeout
+        });
+        
+        // Create the actual data loading promise
+        const dataPromise = designerService.getDashboardData(user.id);
+        
+        console.log('📊 Loading dashboard data with timeout...');
+        
+        // Race between the data loading and timeout
+        const data = await Promise.race([dataPromise, timeoutPromise]);
+        
+        console.log('📈 Dashboard data loaded:', { hasData: !!data, status: data?.status });
+        setDashboardData(data);
         
         if (data) {
-          setDashboardData(data);
           setProfile(data.profile);
           setProducts(data.products);
           setStatus(data.status);
@@ -168,7 +179,8 @@ function DesignerDashboardContent() {
         
         setDashboardReady(true);
       } catch (error) {
-        console.error('Error loading dashboard data:', error);
+        console.error('💥 Error loading dashboard data:', error);
+        setError(error instanceof Error ? error.message : 'Failed to load dashboard data');
         // Even on error, set ready to true so user can see the form
         setDashboardReady(true);
       } finally {
@@ -177,7 +189,7 @@ function DesignerDashboardContent() {
     };
 
     loadDashboardData();
-  }, [user?.id]); // Remove designerProfile dependency
+  }, [user?.id]);
 
   // Show loading state while checking authentication
   if (!initialized) {
@@ -667,6 +679,51 @@ function DesignerDashboardContent() {
           </div>
         </div>
       </section>
+
+      {/* Error Display */}
+      {error && (
+        <section className="relative z-10 py-4">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="bg-red-900/20 border border-red-700/50 rounded-lg p-4 flex items-center gap-3">
+              <div className="text-red-400">⚠️</div>
+              <div>
+                <div className="text-red-300 font-medium">Data Loading Error</div>
+                <div className="text-red-400 text-sm">{error}</div>
+                <button
+                  onClick={() => {
+                    setError(null);
+                    // Retry loading data
+                    if (user?.id) {
+                      const loadDashboardData = async () => {
+                        try {
+                          setLoadingData(true);
+                          const data = await designerService.getDashboardData(user.id);
+                          setDashboardData(data);
+                          if (data) {
+                            setProfile(data.profile);
+                            setProducts(data.products);
+                            setStatus(data.status);
+                            setSubmittedAt(data.submittedAt);
+                            setCompletionPercentage(data.completionPercentage);
+                          }
+                        } catch (error) {
+                          setError(error instanceof Error ? error.message : 'Failed to load dashboard data');
+                        } finally {
+                          setLoadingData(false);
+                        }
+                      };
+                      loadDashboardData();
+                    }
+                  }}
+                  className="mt-2 px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Main Content */}
       <section className="relative z-10 py-8">
