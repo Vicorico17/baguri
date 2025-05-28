@@ -165,7 +165,19 @@ function DesignerDashboardContent() {
 
   // Update completion percentage when profile changes
   useEffect(() => {
-    updateCompletionPercentage();
+    // Calculate completion based on filled fields (without products)
+    let completed = 0;
+    const total = 6; // Reduced from 10 since we removed products
+
+    if (profile.brandName) completed++;
+    if (profile.shortDescription) completed++;
+    if (profile.longDescription) completed++;
+    if (profile.logoUrl) completed++;
+    if (profile.instagramHandle) completed++;
+    if (profile.city) completed++;
+
+    const percentage = Math.round((completed / total) * 100);
+    setCompletionPercentage(percentage);
   }, [profile]);
 
   // Database connectivity test function
@@ -283,23 +295,6 @@ function DesignerDashboardContent() {
       ...prev,
       [field]: value
     }));
-    updateCompletionPercentage();
-  };
-
-  const updateCompletionPercentage = () => {
-    // Calculate completion based on filled fields (without products)
-    let completed = 0;
-    const total = 6; // Reduced from 10 since we removed products
-
-    if (profile.brandName) completed++;
-    if (profile.shortDescription) completed++;
-    if (profile.longDescription) completed++;
-    if (profile.logoUrl) completed++;
-    if (profile.instagramHandle) completed++;
-    if (profile.city) completed++;
-
-    const percentage = Math.round((completed / total) * 100);
-    setCompletionPercentage(percentage);
   };
 
   // Real Supabase upload function
