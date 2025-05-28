@@ -103,6 +103,8 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
     }
   };
 
+  // Initialize auth state on mount with timeout protection
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     let mounted = true;
     let initializationTimeout: NodeJS.Timeout;

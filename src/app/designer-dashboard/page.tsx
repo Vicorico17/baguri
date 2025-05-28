@@ -122,7 +122,7 @@ function DesignerDashboardContent() {
     if (initialized && user) {
       console.log('✅ User authenticated on dashboard:', user.id);
     }
-  }, [initialized, user, router]);
+  }, [initialized, user, router, loading]);
 
   // Load dashboard data
   useEffect(() => {
@@ -191,7 +191,7 @@ function DesignerDashboardContent() {
     };
 
     loadDashboardData();
-  }, [user?.id]);
+  }, [user?.id, user?.email]);
 
   // Database connectivity test function
   const testDatabaseConnectivity = async () => {

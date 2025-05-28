@@ -46,7 +46,7 @@ function DesignerAuthForm() {
     if (initialized && !user) {
       console.log('❌ No user found on auth page - showing login form');
     }
-  }, [initialized, user, redirecting, router]);
+  }, [initialized, user, redirecting, router, loading]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({

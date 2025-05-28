@@ -227,7 +227,7 @@ export default function DesignersPage() {
                 <User size={48} className="mx-auto mb-4 text-zinc-400" />
                 <h3 className="text-xl font-semibold mb-2">No Designers Yet</h3>
                 <p className="text-zinc-400 mb-4">
-                  We're currently reviewing applications from talented Romanian designers. 
+                  We&apos;re currently reviewing applications from talented Romanian designers. 
                   Check back soon to discover amazing brands!
                 </p>
                 {!(authUser || cachedUser) && (
