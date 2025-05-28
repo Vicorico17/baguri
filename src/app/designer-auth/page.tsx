@@ -21,19 +21,32 @@ function DesignerAuthForm() {
     confirmPassword: ''
   });
   const router = useRouter();
-  const { signIn, signUp, signOut, loading, user, designerProfile } = useDesignerAuth();
+  const { signIn, signUp, signOut, loading, user, designerProfile, initialized } = useDesignerAuth();
 
   // Optimized redirect logic - immediate redirect when user is authenticated
   useEffect(() => {
-    console.log('Auth page check:', { loading, user: !!user, redirecting });
+    console.log('🔐 Auth page check:', { 
+      loading, 
+      initialized,
+      user: !!user, 
+      userId: user?.id,
+      redirecting 
+    });
     
-    if (!loading && user && !redirecting) {
-      console.log('User authenticated, redirecting to dashboard...');
+    // Only redirect if auth is initialized, we have a user, and not already redirecting
+    if (initialized && user && !redirecting) {
+      console.log('🔄 User authenticated, redirecting to dashboard...');
       setRedirecting(true);
       // Use replace instead of push to avoid back button issues
       router.replace('/designer-dashboard');
+      return;
     }
-  }, [user, loading, redirecting, router]);
+    
+    // Log when no user is found
+    if (initialized && !user) {
+      console.log('❌ No user found on auth page - showing login form');
+    }
+  }, [initialized, user, redirecting, router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -94,7 +107,7 @@ function DesignerAuthForm() {
   };
 
   // Show redirecting state when user is authenticated
-  if (user && !loading) {
+  if (user && initialized) {
     return (
       <div className="min-h-screen bg-zinc-950 text-white">
         <BackgroundPaths />
@@ -117,7 +130,7 @@ function DesignerAuthForm() {
   }
 
   // Show loading state while checking authentication
-  if (loading) {
+  if (!initialized) {
     return (
       <div className="min-h-screen bg-zinc-950 text-white">
         <BackgroundPaths />

@@ -10,6 +10,7 @@ type DesignerAuthContextType = {
   designerProfile: DesignerProfile | null;
   loading: boolean;
   profileLoading: boolean;
+  initialized: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -89,13 +90,25 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     let mounted = true;
+    let initializationTimeout: NodeJS.Timeout;
 
-    // Get initial session with improved loading
+    // Get initial session with improved loading and timeout protection
     const initializeAuth = async () => {
       try {
+        console.log('🔄 Initializing auth...');
+        
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (!mounted) return;
+        if (!mounted) {
+          console.log('⚠️ Component unmounted during auth initialization');
+          return;
+        }
+        
+        console.log('🔐 Session retrieved:', { 
+          hasSession: !!session, 
+          userId: session?.user?.id,
+          error: error?.message 
+        });
         
         // Set session and user immediately
         setSession(session);
@@ -103,59 +116,101 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
         
         // Load profile if user exists
         if (session?.user) {
+          console.log('👤 Loading profile for user:', session.user.id);
           const profile = await fetchDesignerProfile(session.user.id);
           if (mounted) {
             setDesignerProfile(profile);
+            console.log('✅ Profile loaded:', !!profile);
           }
+        } else {
+          console.log('❌ No session found');
+          setDesignerProfile(null);
         }
         
         // Mark as initialized and stop loading
-        setInitialized(true);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error initializing auth:', error);
         if (mounted) {
           setInitialized(true);
           setLoading(false);
+          console.log('✅ Auth initialization complete');
+        }
+      } catch (error) {
+        console.error('❌ Error initializing auth:', error);
+        if (mounted) {
+          setInitialized(true);
+          setLoading(false);
+          setSession(null);
+          setUser(null);
+          setDesignerProfile(null);
         }
       }
     };
 
+    // Add timeout protection to prevent infinite loading
+    initializationTimeout = setTimeout(() => {
+      if (mounted && !initialized) {
+        console.warn('⚠️ Auth initialization timeout - forcing completion');
+        setInitialized(true);
+        setLoading(false);
+      }
+    }, 10000); // 10 second timeout
+
     initializeAuth();
 
-    // Listen for auth changes
+    // Listen for auth changes with better error handling
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
+      if (!mounted) {
+        console.log('⚠️ Component unmounted during auth state change');
+        return;
+      }
       
-      console.log('Auth state changed:', event, session?.user?.id);
+      console.log('🔄 Auth state changed:', { 
+        event, 
+        userId: session?.user?.id,
+        hasSession: !!session 
+      });
+      
+      // Prevent rapid state changes
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('🔄 Token refreshed, updating session only');
+        setSession(session);
+        return;
+      }
       
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
+        console.log('👤 Auth state change - loading profile for:', session.user.id);
         // Clear cache and fetch fresh profile on auth change
         delete profileCacheRef.current[session.user.id];
         const profile = await fetchDesignerProfile(session.user.id);
         if (mounted) {
           setDesignerProfile(profile);
+          console.log('✅ Profile updated from auth change:', !!profile);
         }
       } else {
+        console.log('❌ No session in auth state change');
         setDesignerProfile(null);
         // Clear all cache when signing out
         profileCacheRef.current = {};
       }
       
       // Set loading to false after auth state change is processed
-      setLoading(false);
+      if (mounted) {
+        setLoading(false);
+        setInitialized(true);
+      }
     });
 
     return () => {
+      console.log('🧹 Cleaning up auth context');
       mounted = false;
+      clearTimeout(initializationTimeout);
       subscription.unsubscribe();
     };
-  }, []); // Remove the initialized dependency to prevent circular updates
+  }, []); // Keep empty dependency array to prevent re-initialization
 
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
     try {
@@ -243,6 +298,7 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
     designerProfile,
     loading,
     profileLoading,
+    initialized,
     signIn,
     signUp,
     signOut,

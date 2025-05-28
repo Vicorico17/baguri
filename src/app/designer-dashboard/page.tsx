@@ -77,7 +77,7 @@ function DesignerDashboardContent() {
   const router = useRouter();
   
   // Use the same auth context as the auth page
-  const { loading, user, designerProfile } = useDesignerAuth();
+  const { loading, user, designerProfile, initialized } = useDesignerAuth();
 
   const [profile, setProfile] = useState<DesignerProfileForm>({
     brandName: '',
@@ -101,13 +101,26 @@ function DesignerDashboardContent() {
 
   // Optimized redirect logic - immediate redirect if not authenticated
   useEffect(() => {
-    console.log('Dashboard auth check:', { loading, user: !!user, designerProfile: !!designerProfile });
+    console.log('🏠 Dashboard auth check:', { 
+      loading, 
+      initialized,
+      user: !!user, 
+      userId: user?.id,
+      designerProfile: !!designerProfile 
+    });
     
-    if (!loading && !user) {
-      console.log('No user found, redirecting to auth...');
+    // Only redirect if auth is initialized and there's no user
+    if (initialized && !user) {
+      console.log('🔄 Auth initialized but no user found, redirecting to auth...');
       router.replace('/designer-auth');
+      return;
     }
-  }, [loading, user, router]);
+    
+    // Log when user is authenticated
+    if (initialized && user) {
+      console.log('✅ User authenticated on dashboard:', user.id);
+    }
+  }, [initialized, user, router]);
 
   // Load dashboard data when user is available
   useEffect(() => {
@@ -168,7 +181,7 @@ function DesignerDashboardContent() {
   }, [user?.id]); // Remove designerProfile dependency
 
   // Show loading state while checking authentication
-  if (loading) {
+  if (!initialized) {
     return (
       <div className="min-h-screen bg-zinc-950 text-white">
         <BackgroundPaths />
