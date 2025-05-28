@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Check, X, Eye, Instagram, Globe, MapPin, Calendar, LogOut, Loader2 } from 'lucide-react';
+import { ArrowLeft, Check, X, Eye, Instagram, Globe, MapPin, Calendar, LogOut, Loader2, RefreshCw } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { supabase } from '@/lib/supabase';
 
@@ -63,6 +63,28 @@ export default function AdminDashboard() {
     if (adminSession === 'authenticated') {
       setIsAuthenticated(true);
       loadDesignerApplications();
+      
+      // Set up real-time subscription for designer changes
+      const subscription = supabase
+        .channel('designer-changes')
+        .on('postgres_changes', 
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'designers' 
+          }, 
+          (payload) => {
+            console.log('Designer data changed:', payload);
+            // Reload applications when any designer data changes
+            loadDesignerApplications();
+          }
+        )
+        .subscribe();
+
+      // Cleanup subscription on unmount
+      return () => {
+        subscription.unsubscribe();
+      };
     } else {
       router.push('/admin/login');
     }
@@ -71,6 +93,9 @@ export default function AdminDashboard() {
   const loadDesignerApplications = async () => {
     try {
       setLoading(true);
+      console.log('Loading designer applications...');
+      
+      // Force fresh data by using a timestamp
       const { data, error } = await supabase
         .from('designers')
         .select('*')
@@ -79,12 +104,17 @@ export default function AdminDashboard() {
 
       if (error) {
         console.error('Error loading designer applications:', error);
+        alert('Error loading applications. Please try again.');
         return;
       }
 
+      console.log('Loaded applications:', data?.length || 0);
+      console.log('Applications with submitted status:', data?.filter(d => d.status === 'submitted').length || 0);
+      
       setDesigners(data || []);
     } catch (error) {
       console.error('Error loading designer applications:', error);
+      alert('Error loading applications. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -251,13 +281,24 @@ export default function AdminDashboard() {
               />
             </Link>
             
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 text-zinc-400 hover:text-white transition"
-            >
-              <LogOut size={16} />
-              Logout
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={loadDesignerApplications}
+                disabled={loading}
+                className="flex items-center gap-2 text-zinc-400 hover:text-white transition disabled:opacity-50"
+              >
+                <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                Refresh
+              </button>
+              
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-zinc-400 hover:text-white transition"
+              >
+                <LogOut size={16} />
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </header>

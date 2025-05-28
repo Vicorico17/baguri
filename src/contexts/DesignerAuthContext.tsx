@@ -147,17 +147,15 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
         profileCacheRef.current = {};
       }
       
-      // Only set loading to false after initialization is complete
-      if (initialized) {
-        setLoading(false);
-      }
+      // Set loading to false after auth state change is processed
+      setLoading(false);
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [initialized]);
+  }, []); // Remove the initialized dependency to prevent circular updates
 
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
     try {

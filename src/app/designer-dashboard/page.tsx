@@ -101,6 +101,8 @@ function DesignerDashboardContent() {
 
   // Optimized redirect logic - immediate redirect if not authenticated
   useEffect(() => {
+    console.log('Dashboard auth check:', { loading, user: !!user, designerProfile: !!designerProfile });
+    
     if (!loading && !user) {
       console.log('No user found, redirecting to auth...');
       router.replace('/designer-auth');
@@ -110,43 +112,38 @@ function DesignerDashboardContent() {
   // Load dashboard data when user is available
   useEffect(() => {
     const loadDashboardData = async () => {
-      if (!user?.id) return;
-      
+      if (!user?.id || !designerProfile) {
+        console.log('Waiting for user and profile...', { user: !!user, designerProfile: !!designerProfile });
+        return;
+      }
+
       console.log('Loading dashboard data for user:', user.id);
       setLoadingData(true);
+      
       try {
         const data = await designerService.getDashboardData(user.id);
+        console.log('Dashboard data loaded:', data);
+        
         if (data) {
-          console.log('Dashboard data loaded successfully');
           setDashboardData(data);
           setProfile(data.profile);
           setProducts(data.products);
           setStatus(data.status);
           setSubmittedAt(data.submittedAt);
           setCompletionPercentage(data.completionPercentage);
+          setDashboardReady(true);
         } else {
-          console.log('No dashboard data found, setting defaults');
-          // If no designer profile exists, set email from user
-          setProfile(prev => ({ ...prev, email: user.email || '' }));
+          console.error('No dashboard data returned');
         }
-        
-        // Always ensure email is synced with auth user
-        setProfile(prev => ({ ...prev, email: user.email || prev.email }));
       } catch (error) {
         console.error('Error loading dashboard data:', error);
-        // Fallback to setting email from user
-        setProfile(prev => ({ ...prev, email: user.email || '' }));
       } finally {
         setLoadingData(false);
-        setDashboardReady(true);
       }
     };
 
-    // Only load data when we have a user and auth is not loading
-    if (user && !loading) {
-      loadDashboardData();
-    }
-  }, [user, loading]);
+    loadDashboardData();
+  }, [user?.id, designerProfile]);
 
   // Show loading state while checking authentication
   if (loading) {
