@@ -55,6 +55,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [rejectionModal, setRejectionModal] = useState<{ designer: DesignerApplication; isOpen: boolean } | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -93,42 +94,82 @@ export default function AdminDashboard() {
   const loadDesignerApplications = async () => {
     try {
       setLoading(true);
-      console.log('Loading designer applications...');
+      console.log('🔍 Loading designer applications...');
       
       // Create a timeout promise to prevent hanging
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Admin data loading timeout')), 8000); // 8 second timeout
+        setTimeout(() => reject(new Error('Admin data loading timeout')), 15000); // 15 second timeout
       });
       
-      // Create the actual query promise
+      // First, let's check what tables exist and have data
+      console.log('📊 Checking database tables...');
+      
+      // Check designer_auth table
+      const authCheckPromise = supabase
+        .from('designer_auth')
+        .select('*')
+        .limit(5);
+      
+      // Check designers table  
+      const designersCheckPromise = supabase
+        .from('designers')
+        .select('*')
+        .limit(5);
+      
+      const [authResult, designersResult] = await Promise.all([
+        authCheckPromise,
+        designersCheckPromise
+      ]);
+      
+      console.log('📋 Database check results:', {
+        designer_auth: { count: authResult.data?.length || 0, error: authResult.error?.message },
+        designers: { count: designersResult.data?.length || 0, error: designersResult.error?.message }
+      });
+      
+      // Now try to get the actual applications data
+      // Query designers table with proper filtering for applications
       const queryPromise = supabase
         .from('designers')
         .select('*')
-        .order('submitted_at', { ascending: false, nullsFirst: false })
+        .not('brand_name', 'is', null) // Only get designers with brand names (actual applications)
         .order('created_at', { ascending: false });
-      
-      console.log('📊 Loading admin data with timeout...');
+     
+      console.log('🔌 Executing applications query with timeout...');
       
       // Race between the query and timeout
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
-
+      const { data: applications, error } = await Promise.race([queryPromise, timeoutPromise]);
+      
+      console.log('📊 Applications query result:', { 
+        hasData: !!applications, 
+        count: applications?.length || 0,
+        error: error?.message 
+      });
+      
       if (error) {
-        console.error('Error loading designer applications:', error);
-        alert('Error loading applications. Please try again.');
+        console.error('💥 Database error:', error);
+        setError(`Database error: ${error.message}`);
         return;
       }
 
-      console.log('Loaded applications:', data?.length || 0);
-      console.log('Applications with submitted status:', data?.filter(d => d.status === 'submitted').length || 0);
-      
-      setDesigners(data || []);
-    } catch (error) {
-      console.error('Error loading designer applications:', error);
-      if (error instanceof Error && error.message.includes('timeout')) {
-        alert('Loading applications is taking too long. Please check your connection and try again.');
-      } else {
-        alert('Error loading applications. Please try again.');
+      if (!applications) {
+        console.log('❌ No applications data returned');
+        setDesigners([]);
+        return;
       }
+
+      console.log('✅ Applications loaded:', applications.length);
+      console.log('📋 Sample application:', applications[0]);
+      setDesigners(applications);
+      setError(null);
+
+    } catch (error) {
+      console.error('💥 Error loading applications:', error);
+      if (error instanceof Error && error.message.includes('timeout')) {
+        setError('Loading applications is taking too long. Please check your connection and try again.');
+      } else {
+        setError(`Failed to load applications: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+      setDesigners([]);
     } finally {
       setLoading(false);
     }
@@ -355,6 +396,18 @@ export default function AdminDashboard() {
             <div className="text-center py-12">
               <Loader2 size={32} className="animate-spin mx-auto mb-4 text-zinc-400" />
               <p className="text-zinc-400">Loading designer applications...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-6 max-w-md mx-auto">
+                <p className="text-red-400 mb-4">{error}</p>
+                <button
+                  onClick={loadDesignerApplications}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition"
+                >
+                  Try Again
+                </button>
+              </div>
             </div>
           ) : (
           <div className="space-y-6">

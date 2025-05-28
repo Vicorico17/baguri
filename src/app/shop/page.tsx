@@ -122,7 +122,7 @@ function ShopContent() {
   const { cartItemCount, setIsCartOpen, addToCart } = useCart();
   
   // Use designer auth context
-  const { user: designerProfile, loading } = useDesignerAuth();
+  const { user: authUser, designerProfile, loading } = useDesignerAuth();
 
   // Check for cached user data on initial load for faster UI
   useEffect(() => {
@@ -143,12 +143,12 @@ function ShopContent() {
     checkCachedSession();
   }, []);
 
-  // Clear cached user when designer profile is null (logged out)
+  // Clear cached user when auth user is null (logged out)
   useEffect(() => {
-    if (!designerProfile && !loading) {
+    if (!authUser && !loading) {
       setCachedUser(null);
     }
-  }, [designerProfile, loading]);
+  }, [authUser, loading]);
 
   // Reduce initial loading time for better UX
   useEffect(() => {
@@ -194,22 +194,22 @@ function ShopContent() {
                 All Designers
               </Link>
               
-              {loading && !designerProfile && !cachedUser ? (
+              {loading && !authUser && !cachedUser ? (
                 <div className="w-8 h-8 bg-zinc-800 rounded-full animate-pulse"></div>
-              ) : designerProfile || cachedUser ? (
+              ) : authUser || cachedUser ? (
                 <div className="flex items-center gap-2 md:gap-3">
                   <Link 
                     href="/designer-dashboard"
                     className="flex items-center gap-2 md:gap-3 px-2 md:px-4 py-2 bg-zinc-800 border border-zinc-700 text-white rounded-full font-medium hover:bg-zinc-700 transition group"
                   >
                     <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-amber-600 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-lg">
-                      {(designerProfile?.email || cachedUser?.email)?.charAt(0).toUpperCase() || 'D'}
+                      {(authUser?.email || cachedUser?.email)?.charAt(0).toUpperCase() || 'D'}
                     </div>
                     <div className="hidden md:flex flex-col items-start">
                       <span className="text-sm font-medium text-white">
-                        {designerProfile?.user_metadata?.full_name || 
+                        {authUser?.user_metadata?.full_name || 
                          cachedUser?.user_metadata?.full_name || 
-                         (designerProfile?.email || cachedUser?.email)?.split('@')[0] || 
+                         (authUser?.email || cachedUser?.email)?.split('@')[0] || 
                          'Designer'}
                       </span>
                       <span className="text-xs text-zinc-400 group-hover:text-zinc-300">

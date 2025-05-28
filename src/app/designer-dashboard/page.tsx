@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Edit, Send, CheckCircle, Clock, XCircle, Upload, Plus, X, Instagram, Globe, Camera, Save, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Edit, Send, CheckCircle, Clock, XCircle, Upload, Plus, X, Instagram, Globe, Camera, Save, ChevronDown, ChevronUp, LogOut } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { BrandShowcase } from "@/components/ui/brand-showcase";
 import { ProgressCircle } from "@/components/ui/progress-circle";
@@ -66,6 +66,7 @@ function DesignerDashboardContent() {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [submitting, setSubmitting] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingSecondaryLogo, setUploadingSecondaryLogo] = useState(false);
   const [brandDetailsOpen, setBrandDetailsOpen] = useState(true);
@@ -79,7 +80,7 @@ function DesignerDashboardContent() {
   const router = useRouter();
   
   // Use the same auth context as the auth page
-  const { loading, user, initialized } = useDesignerAuth();
+  const { loading, user, initialized, signOut } = useDesignerAuth();
 
   const [profile, setProfile] = useState<DesignerProfileForm>({
     brandName: '',
@@ -531,6 +532,7 @@ function DesignerDashboardContent() {
   const handleSubmitForReview = async () => {
     if (!user?.id) return;
     
+    setSubmitting(true);
     try {
       // First save current data
       await handleSaveProfile();
@@ -558,6 +560,8 @@ function DesignerDashboardContent() {
     } catch (error: any) {
       console.error('Error submitting for review:', error);
       alert(`Error submitting for review: ${error.message}`);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -650,6 +654,14 @@ function DesignerDashboardContent() {
                   {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : 'Save'}
               </button>
               )}
+              
+              <button
+                onClick={signOut}
+                className="flex items-center gap-2 px-4 py-2 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white rounded-lg font-medium transition"
+              >
+                <LogOut size={16} />
+                Logout
+              </button>
             </div>
           </div>
         </div>
@@ -1458,6 +1470,7 @@ function DesignerDashboardContent() {
                 completionPercentage={completionPercentage}
                 setProductsOpen={setProductsOpen}
                 setIsEditMode={setIsEditMode}
+                submitting={submitting}
               />
               
               <GuidelinesCard />
@@ -1469,7 +1482,7 @@ function DesignerDashboardContent() {
   );
 }
 
-function ActionCard({ status, canSubmit, onSubmit, completionPercentage, setProductsOpen, setIsEditMode }: any) {
+function ActionCard({ status, canSubmit, onSubmit, completionPercentage, setProductsOpen, setIsEditMode, submitting }: any) {
   return (
     <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-xl p-6">
       <h3 className="text-lg font-bold mb-4">Next Steps</h3>
@@ -1485,15 +1498,15 @@ function ActionCard({ status, canSubmit, onSubmit, completionPercentage, setProd
           
           <button
             onClick={onSubmit}
-            disabled={!canSubmit}
+            disabled={!canSubmit || submitting}
             className={`w-full py-3 rounded-lg font-medium transition ${
-              canSubmit
+              canSubmit && !submitting
                 ? 'bg-white text-zinc-900 hover:bg-zinc-200'
                 : 'bg-zinc-700 text-zinc-400 cursor-not-allowed'
             }`}
           >
             <Send size={16} className="inline mr-2" />
-            Submit for Review
+            {submitting ? 'Submitting...' : 'Submit for Review'}
           </button>
         </div>
       )}
@@ -1566,15 +1579,15 @@ function ActionCard({ status, canSubmit, onSubmit, completionPercentage, setProd
           
           <button
             onClick={onSubmit}
-            disabled={!canSubmit}
+            disabled={!canSubmit || submitting}
             className={`w-full py-3 rounded-lg font-medium transition flex items-center justify-center gap-2 ${
-              canSubmit
+              canSubmit && !submitting
                 ? 'bg-white text-zinc-900 hover:bg-zinc-200'
                 : 'bg-zinc-700 text-zinc-400 cursor-not-allowed'
             }`}
           >
             <Send size={16} />
-            Resubmit for Review
+            {submitting ? 'Submitting...' : 'Resubmit for Review'}
           </button>
           
           {!canSubmit && (
