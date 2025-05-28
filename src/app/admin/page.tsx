@@ -95,12 +95,22 @@ export default function AdminDashboard() {
       setLoading(true);
       console.log('Loading designer applications...');
       
-      // Force fresh data by using a timestamp
-      const { data, error } = await supabase
+      // Create a timeout promise to prevent hanging
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Admin data loading timeout')), 8000); // 8 second timeout
+      });
+      
+      // Create the actual query promise
+      const queryPromise = supabase
         .from('designers')
         .select('*')
         .order('submitted_at', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
+      
+      console.log('📊 Loading admin data with timeout...');
+      
+      // Race between the query and timeout
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
       if (error) {
         console.error('Error loading designer applications:', error);
@@ -114,7 +124,11 @@ export default function AdminDashboard() {
       setDesigners(data || []);
     } catch (error) {
       console.error('Error loading designer applications:', error);
-      alert('Error loading applications. Please try again.');
+      if (error instanceof Error && error.message.includes('timeout')) {
+        alert('Loading applications is taking too long. Please check your connection and try again.');
+      } else {
+        alert('Error loading applications. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
