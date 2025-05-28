@@ -34,11 +34,26 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
   const fetchDesignerProfile = async (userId: string): Promise<DesignerProfile | null> => {
     // Check cache first
     if (profileCacheRef.current[userId] !== undefined) {
+      console.log('📦 Using cached profile for user:', userId, !!profileCacheRef.current[userId]);
       return profileCacheRef.current[userId];
     }
 
     try {
+      console.log('🔍 Fetching designer profile for user:', userId);
       setProfileLoading(true);
+      
+      // First, test basic database connectivity
+      console.log('🔌 Testing database connectivity...');
+      const { data: testData, error: testError } = await supabase
+        .from('designer_auth')
+        .select('user_id')
+        .limit(1);
+      
+      if (testError) {
+        console.error('💥 Database connectivity test failed:', testError);
+        throw new Error(`Database connection failed: ${testError.message}`);
+      }
+      console.log('✅ Database connectivity test passed');
       
       // Use a single query with joins to reduce database calls
       const { data: profileData, error } = await supabase
@@ -50,30 +65,49 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
         .eq('user_id', userId)
         .single();
 
-      if (error || !profileData) {
-        console.log('No designer profile found for user:', userId);
+      console.log('🔍 Profile query result:', { 
+        hasData: !!profileData, 
+        hasError: !!error,
+        errorMessage: error?.message,
+        hasDesigners: !!profileData?.designers 
+      });
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No rows found - this is normal for new users
+          console.log('ℹ️ No designer profile found for user:', userId);
+          profileCacheRef.current[userId] = null;
+          return null;
+        }
+        console.error('💥 Database error fetching profile:', error);
+        throw error;
+      }
+
+      if (!profileData || !profileData.designers) {
+        console.log('ℹ️ No designer data found for user:', userId);
         profileCacheRef.current[userId] = null;
         return null;
       }
 
-      if (!profileData.designers) {
-        console.log('No designer data linked to auth record');
-        profileCacheRef.current[userId] = null;
-        return null;
-      }
-
-      const profile = {
+      const profile: DesignerProfile = {
         ...profileData.designers,
         auth: profileData
-      } as DesignerProfile;
+      };
+
+      console.log('✅ Profile loaded successfully:', {
+        userId,
+        brandName: profile.brand_name,
+        status: profile.status
+      });
 
       // Cache the result
       profileCacheRef.current[userId] = profile;
       return profile;
+
     } catch (error) {
-      console.error('Error fetching designer profile:', error);
-      profileCacheRef.current[userId] = null;
-      return null;
+      console.error('💥 Error fetching designer profile:', error);
+      // Don't cache errors, allow retry
+      throw error;
     } finally {
       setProfileLoading(false);
     }
@@ -117,10 +151,19 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
         // Load profile if user exists
         if (session?.user) {
           console.log('👤 Loading profile for user:', session.user.id);
-          const profile = await fetchDesignerProfile(session.user.id);
-          if (mounted) {
-            setDesignerProfile(profile);
-            console.log('✅ Profile loaded:', !!profile);
+          try {
+            const profile = await fetchDesignerProfile(session.user.id);
+            if (mounted) {
+              setDesignerProfile(profile);
+              console.log('✅ Profile loaded in initialization:', !!profile);
+            } else {
+              console.log('⚠️ Component unmounted during profile load');
+            }
+          } catch (profileError) {
+            console.error('💥 Error loading profile during initialization:', profileError);
+            if (mounted) {
+              setDesignerProfile(null);
+            }
           }
         } else {
           console.log('❌ No session found');
@@ -148,11 +191,18 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
     // Add timeout protection to prevent infinite loading
     initializationTimeout = setTimeout(() => {
       if (mounted && !initialized) {
-        console.warn('⚠️ Auth initialization timeout - forcing completion');
+        console.warn('⚠️ Auth initialization timeout (5s) - forcing completion');
+        console.warn('⚠️ Current state:', { 
+          mounted, 
+          initialized, 
+          hasUser: !!user, 
+          hasSession: !!session,
+          profileLoading 
+        });
         setInitialized(true);
         setLoading(false);
       }
-    }, 10000); // 10 second timeout
+    }, 5000); // 5 second timeout (reduced from 10)
 
     initializeAuth();
 
@@ -185,10 +235,19 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
         console.log('👤 Auth state change - loading profile for:', session.user.id);
         // Clear cache and fetch fresh profile on auth change
         delete profileCacheRef.current[session.user.id];
-        const profile = await fetchDesignerProfile(session.user.id);
-        if (mounted) {
-          setDesignerProfile(profile);
-          console.log('✅ Profile updated from auth change:', !!profile);
+        try {
+          const profile = await fetchDesignerProfile(session.user.id);
+          if (mounted) {
+            setDesignerProfile(profile);
+            console.log('✅ Profile updated from auth change:', !!profile);
+          } else {
+            console.log('⚠️ Component unmounted during auth state profile load');
+          }
+        } catch (profileError) {
+          console.error('💥 Error loading profile during auth state change:', profileError);
+          if (mounted) {
+            setDesignerProfile(null);
+          }
         }
       } else {
         console.log('❌ No session in auth state change');

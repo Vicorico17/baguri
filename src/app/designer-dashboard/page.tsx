@@ -77,7 +77,7 @@ function DesignerDashboardContent() {
   const router = useRouter();
   
   // Use the same auth context as the auth page
-  const { loading, user, designerProfile, initialized } = useDesignerAuth();
+  const { loading, user, initialized } = useDesignerAuth();
 
   const [profile, setProfile] = useState<DesignerProfileForm>({
     brandName: '',
@@ -105,8 +105,7 @@ function DesignerDashboardContent() {
       loading, 
       initialized,
       user: !!user, 
-      userId: user?.id,
-      designerProfile: !!designerProfile 
+      userId: user?.id
     });
     
     // Only redirect if auth is initialized and there's no user
