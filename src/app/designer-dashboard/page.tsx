@@ -9,16 +9,12 @@ import { BackgroundPaths } from "@/components/ui/background-paths";
 import { BrandShowcase } from "@/components/ui/brand-showcase";
 import { ProgressCircle } from "@/components/ui/progress-circle";
 import { useDesignerAuth } from '@/contexts/DesignerAuthContext';
-import { designerService, type DesignerDashboardData, type DesignerProfileForm, type DesignerProduct } from '@/lib/designerService';
+import { designerService, type DesignerDashboardData, type DesignerProfileForm } from '@/lib/designerService';
 
-// Product stock status options
-const STOCK_STATUS_OPTIONS = [
-  { value: 'in_stock', label: 'In Stock', color: 'bg-green-500/20 text-green-400 border-green-500/30' },
-  { value: 'made_to_order', label: 'Made to Order', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
-  { value: 'coming_soon', label: 'Coming Soon', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' }
-];
+// Product stock status options - removed since products management is removed
+// const STOCK_STATUS_OPTIONS = [...]
 
-const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL']; // Keep for future use
 
 // Romanian cities
 const ROMANIAN_CITIES = [
@@ -39,28 +35,6 @@ const mockDesignerProfile = {
   completionPercentage: 15
 };
 
-function createEmptyProduct(): DesignerProduct {
-  // Generate a proper UUID v4
-  const generateUUID = () => {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0;
-      const v = c == 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
-  };
-
-  return {
-    id: generateUUID(),
-    name: '',
-    description: '',
-    price: 0,
-    images: [],
-    sizes: [],
-    colors: [{ name: '', images: [] }],
-    stockStatus: 'in_stock'
-  };
-}
-
 function DesignerDashboardContent() {
   const [dashboardData, setDashboardData] = useState<DesignerDashboardData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -70,7 +44,6 @@ function DesignerDashboardContent() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingSecondaryLogo, setUploadingSecondaryLogo] = useState(false);
   const [brandDetailsOpen, setBrandDetailsOpen] = useState(true);
-  const [productsOpen, setProductsOpen] = useState(false); // Start with products closed for faster initial load
   const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [dashboardReady, setDashboardReady] = useState(false);
@@ -97,7 +70,6 @@ function DesignerDashboardContent() {
     specialties: []
   });
 
-  const [products, setProducts] = useState<DesignerProduct[]>([createEmptyProduct()]);
   const [status, setStatus] = useState<'draft' | 'submitted' | 'approved' | 'rejected'>('draft');
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
   const [completionPercentage, setCompletionPercentage] = useState(0);
@@ -152,7 +124,6 @@ function DesignerDashboardContent() {
         
         if (data) {
           setProfile(data.profile);
-          setProducts(data.products);
           setStatus(data.status);
           setSubmittedAt(data.submittedAt);
           setCompletionPercentage(data.completionPercentage);
@@ -173,7 +144,6 @@ function DesignerDashboardContent() {
             website: '',
             specialties: []
           });
-          setProducts([createEmptyProduct()]);
           setStatus('draft');
           setSubmittedAt(null);
           setCompletionPercentage(0);
@@ -192,6 +162,11 @@ function DesignerDashboardContent() {
 
     loadDashboardData();
   }, [user?.id, user?.email]);
+
+  // Update completion percentage when profile changes
+  useEffect(() => {
+    updateCompletionPercentage();
+  }, [profile]);
 
   // Database connectivity test function
   const testDatabaseConnectivity = async () => {
@@ -311,89 +286,10 @@ function DesignerDashboardContent() {
     updateCompletionPercentage();
   };
 
-  const updateProduct = (productId: string, field: keyof DesignerProduct, value: any) => {
-    setProducts(prev => prev.map(product =>
-        product.id === productId
-          ? { ...product, [field]: value }
-          : product
-    ));
-    updateCompletionPercentage();
-  };
-
-  const addProduct = () => {
-    setProducts(prev => [...prev, createEmptyProduct()]);
-  };
-
-  const removeProduct = (productId: string) => {
-    if (products.length > 1) {
-      setProducts(prev => prev.filter(product => product.id !== productId));
-      updateCompletionPercentage();
-    }
-  };
-
-  const handleSizeToggle = (productId: string, size: string) => {
-    const product = products.find(p => p.id === productId);
-    if (!product) return;
-
-    const newSizes = product.sizes.includes(size)
-      ? product.sizes.filter(s => s !== size)
-      : [...product.sizes, size];
-    
-    updateProduct(productId, 'sizes', newSizes);
-  };
-
-  const addColor = (productId: string) => {
-    const product = products.find(p => p.id === productId);
-    if (!product) return;
-    
-    updateProduct(productId, 'colors', [...product.colors, { name: '', images: [] }]);
-  };
-
-  const updateColor = (productId: string, colorIndex: number, value: string) => {
-    const product = products.find(p => p.id === productId);
-    if (!product) return;
-    
-    const newColors = [...product.colors];
-    newColors[colorIndex] = { ...newColors[colorIndex], name: value };
-    updateProduct(productId, 'colors', newColors);
-  };
-
-  const removeColor = (productId: string, colorIndex: number) => {
-    const product = products.find(p => p.id === productId);
-    if (!product || product.colors.length <= 1) return;
-    
-    const newColors = product.colors.filter((_, index) => index !== colorIndex);
-    updateProduct(productId, 'colors', newColors);
-  };
-
-  const addColorImage = (productId: string, colorIndex: number, imageUrl: string) => {
-    const product = products.find(p => p.id === productId);
-    if (!product) return;
-    
-    const newColors = [...product.colors];
-    newColors[colorIndex] = { 
-      ...newColors[colorIndex], 
-      images: [...newColors[colorIndex].images, imageUrl] 
-    };
-    updateProduct(productId, 'colors', newColors);
-  };
-
-  const removeColorImage = (productId: string, colorIndex: number, imageIndex: number) => {
-    const product = products.find(p => p.id === productId);
-    if (!product) return;
-    
-    const newColors = [...product.colors];
-    newColors[colorIndex] = { 
-      ...newColors[colorIndex], 
-      images: newColors[colorIndex].images.filter((_, index) => index !== imageIndex) 
-    };
-    updateProduct(productId, 'colors', newColors);
-  };
-
   const updateCompletionPercentage = () => {
-    // Calculate completion based on filled fields
+    // Calculate completion based on filled fields (without products)
     let completed = 0;
-    const total = 10;
+    const total = 6; // Reduced from 10 since we removed products
 
     if (profile.brandName) completed++;
     if (profile.shortDescription) completed++;
@@ -401,35 +297,9 @@ function DesignerDashboardContent() {
     if (profile.logoUrl) completed++;
     if (profile.instagramHandle) completed++;
     if (profile.city) completed++;
-    if (profile.yearFounded) completed++;
-    if (products.some(p => p.name && p.price > 0)) completed++;
-    if (products.some(p => p.sizes.length > 0)) completed++;
-    if (products.some(p => p.colors.some(c => c.name.trim()))) completed++;
 
     const percentage = Math.round((completed / total) * 100);
     setCompletionPercentage(percentage);
-  };
-
-  // Real Supabase upload function for color images
-  const handleColorImageUpload = async (file: File, productId: string, colorIndex: number) => {
-    if (!user?.id) return;
-    
-    try {
-      const fileName = `product-${productId}-color-${colorIndex}-${Date.now()}`;
-      const result = await designerService.uploadFile(file, 'product-images', user.id, fileName);
-      
-      if (result.success && result.url) {
-      // Add the image to the specific color
-        addColorImage(productId, colorIndex, result.url);
-        console.log('Product image uploaded successfully');
-      } else {
-        console.error('Upload error:', result.error);
-        alert(`Error uploading product image: ${result.error}`);
-      }
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      alert(`Error uploading product image: ${error.message}`);
-    }
   };
 
   // Real Supabase upload function
@@ -450,12 +320,12 @@ function DesignerDashboardContent() {
         console.log(`${isSecondary ? 'Secondary logo' : 'Logo'} uploaded successfully, URL set to:`, result.url);
       
         // Update profile with the new logo URL
-      if (isSecondary) {
+        if (isSecondary) {
           updateProfile('secondaryLogoUrl', result.url);
-      } else {
+        } else {
           updateProfile('logoUrl', result.url);
-      }
-      
+        }
+        
         // Logo uploaded successfully - user can manually save when ready
       } else {
         console.error('Upload error:', result.error);
@@ -489,25 +359,12 @@ function DesignerDashboardContent() {
         setSaveStatus('idle');
         return;
       }
-
-      // Save products data
-      const productsResult = await designerService.saveDesignerProducts(user.id, products);
-      if (!productsResult.success) {
-        console.error('Error saving products:', productsResult.error);
-        alert(`Error saving products: ${productsResult.error}`);
-        setSaveStatus('idle');
-        return;
-      }
-      
-      // Update completion status
-      updateCompletionPercentage();
       
       // Reload dashboard data to ensure everything is synced
       const updatedData = await designerService.getDashboardData(user.id);
       if (updatedData) {
         setDashboardData(updatedData);
         setProfile(updatedData.profile);
-        setProducts(updatedData.products);
         setStatus(updatedData.status);
         setSubmittedAt(updatedData.submittedAt);
         setCompletionPercentage(updatedData.completionPercentage);
@@ -519,7 +376,7 @@ function DesignerDashboardContent() {
         setSaveStatus('idle');
       }, 2000);
       
-      console.log('Profile and products saved successfully');
+      console.log('Profile saved successfully');
     } catch (error: any) {
       console.error('Error saving profile:', error);
       alert(`Error saving profile: ${error.message}`);
@@ -543,12 +400,15 @@ function DesignerDashboardContent() {
         // Reload dashboard data to get updated status
         const updatedData = await designerService.getDashboardData(user.id);
         if (updatedData) {
+          setDashboardData(updatedData);
+          setProfile(updatedData.profile);
           setStatus(updatedData.status);
           setSubmittedAt(updatedData.submittedAt);
+          setCompletionPercentage(updatedData.completionPercentage);
         }
         
         // Different messages for initial submission vs resubmission
-        const isResubmission = status === 'rejected';
+        const isResubmission = dashboardData?.status === 'rejected';
         const message = isResubmission 
           ? 'Successfully resubmitted for review! 🎉\n\nThank you for making the requested updates. We\'ve sent you a confirmation email and our team will review your updated application within 24 hours.'
           : 'Successfully submitted for review! 🎉\n\nWe\'ve sent you a confirmation email with next steps. Our team will review your application and get back to you within 24 hours.';
@@ -605,8 +465,9 @@ function DesignerDashboardContent() {
     }
   };
 
-  const canSubmit = completionPercentage >= 63 && (status === 'draft' || status === 'rejected');
   const statusInfo = getStatusInfo(status);
+
+  const canSubmit = completionPercentage >= 83 && (status === 'draft' || status === 'rejected'); // Updated threshold since we removed products
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
@@ -733,22 +594,17 @@ function DesignerDashboardContent() {
                       if (user?.id) {
                         const loadDashboardData = async () => {
                           try {
-                            setLoadingData(true);
                             const data = await designerService.getDashboardData(user.id);
                             setDashboardData(data);
                             if (data) {
                               setProfile(data.profile);
-                              setProducts(data.products);
                               setStatus(data.status);
                               setSubmittedAt(data.submittedAt);
                               setCompletionPercentage(data.completionPercentage);
                             }
-                            setDashboardReady(true);
                           } catch (error) {
                             console.error('Retry failed:', error);
                             setError(error instanceof Error ? error.message : 'Retry failed');
-                          } finally {
-                            setLoadingData(false);
                           }
                         };
                         loadDashboardData();
@@ -1144,258 +1000,6 @@ function DesignerDashboardContent() {
                 )}
               </div>
 
-              {/* Products Management Section */}
-              <div id="products-section" className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl overflow-hidden">
-                <div className="p-6 flex items-center justify-between">
-                  <button
-                    onClick={() => setProductsOpen(!productsOpen)}
-                    className="flex items-center justify-between hover:bg-zinc-800/50 transition text-left flex-1 -mx-6 -my-6 px-6 py-6"
-                  >
-                    <div>
-                      <h2 className="text-2xl font-bold flex items-center gap-2">
-                        🛍️ {status === 'approved' ? 'Products Management' : 'Product Preparation'}
-                        {productsOpen ? (
-                          <ChevronUp size={24} className="text-zinc-400 ml-2" />
-                        ) : (
-                          <ChevronDown size={24} className="text-zinc-400 ml-2" />
-                        )}
-                      </h2>
-                      <p className="text-zinc-400 text-sm mt-1">
-                        {status === 'approved' 
-                          ? 'Add and manage your product collection' 
-                          : 'Prepare your products for when your brand gets approved'
-                        }
-                      </p>
-                    </div>
-                  </button>
-                  {productsOpen && isEditMode && (
-                    <button
-                      onClick={addProduct}
-                      className="flex items-center gap-2 px-4 py-2 bg-white text-zinc-900 rounded-lg hover:bg-zinc-200 transition font-medium ml-4"
-                    >
-                      <Plus size={16} />
-                      Add Product
-                    </button>
-                  )}
-                </div>
-                
-                {productsOpen && (
-                  <div className="px-6 pb-6">
-                    <div className="space-y-6">
-                        {products.map((product, index) => (
-                        <div key={product.id} className="border border-zinc-700 rounded-xl p-6 bg-zinc-800/50">
-                          <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-medium">Product {index + 1}</h3>
-                              {products.length > 1 && isEditMode && (
-                              <button
-                                onClick={() => removeProduct(product.id)}
-                                className="text-red-400 hover:text-red-300 transition"
-                              >
-                                <X size={20} />
-                              </button>
-                            )}
-                          </div>
-
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div className="space-y-4">
-                              <div>
-                                <label className="text-sm font-medium mb-2 flex items-center gap-2">
-                                  <ProgressCircle isComplete={!!product.name.trim()} />
-                                  Product Name *
-                                </label>
-                                <input
-                                  type="text"
-                                  value={product.name}
-                                  onChange={(e) => updateProduct(product.id, 'name', e.target.value)}
-                                  disabled={!isEditMode}
-                                  className={`w-full px-4 py-3 border rounded-lg transition ${
-                                    isEditMode 
-                                      ? 'bg-zinc-900 border-zinc-600 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent'
-                                      : 'bg-zinc-700/50 border-zinc-600 text-zinc-300 cursor-not-allowed'
-                                  }`}
-                                  placeholder="Product name"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="text-sm font-medium mb-2 flex items-center gap-2">
-                                  <ProgressCircle isComplete={!!product.description.trim()} />
-                                  Description
-                                </label>
-                                <textarea
-                                  value={product.description}
-                                  onChange={(e) => updateProduct(product.id, 'description', e.target.value)}
-                                  className="w-full px-4 py-3 bg-zinc-900 border border-zinc-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent transition resize-none"
-                                  placeholder="Product description"
-                                  rows={3}
-                                />
-                              </div>
-
-                              <div>
-                                <label className="text-sm font-medium mb-2 flex items-center gap-2">
-                                  <ProgressCircle isComplete={!!product.price && product.price > 0} />
-                                  Price (RON) *
-                                </label>
-                                <input
-                                  type="number"
-                                  value={product.price}
-                                  onChange={(e) => updateProduct(product.id, 'price', Number(e.target.value))}
-                                  className="w-full px-4 py-3 bg-zinc-900 border border-zinc-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent transition"
-                                  placeholder="0"
-                                  min="0"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="space-y-4">
-                              {/* Stock Status */}
-                              <div>
-                                <label className="text-sm font-medium mb-2 flex items-center gap-2">
-                                  <ProgressCircle isComplete={!!product.stockStatus} />
-                                  Stock Status *
-                                </label>
-                                <div className="space-y-2">
-                                  {STOCK_STATUS_OPTIONS.map((option) => (
-                                    <label key={option.value} className="flex items-center gap-3 cursor-pointer">
-                                      <input
-                                        type="radio"
-                                        name={`stock-${product.id}`}
-                                        value={option.value}
-                                        checked={product.stockStatus === option.value}
-                                        onChange={(e) => updateProduct(product.id, 'stockStatus', e.target.value as any)}
-                                        className="sr-only"
-                                      />
-                                      <div className={`px-3 py-2 rounded-lg border text-sm font-medium transition ${
-                                        product.stockStatus === option.value 
-                                          ? option.color 
-                                          : 'bg-zinc-700 text-zinc-400 border-zinc-600 hover:border-zinc-500'
-                                      }`}>
-                                        {option.label}
-                                      </div>
-                                    </label>
-                                  ))}
-                                </div>
-                              </div>
-
-                              {/* Sizes */}
-                              <div>
-                                <label className="text-sm font-medium mb-2 flex items-center gap-2">
-                                  <ProgressCircle isComplete={product.sizes.length > 0} />
-                                  Available Sizes
-                                </label>
-                                <div className="flex flex-wrap gap-2">
-                                  {SIZES.map((size) => (
-                                    <button
-                                      key={size}
-                                      onClick={() => handleSizeToggle(product.id, size)}
-                                      className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
-                                        product.sizes.includes(size)
-                                          ? 'bg-white text-zinc-900'
-                                          : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
-                                      }`}
-                                    >
-                                      {size}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-
-                              {/* Colors */}
-                              <div>
-                                <label className="text-sm font-medium mb-2 flex items-center gap-2">
-                                  <ProgressCircle isComplete={product.colors.some(color => color.name.trim())} />
-                                  Available Colors
-                                </label>
-                                <div className="space-y-4">
-                                  {product.colors.map((color, colorIndex) => (
-                                    <div key={colorIndex} className="border border-zinc-600 rounded-lg p-4 bg-zinc-800/50">
-                                      <div className="flex items-center gap-2 mb-3">
-                                        <input
-                                          type="text"
-                                          value={color.name}
-                                          onChange={(e) => updateColor(product.id, colorIndex, e.target.value)}
-                                          disabled={!isEditMode}
-                                          className={`flex-1 px-3 py-2 border rounded-lg transition text-sm ${
-                                            isEditMode 
-                                              ? 'bg-zinc-900 border-zinc-600 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent'
-                                              : 'bg-zinc-700/50 border-zinc-600 text-zinc-300 cursor-not-allowed'
-                                          }`}
-                                          placeholder="Color name"
-                                        />
-                                        {product.colors.length > 1 && isEditMode && (
-                                          <button
-                                            onClick={() => removeColor(product.id, colorIndex)}
-                                            className="text-red-400 hover:text-red-300 transition"
-                                          >
-                                            <X size={16} />
-                                          </button>
-                                        )}
-                                      </div>
-                                      
-                                      {/* Color Images */}
-                                      <div>
-                                        <div className="text-xs text-zinc-400 mb-2">Color Images</div>
-                                        <div className="grid grid-cols-2 gap-2 mb-2">
-                                          {color.images.map((image, imageIndex) => (
-                                            <div key={imageIndex} className="relative aspect-square bg-zinc-700 rounded-lg overflow-hidden">
-                                              <Image
-                                                src={image}
-                                                alt={`${color.name} ${imageIndex + 1}`}
-                                                fill
-                                                className="object-cover"
-                                              />
-                                              {isEditMode && (
-                                                <button
-                                                  onClick={() => removeColorImage(product.id, colorIndex, imageIndex)}
-                                                  className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
-                                                >
-                                                  <X size={10} />
-                                                </button>
-                                              )}
-                                            </div>
-                                          ))}
-                                          
-                                          {/* Add Image Button */}
-                                          {isEditMode && (
-                                            <label className="aspect-square border-2 border-dashed border-zinc-600 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-zinc-500 transition">
-                                              <input
-                                                type="file"
-                                                accept="image/*"
-                                                className="hidden"
-                                                onChange={(e) => {
-                                                  const file = e.target.files?.[0];
-                                                  if (file) handleColorImageUpload(file, product.id, colorIndex);
-                                                }}
-                                              />
-                                              <Camera size={16} className="text-zinc-400 mb-1" />
-                                              <span className="text-xs text-zinc-400">Add Image</span>
-                                            </label>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-                                  
-                                  {isEditMode && (
-                                    <button
-                                      onClick={() => addColor(product.id)}
-                                      className="text-sm text-zinc-400 hover:text-white transition flex items-center gap-1"
-                                    >
-                                      <Plus size={14} />
-                                      Add Color
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
               {/* Account Settings Section */}
               <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl overflow-hidden">
                 <div className="p-6 flex items-center justify-between">
@@ -1468,9 +1072,9 @@ function DesignerDashboardContent() {
                 canSubmit={canSubmit}
                 onSubmit={handleSubmitForReview}
                 completionPercentage={completionPercentage}
-                setProductsOpen={setProductsOpen}
                 setIsEditMode={setIsEditMode}
                 submitting={submitting}
+                profile={profile}
               />
               
               <GuidelinesCard />
@@ -1482,7 +1086,7 @@ function DesignerDashboardContent() {
   );
 }
 
-function ActionCard({ status, canSubmit, onSubmit, completionPercentage, setProductsOpen, setIsEditMode, submitting }: any) {
+function ActionCard({ status, canSubmit, onSubmit, completionPercentage, setIsEditMode, submitting, profile }: any) {
   return (
     <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-xl p-6">
       <h3 className="text-lg font-bold mb-4">Next Steps</h3>
@@ -1528,35 +1132,23 @@ function ActionCard({ status, canSubmit, onSubmit, completionPercentage, setProd
               <CheckCircle size={16} className="text-green-400" />
               <p className="text-green-400 text-sm font-medium">Congratulations! 🎉</p>
             </div>
-            <p className="text-green-300 text-xs">Your brand is now live on Baguri! Start managing your products and orders.</p>
+            <p className="text-green-300 text-xs">Your brand is now live on Baguri! You can view your store page.</p>
           </div>
           
           <div className="space-y-2">
             <button
-              onClick={() => window.open('/shop', '_blank')}
+              onClick={() => {
+                const slug = profile.brandName?.toLowerCase().replace(/\s+/g, '-');
+                if (slug) {
+                  window.open(`/designer/${slug}`, '_blank');
+                } else {
+                  window.open('/designers', '_blank');
+                }
+              }}
               className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
             >
               <Globe size={16} />
               View Your Store
-            </button>
-            
-            <button
-              onClick={() => {
-                // Scroll to products section and open it
-                setProductsOpen(true);
-                setIsEditMode(true);
-                // Small delay to ensure the section is rendered before scrolling
-                setTimeout(() => {
-                  const productsSection = document.getElementById('products-section');
-                  if (productsSection) {
-                    productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }
-                }, 100);
-              }}
-              className="w-full py-3 bg-white text-zinc-900 hover:bg-zinc-200 rounded-lg font-medium transition flex items-center justify-center gap-2"
-            >
-              <Edit size={16} />
-              Manage Products
             </button>
           </div>
         </div>
