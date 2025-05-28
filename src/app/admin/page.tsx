@@ -56,6 +56,7 @@ export default function AdminDashboard() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [rejectionModal, setRejectionModal] = useState<{ designer: DesignerApplication; isOpen: boolean } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -257,6 +258,7 @@ export default function AdminDashboard() {
       return;
     }
     
+    setRejecting(true);
     setActionLoading(designerId);
     try {
       const { error } = await supabase
@@ -294,6 +296,7 @@ export default function AdminDashboard() {
       console.error('Error rejecting designer:', error);
       alert('Error rejecting designer. Please try again.');
     } finally {
+      setRejecting(false);
       setActionLoading(null);
     }
   };
@@ -456,6 +459,7 @@ export default function AdminDashboard() {
           isOpen={rejectionModal.isOpen}
           onClose={() => setRejectionModal(null)}
           onReject={(notes) => handleReject(rejectionModal.designer.id, notes)}
+          rejecting={rejecting}
         />
       )}
     </div>
@@ -762,11 +766,12 @@ function DesignerDetailModal({ designer, onClose, onApprove, onReject, isLoading
   );
 }
 
-function RejectionModal({ designer, isOpen, onClose, onReject }: {
+function RejectionModal({ designer, isOpen, onClose, onReject, rejecting }: {
   designer: DesignerApplication;
   isOpen: boolean;
   onClose: () => void;
   onReject: (notes?: string) => void;
+  rejecting: boolean;
 }) {
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
@@ -864,16 +869,24 @@ function RejectionModal({ designer, isOpen, onClose, onReject }: {
           <div className="flex gap-3 mt-6 pt-6 border-t border-zinc-700">
               <button
               onClick={onClose}
-              className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg font-medium transition"
+              disabled={rejecting}
+              className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
               Cancel
               </button>
               <button
               onClick={handleSubmit}
-              disabled={selectedReasons.length === 0 && !rejectionNotes.trim()}
-              className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={rejecting || (selectedReasons.length === 0 && !rejectionNotes.trim())}
+              className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-              Send Rejection & Feedback
+              {rejecting ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                'Send Rejection & Feedback'
+              )}
               </button>
             </div>
         </div>

@@ -1,9 +1,12 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Instagram, Globe, MapPin, Calendar } from 'lucide-react';
+import { ArrowLeft, Instagram, Globe, MapPin, Calendar, User } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
+import { useDesignerAuth } from '@/contexts/DesignerAuthContext';
+import { supabase } from '@/lib/supabase';
 
 // Social Icon Component
 function SocialIcon({ type, url }: { type: "instagram" | "tiktok"; url: string }) {
@@ -39,79 +42,94 @@ function PlaceholderImage({ type, className, alt }: { type: 'product' | 'logo'; 
   );
 }
 
-// Designer data
-const designers = [
-  {
-    id: 2,
-    name: "Atelier Mia",
-    slug: "atelier-mia",
-    logo: "atelier-mia",
-    tagline: "Timeless elegance meets modern sophistication",
-    description: "Founded in 2019 in Bucharest, Atelier Mia creates luxury evening wear that celebrates the Romanian woman's grace and strength.",
-    location: "Bucharest, Romania",
-    yearFounded: 2019,
-    specialties: ["Evening Wear", "Bridal", "Cocktail Dresses"],
-    socialLinks: {
-      instagram: "@atelier.mia",
-      website: "www.ateliermia.ro"
-    },
-    isUpcoming: false,
-    productCount: 12
-  },
-  {
-    id: 3,
-    name: "Urban Luna",
-    slug: "urban-luna",
-    logo: "urban-luna",
-    tagline: "Streetwear with a Romanian soul",
-    description: "Urban Luna bridges the gap between street fashion and Romanian heritage. Our pieces are designed for the urban explorer who isn't afraid to stand out.",
-    location: "Cluj-Napoca, Romania",
-    yearFounded: 2021,
-    specialties: ["Streetwear", "Oversized Silhouettes", "Sustainable Fashion"],
-    socialLinks: {
-      instagram: "@urban.luna.ro",
-      website: "www.urbanluna.com"
-    },
-    isUpcoming: false,
-    productCount: 8
-  },
-  {
-    id: 4,
-    name: "Vestige Co",
-    slug: "vestige-co",
-    logo: "vestige-co",
-    tagline: "Preserving craftsmanship for tomorrow",
-    description: "Vestige Co specializes in handwoven accessories that tell the story of Romanian textile traditions. Every piece is created in partnership with local artisans.",
-    location: "Maramureș, Romania",
-    yearFounded: 2020,
-    specialties: ["Handwoven Accessories", "Traditional Crafts", "Sustainable Materials"],
-    socialLinks: {
-      instagram: "@vestige.co",
-      website: "www.vestigeco.ro"
-    },
-    isUpcoming: true,
-    productCount: 5
-  },
-  {
-    id: 5,
-    name: "Nova Studio",
-    slug: "nova-studio",
-    logo: "nova-studio",
-    tagline: "Minimalism redefined",
-    description: "Nova Studio creates clean, functional pieces for the contemporary lifestyle. Our philosophy centers around 'less is more' while ensuring every detail serves a purpose.",
-    location: "Timișoara, Romania",
-    yearFounded: 2022,
-    specialties: ["Minimalist Design", "Functional Fashion", "Geometric Patterns"],
-    socialLinks: {
-      instagram: "@nova.studio.ro",
-      website: "www.novastudio.ro"
-    },
-    isUpcoming: true,
-    productCount: 3
-  }
-];
-
 export default function DesignersPage() {
+  const [cachedUser, setCachedUser] = useState<any>(null);
+  const [designers, setDesigners] = useState<any[]>([]);
+  const [loadingDesigners, setLoadingDesigners] = useState(true);
+  
+  // Use designer auth context
+  const { user: authUser, designerProfile, loading } = useDesignerAuth();
+
+  // Check for cached user data on initial load for faster UI
+  useEffect(() => {
+    const checkCachedSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setCachedUser(session.user);
+        } else {
+          setCachedUser(null);
+        }
+      } catch (error) {
+        // Ignore errors, just don't show cached user
+        setCachedUser(null);
+      }
+    };
+    
+    checkCachedSession();
+  }, []);
+
+  // Clear cached user when auth user is null (logged out)
+  useEffect(() => {
+    if (!authUser && !loading) {
+      setCachedUser(null);
+    }
+  }, [authUser, loading]);
+
+  // Load approved designers from database
+  useEffect(() => {
+    const loadApprovedDesigners = async () => {
+      try {
+        setLoadingDesigners(true);
+        console.log('Loading approved designers...');
+        
+        const { data: approvedDesigners, error } = await supabase
+          .from('designers')
+          .select('*')
+          .eq('status', 'approved')
+          .not('brand_name', 'is', null)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error loading approved designers:', error);
+          // Fall back to empty array if there's an error
+          setDesigners([]);
+          return;
+        }
+
+        console.log('Approved designers loaded:', approvedDesigners?.length || 0);
+        
+        // Transform database data to match the expected format
+        const transformedDesigners = (approvedDesigners || []).map((designer, index) => ({
+          id: designer.id,
+          name: designer.brand_name,
+          slug: designer.brand_name?.toLowerCase().replace(/\s+/g, '-') || `designer-${index}`,
+          logo: designer.logo_url || 'placeholder',
+          tagline: designer.short_description || 'Romanian fashion designer',
+          description: designer.long_description || designer.short_description || 'A talented Romanian fashion designer.',
+          location: designer.city ? `${designer.city}, Romania` : 'Romania',
+          yearFounded: designer.year_founded || new Date().getFullYear(),
+          specialties: designer.specialties || ['Fashion Design'],
+          socialLinks: {
+            instagram: designer.instagram || '',
+            website: designer.website || ''
+          },
+          isUpcoming: false,
+          productCount: 0 // We'll need to add this later when we have products
+        }));
+
+        setDesigners(transformedDesigners);
+      } catch (error) {
+        console.error('Error loading designers:', error);
+        setDesigners([]);
+      } finally {
+        setLoadingDesigners(false);
+      }
+    };
+
+    loadApprovedDesigners();
+  }, []);
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <BackgroundPaths />
@@ -149,12 +167,37 @@ export default function DesignersPage() {
                 </a>
                 <SocialIcon type="tiktok" url="https://www.tiktok.com/@baguri.ro" />
               </div>
-              <Link 
-                href="/designer-auth"
-                className="px-4 py-2 bg-white text-zinc-900 rounded-full font-medium hover:bg-zinc-200 transition"
-              >
-                Become a Designer
-              </Link>
+              
+              {loading && !authUser && !cachedUser ? (
+                <div className="w-8 h-8 bg-zinc-800 rounded-full animate-pulse"></div>
+              ) : authUser || cachedUser ? (
+                <Link 
+                  href="/designer-dashboard"
+                  className="flex items-center gap-2 px-4 py-2 bg-zinc-800 border border-zinc-700 text-white rounded-full font-medium hover:bg-zinc-700 transition group"
+                >
+                  <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-amber-600 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-lg">
+                    {(authUser?.email || cachedUser?.email)?.charAt(0).toUpperCase() || 'D'}
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span className="text-sm font-medium text-white">
+                      {authUser?.user_metadata?.full_name || 
+                       cachedUser?.user_metadata?.full_name || 
+                       (authUser?.email || cachedUser?.email)?.split('@')[0] || 
+                       'Designer'}
+                    </span>
+                    <span className="text-xs text-zinc-400 group-hover:text-zinc-300">
+                      Dashboard
+                    </span>
+                  </div>
+                </Link>
+              ) : (
+                <Link 
+                  href="/designer-auth"
+                  className="px-4 py-2 bg-white text-zinc-900 rounded-full font-medium hover:bg-zinc-200 transition"
+                >
+                  Become a Designer
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -173,11 +216,37 @@ export default function DesignersPage() {
       {/* All Designers */}
       <section className="relative z-10 py-16">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {designers.map((designer) => (
-              <DesignerCard key={designer.id} designer={designer} />
-            ))}
-          </div>
+          {loadingDesigners ? (
+            <div className="text-center py-12">
+              <div className="w-8 h-8 border-2 border-zinc-600 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-zinc-400">Loading designers...</p>
+            </div>
+          ) : designers.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-8 max-w-md mx-auto">
+                <User size={48} className="mx-auto mb-4 text-zinc-400" />
+                <h3 className="text-xl font-semibold mb-2">No Designers Yet</h3>
+                <p className="text-zinc-400 mb-4">
+                  We're currently reviewing applications from talented Romanian designers. 
+                  Check back soon to discover amazing brands!
+                </p>
+                {!(authUser || cachedUser) && (
+                  <Link 
+                    href="/designer-auth"
+                    className="inline-block px-4 py-2 bg-white text-zinc-900 rounded-lg font-medium hover:bg-zinc-200 transition"
+                  >
+                    Apply to Join
+                  </Link>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {designers.map((designer) => (
+                <DesignerCard key={designer.id} designer={designer} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -187,12 +256,21 @@ export default function DesignersPage() {
           <p className="text-white text-lg font-semibold mb-4">
             Are you a Romanian designer?
           </p>
-          <Link 
-            href="/designer-auth"
-            className="inline-block bg-white text-zinc-900 px-6 py-2 rounded-lg text-sm font-medium hover:bg-zinc-200 transition"
-          >
-            Join Our Platform
-          </Link>
+          {authUser || cachedUser ? (
+            <Link 
+              href="/designer-dashboard"
+              className="inline-block bg-white text-zinc-900 px-6 py-2 rounded-lg text-sm font-medium hover:bg-zinc-200 transition"
+            >
+              Go to Dashboard
+            </Link>
+          ) : (
+            <Link 
+              href="/designer-auth"
+              className="inline-block bg-white text-zinc-900 px-6 py-2 rounded-lg text-sm font-medium hover:bg-zinc-200 transition"
+            >
+              Join Our Platform
+            </Link>
+          )}
         </div>
       </section>
     </div>
