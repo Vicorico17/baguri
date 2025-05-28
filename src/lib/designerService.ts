@@ -9,7 +9,6 @@ export type DesignerProfileForm = {
   city: string;
   yearFounded: number;
   email: string;
-  username: string;
   logoUrl: string;
   secondaryLogoUrl: string;
   instagramHandle: string;
@@ -108,7 +107,6 @@ class DesignerService {
         city: designerProfile.city || '',
         yearFounded: designerProfile.year_founded || new Date().getFullYear(),
         email: user?.email || designerProfile.email || '', // Always use auth user's email as source of truth
-        username: designerProfile.username || '',
         logoUrl: designerProfile.logo_url || '',
         secondaryLogoUrl: designerProfile.secondary_logo_url || '',
         instagramHandle: designerProfile.instagram || '',
@@ -188,7 +186,6 @@ class DesignerService {
           description: profileData.longDescription, // Keep for backward compatibility
           city: profileData.city,
           year_founded: profileData.yearFounded,
-          username: profileData.username,
           email: user.email, // Always sync with auth user's email
           logo_url: profileData.logoUrl,
           secondary_logo_url: profileData.secondaryLogoUrl,
@@ -232,26 +229,10 @@ class DesignerService {
         .eq('designer_id', designerProfile.id);
 
       const existingIds = new Set(existingProducts?.map(p => p.id) || []);
-      const newIds = new Set(products.map(p => p.id));
 
-      // Delete products that are no longer in the list
-      const toDelete = Array.from(existingIds).filter(id => !newIds.has(id));
-      if (toDelete.length > 0) {
-        const { error: deleteError } = await supabase
-          .from('designer_products')
-          .delete()
-          .in('id', toDelete);
-
-        if (deleteError) {
-          console.error('Error deleting products:', deleteError);
-          return { success: false, error: deleteError.message };
-        }
-      }
-
-      // Upsert products
+      // Process each product
       for (const product of products) {
         const productData = {
-          id: product.id,
           designer_id: designerProfile.id,
           name: product.name,
           description: product.description,
@@ -262,13 +243,48 @@ class DesignerService {
           stock_status: product.stockStatus,
         };
 
-        const { error: upsertError } = await supabase
-          .from('designer_products')
-          .upsert(productData, { onConflict: 'id' });
+        // Check if this is an existing product (has a valid UUID that exists in DB)
+        const isExistingProduct = existingIds.has(product.id);
 
-        if (upsertError) {
-          console.error('Error upserting product:', upsertError);
-          return { success: false, error: upsertError.message };
+        if (isExistingProduct) {
+          // Update existing product
+          const { error: updateError } = await supabase
+            .from('designer_products')
+            .update(productData)
+            .eq('id', product.id);
+
+          if (updateError) {
+            console.error('Error updating product:', updateError);
+            return { success: false, error: updateError.message };
+          }
+        } else {
+          // Insert new product (let database generate UUID)
+          const { error: insertError } = await supabase
+            .from('designer_products')
+            .insert(productData);
+
+          if (insertError) {
+            console.error('Error inserting product:', insertError);
+            return { success: false, error: insertError.message };
+          }
+        }
+      }
+
+      // Delete products that are no longer in the list (only check against valid existing IDs)
+      const currentValidIds = products
+        .map(p => p.id)
+        .filter(id => existingIds.has(id));
+      
+      const toDelete = Array.from(existingIds).filter(id => !currentValidIds.includes(id));
+      if (toDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('designer_products')
+          .delete()
+          .in('id', toDelete);
+
+        if (deleteError) {
+          console.error('Error deleting products:', deleteError);
+          return { success: false, error: deleteError.message };
         }
       }
 
@@ -287,6 +303,12 @@ class DesignerService {
         return { success: false, error: 'Designer profile not found' };
       }
 
+      // Get the current auth user to get the email
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        return { success: false, error: 'User not authenticated' };
+      }
+
       const { error } = await supabase
         .from('designers')
         .update({
@@ -298,6 +320,31 @@ class DesignerService {
       if (error) {
         console.error('Error submitting for review:', error);
         return { success: false, error: error.message };
+      }
+
+      // Send email notification
+      try {
+        const emailResponse = await fetch('/api/send-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            template: 'designer-review-submitted',
+            email: user.email,
+            brandName: designerProfile.brand_name || 'Your Brand',
+          }),
+        });
+
+        if (!emailResponse.ok) {
+          console.error('Failed to send email notification');
+          // Don't fail the submission if email fails
+        } else {
+          console.log('Email notification sent successfully');
+        }
+      } catch (emailError) {
+        console.error('Error sending email notification:', emailError);
+        // Don't fail the submission if email fails
       }
 
       return { success: true };
@@ -359,25 +406,23 @@ class DesignerService {
   // Calculate completion percentage
   private calculateCompletionPercentage(profile: DesignerProfileForm, products: DesignerProduct[]): number {
     let completed = 0;
-    const total = 12;
+    const coreFields = 6; // 6 required fields for submission
+    const totalFields = 8; // 8 total fields for 100%
 
-    // Profile fields (8 points)
+    // Core required fields (6 fields = 75% total, need 5 for submission)
     if (profile.brandName.trim()) completed++;
     if (profile.shortDescription.trim()) completed++;
-    if (profile.longDescription.trim()) completed++;
     if (profile.logoUrl.trim()) completed++;
-    if (profile.instagramHandle.trim()) completed++;
     if (profile.city.trim()) completed++;
     if (profile.yearFounded && profile.yearFounded > 1900) completed++;
-    if (profile.specialties.length > 0) completed++;
+    if (profile.instagramHandle.trim()) completed++;
 
-    // Product fields (4 points)
-    if (products.some(p => p.name.trim() && p.price > 0)) completed++;
-    if (products.some(p => p.sizes.length > 0)) completed++;
-    if (products.some(p => p.colors.some(c => c.name.trim()))) completed++;
-    if (products.some(p => p.description.trim())) completed++;
+    // Optional fields for 100% completion (2 additional fields = 25%)
+    if (profile.secondaryLogoUrl.trim()) completed++;
+    if (profile.tiktokHandle?.trim()) completed++;
 
-    return Math.round((completed / total) * 100);
+    // Calculate percentage: 8 fields = 100%, 6 fields = 75%
+    return Math.round((completed / totalFields) * 100);
   }
 
   // Upload file to Supabase storage

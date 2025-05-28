@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
-import { DesignerAuthProvider, useDesignerAuth } from '@/contexts/DesignerAuthContext';
+import { useDesignerAuth } from '@/contexts/DesignerAuthContext';
 
 function DesignerAuthForm() {
   const [isLogin, setIsLogin] = useState(true);
@@ -317,8 +317,6 @@ function DesignerAuthForm() {
 
 export default function DesignerAuth() {
   return (
-    <DesignerAuthProvider>
-      <DesignerAuthForm />
-    </DesignerAuthProvider>
+    <DesignerAuthForm />
   );
 } 

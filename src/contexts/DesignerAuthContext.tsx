@@ -24,6 +24,7 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
   const [designerProfile, setDesignerProfile] = useState<DesignerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
   
   // Simple cache to prevent repeated profile fetches
   const profileCacheRef = React.useRef<{ [userId: string]: DesignerProfile | null }>({});
@@ -89,28 +90,32 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     let mounted = true;
 
-    // Get initial session with faster loading
+    // Get initial session with improved loading
     const initializeAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (!mounted) return;
         
+        // Set session and user immediately
         setSession(session);
         setUser(session?.user ?? null);
-        setLoading(false); // Set loading false immediately after getting session
         
-        // Load profile in background if user exists - no delay needed
+        // Load profile if user exists
         if (session?.user) {
-          fetchDesignerProfile(session.user.id).then((profile) => {
-            if (mounted) {
-              setDesignerProfile(profile);
-            }
-          });
+          const profile = await fetchDesignerProfile(session.user.id);
+          if (mounted) {
+            setDesignerProfile(profile);
+          }
         }
+        
+        // Mark as initialized and stop loading
+        setInitialized(true);
+        setLoading(false);
       } catch (error) {
         console.error('Error initializing auth:', error);
         if (mounted) {
+          setInitialized(true);
           setLoading(false);
         }
       }
@@ -124,46 +129,60 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
       
+      console.log('Auth state changed:', event, session?.user?.id);
+      
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
+        // Clear cache and fetch fresh profile on auth change
+        delete profileCacheRef.current[session.user.id];
         const profile = await fetchDesignerProfile(session.user.id);
         if (mounted) {
           setDesignerProfile(profile);
         }
       } else {
         setDesignerProfile(null);
+        // Clear all cache when signing out
+        profileCacheRef.current = {};
       }
       
-      setLoading(false);
+      // Only set loading to false after initialization is complete
+      if (initialized) {
+        setLoading(false);
+      }
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [initialized]);
 
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
+        setLoading(false);
         return { error: error.message };
       }
 
+      // Don't set loading to false here - let the auth state change handler do it
       return { error: null };
     } catch (error: any) {
+      setLoading(false);
       return { error: error.message || 'An error occurred during sign in' };
     }
   };
 
   const signUp = async (email: string, password: string, fullName: string): Promise<{ error: string | null }> => {
     try {
+      setLoading(true);
       // First create the auth user
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -176,25 +195,27 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
       });
 
       if (error) {
+        setLoading(false);
         return { error: error.message };
       }
 
       if (!data.user) {
+        setLoading(false);
         return { error: 'Failed to create user account' };
       }
 
-      // Note: The designer profile and auth linkage will be created manually
-      // by admin after the designer fills out their application form
-      // For now, we just create the auth user
-
+      // Don't set loading to false here - let the auth state change handler do it
       return { error: null };
     } catch (error: any) {
+      setLoading(false);
       return { error: error.message || 'An error occurred during sign up' };
     }
   };
 
   const signOut = async () => {
     try {
+      setLoading(true);
+      
       // Clear state immediately for better UX
       setDesignerProfile(null);
       setUser(null);
@@ -205,6 +226,8 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
       
       // Then sign out from Supabase
       await supabase.auth.signOut();
+      
+      setLoading(false);
     } catch (error) {
       console.error('Error during sign out:', error);
       // Even if signOut fails, clear the local state
@@ -212,6 +235,7 @@ export function DesignerAuthProvider({ children }: { children: React.ReactNode }
       setUser(null);
       setSession(null);
       profileCacheRef.current = {};
+      setLoading(false);
     }
   };
 

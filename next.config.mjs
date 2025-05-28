@@ -19,7 +19,34 @@ const nextConfig = {
         port: '',
         pathname: '/storage/v1/object/public/**',
       },
+      // Allow common external domains for testing/development
+      {
+        protocol: 'https',
+        hostname: 'example.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'picsum.photos',
+        port: '',
+        pathname: '/**',
+      },
+      // Allow any HTTPS domain for flexibility (be careful in production)
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
     ],
+    // Add error handling for failed image loads
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 };
 

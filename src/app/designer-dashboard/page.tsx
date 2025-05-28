@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Edit, Send, CheckCircle, Clock, XCircle, Upload, LogOut, Plus, X, Instagram, Globe, Camera, Save, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Edit, Send, CheckCircle, Clock, XCircle, Upload, Plus, X, Instagram, Globe, Camera, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { BrandShowcase } from "@/components/ui/brand-showcase";
 import { ProgressCircle } from "@/components/ui/progress-circle";
-import { DesignerAuthProvider, useDesignerAuth } from '@/contexts/DesignerAuthContext';
+import { useDesignerAuth } from '@/contexts/DesignerAuthContext';
 import { designerService, type DesignerDashboardData, type DesignerProfileForm, type DesignerProduct } from '@/lib/designerService';
 
 // Product stock status options
@@ -40,8 +40,17 @@ const mockDesignerProfile = {
 };
 
 function createEmptyProduct(): DesignerProduct {
+  // Generate a proper UUID v4
+  const generateUUID = () => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
+
   return {
-    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+    id: generateUUID(),
     name: '',
     description: '',
     price: 0,
@@ -56,6 +65,7 @@ function DesignerDashboardContent() {
   const [dashboardData, setDashboardData] = useState<DesignerDashboardData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingSecondaryLogo, setUploadingSecondaryLogo] = useState(false);
   const [brandDetailsOpen, setBrandDetailsOpen] = useState(true);
@@ -64,20 +74,18 @@ function DesignerDashboardContent() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [dashboardReady, setDashboardReady] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
-  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
   
   // Use the same auth context as the auth page
-  const { signOut, loading, user, designerProfile } = useDesignerAuth();
+  const { loading, user, designerProfile } = useDesignerAuth();
 
   const [profile, setProfile] = useState<DesignerProfileForm>({
     brandName: '',
     shortDescription: '',
     longDescription: '',
-    city: 'Bucharest',
+    city: '',
     yearFounded: new Date().getFullYear(),
     email: '',
-    username: '',
     logoUrl: '',
     secondaryLogoUrl: '',
     instagramHandle: '',
@@ -94,6 +102,7 @@ function DesignerDashboardContent() {
   // Optimized redirect logic - immediate redirect if not authenticated
   useEffect(() => {
     if (!loading && !user) {
+      console.log('No user found, redirecting to auth...');
       router.replace('/designer-auth');
     }
   }, [loading, user, router]);
@@ -103,10 +112,12 @@ function DesignerDashboardContent() {
     const loadDashboardData = async () => {
       if (!user?.id) return;
       
+      console.log('Loading dashboard data for user:', user.id);
       setLoadingData(true);
       try {
         const data = await designerService.getDashboardData(user.id);
         if (data) {
+          console.log('Dashboard data loaded successfully');
           setDashboardData(data);
           setProfile(data.profile);
           setProducts(data.products);
@@ -114,6 +125,7 @@ function DesignerDashboardContent() {
           setSubmittedAt(data.submittedAt);
           setCompletionPercentage(data.completionPercentage);
         } else {
+          console.log('No dashboard data found, setting defaults');
           // If no designer profile exists, set email from user
           setProfile(prev => ({ ...prev, email: user.email || '' }));
         }
@@ -126,28 +138,15 @@ function DesignerDashboardContent() {
         setProfile(prev => ({ ...prev, email: user.email || '' }));
       } finally {
         setLoadingData(false);
-        setDashboardReady(true); // Set ready immediately when data loading is done
+        setDashboardReady(true);
       }
     };
 
+    // Only load data when we have a user and auth is not loading
     if (user && !loading) {
       loadDashboardData();
     }
   }, [user, loading]);
-
-  // Cleanup auto-save timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const handleLogout = () => {
-    signOut();
-    router.push('/designer-auth');
-  };
 
   // Show loading state while checking authentication
   if (loading) {
@@ -242,35 +241,15 @@ function DesignerDashboardContent() {
       [field]: value
     }));
     updateCompletionPercentage();
-    
-    // Auto-save after a short delay when in edit mode
-    if (isEditMode) {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-      autoSaveTimeoutRef.current = setTimeout(() => {
-        handleSaveProfile();
-      }, 2000); // Auto-save after 2 seconds of inactivity
-    }
   };
 
   const updateProduct = (productId: string, field: keyof DesignerProduct, value: any) => {
     setProducts(prev => prev.map(product =>
-      product.id === productId
-        ? { ...product, [field]: value }
-        : product
+        product.id === productId
+          ? { ...product, [field]: value }
+          : product
     ));
     updateCompletionPercentage();
-    
-    // Auto-save after a short delay when in edit mode
-    if (isEditMode) {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-      autoSaveTimeoutRef.current = setTimeout(() => {
-        handleSaveProfile();
-      }, 2000); // Auto-save after 2 seconds of inactivity
-    }
   };
 
   const addProduct = () => {
@@ -372,7 +351,7 @@ function DesignerDashboardContent() {
       const result = await designerService.uploadFile(file, 'product-images', user.id, fileName);
       
       if (result.success && result.url) {
-        // Add the image to the specific color
+      // Add the image to the specific color
         addColorImage(productId, colorIndex, result.url);
         console.log('Product image uploaded successfully');
       } else {
@@ -400,12 +379,16 @@ function DesignerDashboardContent() {
       const result = await designerService.uploadFile(file, 'logos', user.id, fileName);
       
       if (result.success && result.url) {
-        if (isSecondary) {
+        console.log(`${isSecondary ? 'Secondary logo' : 'Logo'} uploaded successfully, URL set to:`, result.url);
+      
+        // Update profile with the new logo URL
+      if (isSecondary) {
           updateProfile('secondaryLogoUrl', result.url);
-        } else {
+      } else {
           updateProfile('logoUrl', result.url);
-        }
-        console.log(`${isSecondary ? 'Secondary logo' : 'Logo'} uploaded successfully`);
+      }
+      
+        // Logo uploaded successfully - user can manually save when ready
       } else {
         console.error('Upload error:', result.error);
         alert(`Error uploading ${isSecondary ? 'secondary logo' : 'logo'}: ${result.error}`);
@@ -426,12 +409,16 @@ function DesignerDashboardContent() {
     if (!user?.id) return;
     
     setSaving(true);
+    setSaveStatus('saving');
     try {
+      console.log('Saving profile with data:', profile);
+      
       // Save profile data
       const profileResult = await designerService.saveDesignerProfile(user.id, profile);
       if (!profileResult.success) {
         console.error('Error saving profile:', profileResult.error);
         alert(`Error saving profile: ${profileResult.error}`);
+        setSaveStatus('idle');
         return;
       }
 
@@ -440,6 +427,7 @@ function DesignerDashboardContent() {
       if (!productsResult.success) {
         console.error('Error saving products:', productsResult.error);
         alert(`Error saving products: ${productsResult.error}`);
+        setSaveStatus('idle');
         return;
       }
       
@@ -458,19 +446,16 @@ function DesignerDashboardContent() {
       }
       
       // Show success feedback
-      const saveButton = document.querySelector('[data-save-button]');
-      if (saveButton) {
-        const originalText = saveButton.textContent;
-        saveButton.textContent = 'Saved!';
-        setTimeout(() => {
-          saveButton.textContent = originalText;
-        }, 2000);
-      }
+      setSaveStatus('saved');
+      setTimeout(() => {
+        setSaveStatus('idle');
+      }, 2000);
       
-      console.log('Profile and products saved successfully and data refreshed');
+      console.log('Profile and products saved successfully');
     } catch (error: any) {
       console.error('Error saving profile:', error);
       alert(`Error saving profile: ${error.message}`);
+      setSaveStatus('idle');
     } finally {
       setSaving(false);
     }
@@ -492,7 +477,14 @@ function DesignerDashboardContent() {
           setStatus(updatedData.status);
           setSubmittedAt(updatedData.submittedAt);
         }
-        alert('Successfully submitted for review! Our team will review your application and get back to you soon.');
+        
+        // Different messages for initial submission vs resubmission
+        const isResubmission = status === 'rejected';
+        const message = isResubmission 
+          ? 'Successfully resubmitted for review! 🎉\n\nThank you for making the requested updates. We\'ve sent you a confirmation email and our team will review your updated application within 24 hours.'
+          : 'Successfully submitted for review! 🎉\n\nWe\'ve sent you a confirmation email with next steps. Our team will review your application and get back to you within 24 hours.';
+        
+        alert(message);
       } else {
         alert(`Error submitting for review: ${result.error}`);
       }
@@ -542,7 +534,7 @@ function DesignerDashboardContent() {
     }
   };
 
-  const canSubmit = completionPercentage >= 80 && status === 'draft';
+  const canSubmit = completionPercentage >= 63 && (status === 'draft' || status === 'rejected');
   const statusInfo = getStatusInfo(status);
 
   return (
@@ -570,43 +562,27 @@ function DesignerDashboardContent() {
             </Link>
             
             <div className="flex items-center gap-4">
+              {!isEditMode ? (
               <button
-                onClick={async () => {
-                  if (isEditMode) {
-                    // Save any pending changes before switching to view mode
-                    await handleSaveProfile();
-                  }
-                  setIsEditMode(!isEditMode);
-                }}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
-                  isEditMode 
-                    ? 'bg-amber-600 text-white hover:bg-amber-700' 
-                    : 'bg-white text-zinc-900 hover:bg-zinc-200'
-                }`}
+                  onClick={() => setIsEditMode(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white text-zinc-900 hover:bg-zinc-200 rounded-lg font-medium transition"
               >
                 <Edit size={16} />
-                {isEditMode ? 'View Mode' : 'Edit Profile'}
+                  Edit Profile
               </button>
-              
-              {isEditMode && (
-                <button
-                  onClick={handleSaveProfile}
-                  disabled={saving}
-                  data-save-button
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Save size={16} />
-                  {saving ? 'Saving...' : 'Save'}
-                </button>
-              )}
-              
+              ) : (
               <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 text-zinc-400 hover:text-white transition"
+                  onClick={async () => {
+                    await handleSaveProfile();
+                    setIsEditMode(false);
+                  }}
+                  disabled={saving}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <LogOut size={16} />
-                Logout
+                  <Save size={16} />
+                  {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : 'Save'}
               </button>
+              )}
             </div>
           </div>
         </div>
@@ -685,15 +661,6 @@ function DesignerDashboardContent() {
                       <ChevronDown size={24} className="text-zinc-400 ml-2" />
                     )}
                   </button>
-                  {brandDetailsOpen && isEditMode && (
-                    <button
-                      onClick={() => setIsEditMode(false)}
-                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition ml-4"
-                    >
-                      <Save size={16} />
-                      Save
-                    </button>
-                  )}
                 </div>
                 
                 {brandDetailsOpen && (
@@ -863,6 +830,7 @@ function DesignerDashboardContent() {
                                     alt="Brand Logo"
                                     fill
                                     className="object-contain p-4"
+                                    key={profile.logoUrl}
                                   />
                                   {isEditMode && (
                                     <button
@@ -906,7 +874,10 @@ function DesignerDashboardContent() {
 
                           {/* Secondary Logo Upload */}
                           <div>
-                            <label className="block text-sm font-medium mb-2">Secondary Logo (Optional)</label>
+                            <label className="text-sm font-medium mb-2 flex items-center gap-2">
+                              <ProgressCircle isComplete={!!profile.secondaryLogoUrl.trim()} />
+                              Secondary Logo (Optional for 100%)
+                            </label>
                             <div className="relative">
                               {profile.secondaryLogoUrl ? (
                                 <div className={`relative w-full h-32 border rounded-lg overflow-hidden ${
@@ -917,6 +888,7 @@ function DesignerDashboardContent() {
                                     alt="Secondary Logo"
                                     fill
                                     className="object-contain p-4"
+                                    key={profile.secondaryLogoUrl}
                                   />
                                   {isEditMode && (
                                     <button
@@ -1000,7 +972,7 @@ function DesignerDashboardContent() {
                         <div>
                           <label className="text-sm font-medium mb-2 flex items-center gap-2">
                             <ProgressCircle isComplete={!!profile.tiktokHandle?.trim()} />
-                            TikTok Handle
+                            TikTok Handle (Optional for 100%)
                           </label>
                           {!isEditMode && profile.tiktokHandle ? (
                             <div className="flex items-center gap-3 px-4 py-3">
@@ -1034,7 +1006,7 @@ function DesignerDashboardContent() {
               </div>
 
               {/* Products Management Section */}
-              <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl overflow-hidden">
+              <div id="products-section" className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl overflow-hidden">
                 <div className="p-6 flex items-center justify-between">
                   <button
                     onClick={() => setProductsOpen(!productsOpen)}
@@ -1042,14 +1014,19 @@ function DesignerDashboardContent() {
                   >
                     <div>
                       <h2 className="text-2xl font-bold flex items-center gap-2">
-                        🛍️ Products Management
+                        🛍️ {status === 'approved' ? 'Products Management' : 'Product Preparation'}
                         {productsOpen ? (
                           <ChevronUp size={24} className="text-zinc-400 ml-2" />
                         ) : (
                           <ChevronDown size={24} className="text-zinc-400 ml-2" />
                         )}
                       </h2>
-                      <p className="text-zinc-400 text-sm mt-1">Add and manage your product collection</p>
+                      <p className="text-zinc-400 text-sm mt-1">
+                        {status === 'approved' 
+                          ? 'Add and manage your product collection' 
+                          : 'Prepare your products for when your brand gets approved'
+                        }
+                      </p>
                     </div>
                   </button>
                   {productsOpen && isEditMode && (
@@ -1066,11 +1043,11 @@ function DesignerDashboardContent() {
                 {productsOpen && (
                   <div className="px-6 pb-6">
                     <div className="space-y-6">
-                      {products.map((product, index) => (
+                        {products.map((product, index) => (
                         <div key={product.id} className="border border-zinc-700 rounded-xl p-6 bg-zinc-800/50">
                           <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-medium">Product {index + 1}</h3>
-                            {products.length > 1 && isEditMode && (
+                              {products.length > 1 && isEditMode && (
                               <button
                                 onClick={() => removeProduct(product.id)}
                                 className="text-red-400 hover:text-red-300 transition"
@@ -1303,35 +1280,8 @@ function DesignerDashboardContent() {
                 
                 {accountSettingsOpen && (
                   <div className="px-6 pb-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-6">
                       <div>
-                        <label className="text-sm font-medium mb-2 flex items-center gap-2">
-                          <ProgressCircle isComplete={!!profile.username.trim()} />
-                          Username
-                        </label>
-                        {!isEditMode && profile.username ? (
-                          <div className="px-4 py-3 text-zinc-300">
-                            {profile.username}
-                          </div>
-                        ) : (
-                          <input
-                            type="text"
-                            value={profile.username}
-                            onChange={(e) => updateProfile('username', e.target.value)}
-                            disabled={!isEditMode}
-                            className={`w-full px-4 py-3 border rounded-lg transition ${
-                              isEditMode 
-                                ? 'bg-zinc-800 border-zinc-700 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent'
-                                : 'bg-zinc-700/50 border-zinc-600 text-zinc-300 cursor-not-allowed'
-                            }`}
-                            placeholder="Your username"
-                          />
-                        )}
-                      </div>
-                      
-
-                      
-                      <div className="md:col-span-2">
                         <label className="text-sm font-medium mb-2 flex items-center gap-2">
                           <ProgressCircle isComplete={!!profile.email.trim()} />
                           Email Address
@@ -1339,10 +1289,32 @@ function DesignerDashboardContent() {
                         </label>
                         <div className="px-4 py-3 text-zinc-300 bg-zinc-700/50 border border-zinc-600 rounded-lg">
                           {profile.email || user?.email || 'No email found'}
-                        </div>
+                          </div>
                         <p className="text-xs text-zinc-500 mt-1">
                           Email is synced from your account and cannot be changed here
                         </p>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button
+                          onClick={() => {
+                            // TODO: Implement email change functionality
+                            alert('Email change functionality will be implemented soon');
+                          }}
+                          className="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-800 text-white border border-zinc-600 rounded-lg hover:bg-zinc-700 transition font-medium"
+                        >
+                          Change Your Email
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            // TODO: Implement password change functionality
+                            alert('Password change functionality will be implemented soon');
+                          }}
+                          className="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-800 text-white border border-zinc-600 rounded-lg hover:bg-zinc-700 transition font-medium"
+                        >
+                          Change Your Password
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1357,6 +1329,8 @@ function DesignerDashboardContent() {
                 canSubmit={canSubmit}
                 onSubmit={handleSubmitForReview}
                 completionPercentage={completionPercentage}
+                setProductsOpen={setProductsOpen}
+                setIsEditMode={setIsEditMode}
               />
               
               <GuidelinesCard />
@@ -1368,7 +1342,7 @@ function DesignerDashboardContent() {
   );
 }
 
-function ActionCard({ status, canSubmit, onSubmit, completionPercentage }: any) {
+function ActionCard({ status, canSubmit, onSubmit, completionPercentage, setProductsOpen, setIsEditMode }: any) {
   return (
     <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-xl p-6">
       <h3 className="text-lg font-bold mb-4">Next Steps</h3>
@@ -1378,7 +1352,7 @@ function ActionCard({ status, canSubmit, onSubmit, completionPercentage }: any) 
           <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
             <p className="text-amber-400 text-sm mb-2">Complete your profile to submit for review</p>
             <div className="text-xs text-amber-300">
-              {completionPercentage < 80 ? 'At least 80% completion required' : 'Ready to submit!'}
+              {completionPercentage < 63 ? 'At least 5 out of 6 required fields needed' : 'Ready to submit!'}
             </div>
           </div>
           
@@ -1399,27 +1373,88 @@ function ActionCard({ status, canSubmit, onSubmit, completionPercentage }: any) 
       
       {status === 'submitted' && (
         <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-          <p className="text-amber-400 text-sm">Your application is under review. We&apos;ll notify you within 2-3 business days.</p>
+          <div className="flex items-center gap-2 mb-2">
+            <Clock size={16} className="text-amber-400" />
+            <p className="text-amber-400 text-sm font-medium">Under Review</p>
+          </div>
+          <p className="text-amber-300 text-xs">Your application is being reviewed. We&apos;ll notify you within 24 hours via email.</p>
         </div>
       )}
       
       {status === 'approved' && (
+        <div className="space-y-4">
         <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-          <p className="text-green-400 text-sm">🎉 Your brand is now live on Baguri! Start uploading products and managing your store.</p>
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle size={16} className="text-green-400" />
+              <p className="text-green-400 text-sm font-medium">Congratulations! 🎉</p>
+            </div>
+            <p className="text-green-300 text-xs">Your brand is now live on Baguri! Start managing your products and orders.</p>
+          </div>
+          
+          <div className="space-y-2">
+            <button
+              onClick={() => window.open('/shop', '_blank')}
+              className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+            >
+              <Globe size={16} />
+              View Your Store
+            </button>
+            
+            <button
+              onClick={() => {
+                // Scroll to products section and open it
+                setProductsOpen(true);
+                setIsEditMode(true);
+                // Small delay to ensure the section is rendered before scrolling
+                setTimeout(() => {
+                  const productsSection = document.getElementById('products-section');
+                  if (productsSection) {
+                    productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }, 100);
+              }}
+              className="w-full py-3 bg-white text-zinc-900 hover:bg-zinc-200 rounded-lg font-medium transition flex items-center justify-center gap-2"
+            >
+              <Edit size={16} />
+              Manage Products
+            </button>
+          </div>
         </div>
       )}
       
       {status === 'rejected' && (
         <div className="space-y-4">
           <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-            <p className="text-red-400 text-sm">Please review the feedback and make necessary changes before resubmitting.</p>
+            <div className="flex items-center gap-2 mb-2">
+              <XCircle size={16} className="text-red-400" />
+              <p className="text-red-400 text-sm font-medium">Updates Required</p>
           </div>
+            <p className="text-red-300 text-xs">Please review the feedback email and make necessary changes before resubmitting.</p>
+          </div>
+          
+          <div className="p-3 bg-zinc-800/50 border border-zinc-600 rounded-lg">
+            <p className="text-zinc-300 text-xs mb-2">📧 Check your email for detailed feedback</p>
+            <p className="text-zinc-400 text-xs">Update your profile based on our suggestions, then resubmit when ready.</p>
+          </div>
+          
           <button
             onClick={onSubmit}
-            className="w-full py-3 bg-white text-zinc-900 hover:bg-zinc-200 rounded-lg font-medium transition"
+            disabled={!canSubmit}
+            className={`w-full py-3 rounded-lg font-medium transition flex items-center justify-center gap-2 ${
+              canSubmit
+                ? 'bg-white text-zinc-900 hover:bg-zinc-200'
+                : 'bg-zinc-700 text-zinc-400 cursor-not-allowed'
+            }`}
           >
-            Resubmit Application
+            <Send size={16} />
+            Resubmit for Review
           </button>
+          
+          {!canSubmit && (
+            <p className="text-xs text-zinc-500 text-center">
+              Complete your profile to resubmit ({Math.round(completionPercentage)}% complete)
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -1463,8 +1498,6 @@ function GuidelinesCard() {
 
 export default function DesignerDashboard() {
   return (
-    <DesignerAuthProvider>
-      <DesignerDashboardContent />
-    </DesignerAuthProvider>
+    <DesignerDashboardContent />
   );
 }

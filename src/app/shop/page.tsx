@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ShoppingCart, Heart, X, Plus, Minus, User } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { CartSidebar as GlobalCartSidebar } from '@/components/CartSidebar';
-import { DesignerAuthProvider, useDesignerAuth } from '@/contexts/DesignerAuthContext';
+import { useDesignerAuth } from '@/contexts/DesignerAuthContext';
 import { supabase } from '@/lib/supabase';
 
 // Placeholder component for images
@@ -498,10 +498,8 @@ function ProductModal({ product, onClose, onAddToCart }: {
   );
 }
 
-export default function ShopPage() {
+export default function Shop() {
   return (
-    <DesignerAuthProvider>
-      <ShopContent />
-    </DesignerAuthProvider>
+    <ShopContent />
   );
 }
