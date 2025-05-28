@@ -75,6 +75,7 @@ function DesignerDashboardContent() {
   const [dashboardReady, setDashboardReady] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dbTestResult, setDbTestResult] = useState<string | null>(null);
   const router = useRouter();
   
   // Use the same auth context as the auth page
@@ -190,6 +191,29 @@ function DesignerDashboardContent() {
 
     loadDashboardData();
   }, [user?.id]);
+
+  // Database connectivity test function
+  const testDatabaseConnectivity = async () => {
+    try {
+      setDbTestResult('Testing database connectivity...');
+      console.log('🔌 Testing database connectivity from dashboard...');
+      
+      const response = await fetch('/api/test-db');
+      const result = await response.json();
+      
+      if (result.success) {
+        setDbTestResult(`✅ Database connection successful! Has data: ${result.hasData}`);
+        console.log('✅ Database test passed:', result);
+      } else {
+        setDbTestResult(`❌ Database test failed: ${result.error}`);
+        console.error('❌ Database test failed:', result);
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      setDbTestResult(`💥 Database test error: ${errorMsg}`);
+      console.error('💥 Database test error:', error);
+    }
+  };
 
   // Show loading state while checking authentication
   if (!initialized) {
@@ -686,39 +710,54 @@ function DesignerDashboardContent() {
           <div className="max-w-7xl mx-auto px-4">
             <div className="bg-red-900/20 border border-red-700/50 rounded-lg p-4 flex items-center gap-3">
               <div className="text-red-400">⚠️</div>
-              <div>
+              <div className="flex-1">
                 <div className="text-red-300 font-medium">Data Loading Error</div>
                 <div className="text-red-400 text-sm">{error}</div>
-                <button
-                  onClick={() => {
-                    setError(null);
-                    // Retry loading data
-                    if (user?.id) {
-                      const loadDashboardData = async () => {
-                        try {
-                          setLoadingData(true);
-                          const data = await designerService.getDashboardData(user.id);
-                          setDashboardData(data);
-                          if (data) {
-                            setProfile(data.profile);
-                            setProducts(data.products);
-                            setStatus(data.status);
-                            setSubmittedAt(data.submittedAt);
-                            setCompletionPercentage(data.completionPercentage);
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => {
+                      setError(null);
+                      // Retry loading data
+                      if (user?.id) {
+                        const loadDashboardData = async () => {
+                          try {
+                            setLoadingData(true);
+                            const data = await designerService.getDashboardData(user.id);
+                            setDashboardData(data);
+                            if (data) {
+                              setProfile(data.profile);
+                              setProducts(data.products);
+                              setStatus(data.status);
+                              setSubmittedAt(data.submittedAt);
+                              setCompletionPercentage(data.completionPercentage);
+                            }
+                            setDashboardReady(true);
+                          } catch (error) {
+                            console.error('Retry failed:', error);
+                            setError(error instanceof Error ? error.message : 'Retry failed');
+                          } finally {
+                            setLoadingData(false);
                           }
-                        } catch (error) {
-                          setError(error instanceof Error ? error.message : 'Failed to load dashboard data');
-                        } finally {
-                          setLoadingData(false);
-                        }
-                      };
-                      loadDashboardData();
-                    }
-                  }}
-                  className="mt-2 px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition"
-                >
-                  Retry
-                </button>
+                        };
+                        loadDashboardData();
+                      }
+                    }}
+                    className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white text-sm rounded transition-colors"
+                  >
+                    Retry
+                  </button>
+                  <button
+                    onClick={testDatabaseConnectivity}
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded transition-colors"
+                  >
+                    Test Database
+                  </button>
+                </div>
+                {dbTestResult && (
+                  <div className="mt-2 text-sm text-zinc-300 bg-zinc-800/50 p-2 rounded">
+                    {dbTestResult}
+                  </div>
+                )}
               </div>
             </div>
           </div>
