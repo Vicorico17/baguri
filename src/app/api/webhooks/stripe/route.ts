@@ -3,11 +3,17 @@ import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { supabase } from '@/lib/supabase';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-02-24.acacia',
-});
+// Create Stripe client with fallback for build time
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+let stripe: Stripe | null = null;
+
+if (stripeSecretKey) {
+  stripe = new Stripe(stripeSecretKey, {
+    apiVersion: '2025-02-24.acacia',
+  });
+}
 
 // Commission tier structure
 const COMMISSION_TIERS = [
@@ -27,6 +33,12 @@ function getCommissionTier(salesTotal: number) {
 
 export async function POST(req: NextRequest) {
   try {
+    // Check if Stripe is properly configured
+    if (!stripe || !endpointSecret) {
+      console.error('Stripe configuration missing');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const body = await req.text();
     const sig = headers().get('stripe-signature')!;
 
@@ -65,6 +77,12 @@ export async function POST(req: NextRequest) {
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   try {
     console.log('Processing checkout completed:', session.id);
+    
+    // Check if Stripe is available
+    if (!stripe) {
+      console.error('Stripe not configured for webhook processing');
+      return;
+    }
     
     // Get line items from the session
     const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
