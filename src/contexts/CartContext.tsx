@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export type CartItem = {
-  id: number;
+  id: string | number; // Support both string UUIDs and numeric IDs
   name: string;
   price: number;
   originalPrice?: number;
@@ -17,8 +17,8 @@ export type CartItem = {
 type CartContextType = {
   cart: CartItem[];
   addToCart: (product: any, size: string, color: string) => void;
-  updateCartItemQuantity: (id: number, size: string, color: string, quantity: number) => void;
-  removeFromCart: (id: number, size: string, color: string) => void;
+  updateCartItemQuantity: (id: string | number, size: string, color: string, quantity: number) => void;
+  removeFromCart: (id: string | number, size: string, color: string) => void;
   clearCart: () => void;
   cartTotal: number;
   cartItemCount: number;
@@ -91,7 +91,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateCartItemQuantity = (id: number, size: string, color: string, quantity: number) => {
+  const updateCartItemQuantity = (id: string | number, size: string, color: string, quantity: number) => {
     if (quantity === 0) {
       removeFromCart(id, size, color);
     } else {
@@ -103,7 +103,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const removeFromCart = (id: number, size: string, color: string) => {
+  const removeFromCart = (id: string | number, size: string, color: string) => {
     setCart(cart.filter(item => !(item.id === id && item.size === size && item.color === color)));
   };
 

@@ -24,56 +24,68 @@ export const STRIPE_PRODUCT_MAPPING = {
   }
 };
 
-export function getStripeProductId(productId: number): string | null {
+export function getStripeProductId(productId: string | number): string | null {
   // First, check the dynamic mapping from automated product creation
   const dynamicData = getStripeDataForProduct(productId);
   if (dynamicData) {
     return dynamicData.productId;
   }
   
-  // Fallback to static mapping for existing products
-  const mapping = STRIPE_PRODUCT_MAPPING[productId as keyof typeof STRIPE_PRODUCT_MAPPING];
-  return mapping?.productId || null;
+  // Fallback to static mapping for existing products (only for numeric IDs)
+  if (typeof productId === 'number') {
+    const mapping = STRIPE_PRODUCT_MAPPING[productId as keyof typeof STRIPE_PRODUCT_MAPPING];
+    return mapping?.productId || null;
+  }
+  
+  return null;
 }
 
-export function getStripePriceId(productId: number): string | null {
+export function getStripePriceId(productId: string | number): string | null {
   // First, check the dynamic mapping from automated product creation
   const dynamicData = getStripeDataForProduct(productId);
   if (dynamicData) {
     return dynamicData.priceId;
   }
   
-  // Fallback to static mapping for existing products
-  const mapping = STRIPE_PRODUCT_MAPPING[productId as keyof typeof STRIPE_PRODUCT_MAPPING];
-  return mapping?.priceId || null;
+  // Fallback to static mapping for existing products (only for numeric IDs)
+  if (typeof productId === 'number') {
+    const mapping = STRIPE_PRODUCT_MAPPING[productId as keyof typeof STRIPE_PRODUCT_MAPPING];
+    return mapping?.priceId || null;
+  }
+  
+  return null;
 }
 
-export function getStripePaymentUrl(productId: number): string | null {
+export function getStripePaymentUrl(productId: string | number): string | null {
   // First, check the dynamic mapping from automated product creation
   const dynamicData = getStripeDataForProduct(productId);
   if (dynamicData?.paymentLinkUrl) {
     return dynamicData.paymentLinkUrl;
   }
   
-  // Fallback to static payment URLs for existing products
-  const paymentUrls: Record<number, string> = {
-    1: 'https://buy.stripe.com/test_4gM8wReahgGU6L5cHV8og00', // Silk Evening Dress
-    2: 'https://buy.stripe.com/test_8x2aEZ4zH76k7P97nB8og01', // Oversized Blazer  
-    3: 'https://buy.stripe.com/test_5kQ6oJ7LT62gc5pfU78og02', // Handwoven Scarf
-    4: 'https://buy.stripe.com/test_bJe5kF7LT62gfhB5ft8og03', // Minimalist Tote
-    5: 'https://buy.stripe.com/test_4gM8wReahgGU6L5cHV8og00', // Vintage Inspired Gown (same as #1)
-  };
+  // Fallback to static payment URLs for existing products (only for numeric IDs)
+  if (typeof productId === 'number') {
+    const paymentUrls: Record<number, string> = {
+      1: 'https://buy.stripe.com/test_4gM8wReahgGU6L5cHV8og00', // Silk Evening Dress
+      2: 'https://buy.stripe.com/test_8x2aEZ4zH76k7P97nB8og01', // Oversized Blazer  
+      3: 'https://buy.stripe.com/test_5kQ6oJ7LT62gc5pfU78og02', // Handwoven Scarf
+      4: 'https://buy.stripe.com/test_bJe5kF7LT62gfhB5ft8og03', // Minimalist Tote
+      5: 'https://buy.stripe.com/test_4gM8wReahgGU6L5cHV8og00', // Vintage Inspired Gown (same as #1)
+    };
+    
+    return paymentUrls[productId] || null;
+  }
   
-  return paymentUrls[productId] || null;
+  return null;
 }
 
 // Helper function to check if a product has Stripe integration
-export function hasStripeIntegration(productId: number): boolean {
+export function hasStripeIntegration(productId: string | number): boolean {
   return getStripePriceId(productId) !== null;
 }
 
 // Helper function to get all Stripe data for a product
-export function getStripeData(productId: number): {
+export function getStripeData(productId: string | number): {
   productId: string | null;
   priceId: string | null;
   paymentUrl: string | null;
@@ -90,15 +102,17 @@ export function getStripeData(productId: number): {
     };
   }
   
-  // Check static mapping
-  const staticMapping = STRIPE_PRODUCT_MAPPING[productId as keyof typeof STRIPE_PRODUCT_MAPPING];
-  if (staticMapping) {
-    return {
-      productId: staticMapping.productId,
-      priceId: staticMapping.priceId,
-      paymentUrl: getStripePaymentUrl(productId),
-      source: 'static'
-    };
+  // Check static mapping (only for numeric IDs)
+  if (typeof productId === 'number') {
+    const staticMapping = STRIPE_PRODUCT_MAPPING[productId as keyof typeof STRIPE_PRODUCT_MAPPING];
+    if (staticMapping) {
+      return {
+        productId: staticMapping.productId,
+        priceId: staticMapping.priceId,
+        paymentUrl: getStripePaymentUrl(productId),
+        source: 'static'
+      };
+    }
   }
   
   return {

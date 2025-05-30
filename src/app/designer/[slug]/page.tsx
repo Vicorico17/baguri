@@ -31,6 +31,7 @@ function PlaceholderImage({ type, className, alt }: { type: 'product' | 'logo' |
 
 export default function DesignerProfile({ params }: { params: { slug: string } }) {
   const [designer, setDesigner] = useState<any>(null);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -77,7 +78,21 @@ export default function DesignerProfile({ params }: { params: { slug: string } }
           return;
         }
 
-        setDesigner(transformDesignerData(matchingDesigner));
+        const transformedDesigner = transformDesignerData(matchingDesigner);
+        setDesigner(transformedDesigner);
+
+        // Load all active products for this designer (not just live ones)
+        const { data: productsData, error: productsError } = await supabase
+          .from('designer_products')
+          .select('*')
+          .eq('designer_id', matchingDesigner.id)
+          .eq('is_active', true); // Show all active products, not just live ones
+
+        if (productsError) {
+          console.error('Error loading products:', productsError);
+        } else {
+          setProducts(productsData || []);
+        }
       } catch (error) {
         console.error('Error loading designer data:', error);
         setError('Failed to load designer data');
@@ -396,30 +411,44 @@ export default function DesignerProfile({ params }: { params: { slug: string } }
         </div>
       </section>
 
-      {/* Coming Soon Products Section */}
+      {/* Products Section */}
       <section className="relative z-10 py-16 bg-zinc-900/30">
         <div className="max-w-7xl mx-auto px-4">
           <h2 className="text-2xl font-bold mb-8 text-center">Collection</h2>
-          <div className="text-center py-12">
-            <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-8 max-w-md mx-auto">
-              <ShoppingCart size={48} className="mx-auto mb-4 text-zinc-400" />
-              <h3 className="text-xl font-semibold mb-2">Products Coming Soon</h3>
-              <p className="text-zinc-400 mb-4">
-                {designer.name} is preparing their amazing collection. 
-                Check back soon to discover their latest designs!
-              </p>
-              {designer.socialLinks.instagram && (
-                <a 
-                  href={`https://instagram.com/${designer.socialLinks.instagram.replace('@', '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block px-4 py-2 bg-white text-zinc-900 rounded-lg font-medium hover:bg-zinc-200 transition"
-                >
-                  Follow on Instagram
-                </a>
-              )}
+          
+          {products.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {products.map((product) => (
+                <ProductCard 
+                  key={product.id} 
+                  product={product} 
+                  designer={designer}
+                  onAddToCart={addToCart}
+                />
+              ))}
             </div>
-          </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-8 max-w-md mx-auto">
+                <ShoppingCart size={48} className="mx-auto mb-4 text-zinc-400" />
+                <h3 className="text-xl font-semibold mb-2">Products Coming Soon</h3>
+                <p className="text-zinc-400 mb-4">
+                  {designer.name} is preparing their amazing collection. 
+                  Check back soon to discover their latest designs!
+                </p>
+                {designer.socialLinks.instagram && (
+                  <a 
+                    href={`https://instagram.com/${designer.socialLinks.instagram.replace('@', '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block px-4 py-2 bg-white text-zinc-900 rounded-lg font-medium hover:bg-zinc-200 transition"
+                  >
+                    Follow on Instagram
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -453,6 +482,98 @@ export default function DesignerProfile({ params }: { params: { slug: string } }
       
       {/* Global Shopping Cart Sidebar */}
       <CartSidebar />
+    </div>
+  );
+}
+
+// Product Card Component
+function ProductCard({ product, designer, onAddToCart }: { 
+  product: any; 
+  designer: any;
+  onAddToCart: (product: any, size: string, color: string) => void; 
+}) {
+  // Handle colors - it might be a string or already an object
+  let colors = [];
+  try {
+    if (typeof product.colors === 'string') {
+      colors = JSON.parse(product.colors);
+    } else if (Array.isArray(product.colors)) {
+      colors = product.colors;
+    } else {
+      colors = [];
+    }
+  } catch (error) {
+    console.error('Error parsing colors:', error);
+    colors = [];
+  }
+  
+  const firstColor = colors[0];
+  const firstImage = firstColor?.images?.[0];
+  
+  // Calculate total variants
+  const totalVariants = colors.reduce((total: number, color: any) => {
+    return total + (color.sizes?.length || 0);
+  }, 0);
+
+  const handleAddToCart = () => {
+    // For now, add the product with the first available variant
+    if (firstColor && firstColor.sizes?.length > 0) {
+      const productForCart = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: firstImage || '/placeholder-product.jpg',
+        designer: { name: designer.name, logo: designer.logo }
+      };
+      onAddToCart(productForCart, firstColor.sizes[0].size, firstColor.name);
+    }
+  };
+
+  return (
+    <div className="bg-zinc-900 rounded-lg overflow-hidden hover:bg-zinc-800 transition group">
+      {/* Product Image */}
+      <div className="aspect-[4/3] bg-zinc-800 relative overflow-hidden">
+        {firstImage ? (
+          <Image
+            src={firstImage}
+            alt={product.name}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          <PlaceholderImage 
+            type="product" 
+            alt={product.name}
+            className="w-full h-full"
+          />
+        )}
+        
+        {/* Add to Cart Overlay */}
+        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <button
+            onClick={handleAddToCart}
+            className="bg-white text-zinc-900 px-6 py-2 rounded-lg font-medium hover:bg-zinc-200 transition flex items-center gap-2"
+          >
+            <ShoppingCart size={16} />
+            Add to Cart
+          </button>
+        </div>
+      </div>
+      
+      {/* Product Info */}
+      <div className="p-4">
+        <h3 className="font-semibold mb-2 line-clamp-2">{product.name}</h3>
+        <p className="text-zinc-400 text-sm mb-3 line-clamp-2">{product.description}</p>
+        
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xl font-bold">{product.price} lei</span>
+          <div className="flex items-center gap-1 text-sm text-zinc-400">
+            <span>{colors.length} colors</span>
+            <span>•</span>
+            <span>{totalVariants} variants</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 } 

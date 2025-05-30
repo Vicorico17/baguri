@@ -117,12 +117,60 @@ function ShopContent() {
   const [showAllDesigners, setShowAllDesigners] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
   const [cachedUser, setCachedUser] = useState<any>(null);
+  const [products, setProducts] = useState<any[]>([]);
+  const [designers, setDesigners] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   
   // Use global cart
   const { cartItemCount, setIsCartOpen, addToCart } = useCart();
   
   // Use designer auth context
-  const { user: authUser, designerProfile, loading } = useDesignerAuth();
+  const { user: authUser, designerProfile, loading: authLoading } = useDesignerAuth();
+
+  // Load products and designers from database
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Load live products
+        const { data: productsData, error: productsError } = await supabase
+          .from('designer_products')
+          .select(`
+            *,
+            designers (
+              id,
+              brand_name,
+              logo_url
+            )
+          `)
+          .eq('is_live', true);
+
+        if (productsError) {
+          console.error('Error loading products:', productsError);
+        } else {
+          setProducts(productsData || []);
+        }
+
+        // Load approved designers
+        const { data: designersData, error: designersError } = await supabase
+          .from('designers')
+          .select('*')
+          .eq('status', 'approved')
+          .not('brand_name', 'is', null);
+
+        if (designersError) {
+          console.error('Error loading designers:', designersError);
+        } else {
+          setDesigners(designersData || []);
+        }
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   // Check for cached user data on initial load for faster UI
   useEffect(() => {
@@ -145,22 +193,21 @@ function ShopContent() {
 
   // Clear cached user when auth user is null (logged out)
   useEffect(() => {
-    if (!authUser && !loading) {
+    if (!authUser && !authLoading) {
       setCachedUser(null);
     }
-  }, [authUser, loading]);
+  }, [authUser, authLoading]);
 
   // Reduce initial loading time for better UX
   useEffect(() => {
-    if (!loading) {
+    if (!authLoading) {
       setInitialLoad(false);
     }
-  }, [loading]);
+  }, [authLoading]);
 
-  const filteredProducts = mockProducts.filter(product => {
-    const designerFilter = selectedDesigner === null || product.designer.name === mockDesigners.find(d => d.id === selectedDesigner)?.name;
-    const upcomingFilter = showUpcoming ? product.isUpcoming : !product.isUpcoming;
-    return designerFilter && upcomingFilter;
+  const filteredProducts = products.filter(product => {
+    const designerFilter = selectedDesigner === null || product.designers?.id === selectedDesigner;
+    return designerFilter;
   });
 
   const handleAddToCart = (product: any, size: string, color: string) => {
@@ -248,27 +295,6 @@ function ShopContent() {
       <div className="fixed top-20 left-0 right-0 z-30 border-b border-zinc-800 bg-zinc-900/30 backdrop-blur-sm mobile-header">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center gap-4 overflow-x-auto mobile-gap-3">
-            <div className="flex items-center gap-2 mr-4 mobile-gap-2">
-              <button
-                onClick={() => setShowUpcoming(false)}
-                className={`px-3 py-1 rounded-full text-sm font-medium transition mobile-touch-target ${
-                  !showUpcoming ? 'bg-white text-zinc-900' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                }`}
-              >
-                Live
-              </button>
-              <button
-                onClick={() => setShowUpcoming(true)}
-                className={`px-3 py-1 rounded-full text-sm font-medium transition mobile-touch-target ${
-                  showUpcoming ? 'bg-white text-zinc-900' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                }`}
-              >
-                Upcoming
-              </button>
-            </div>
-            
-            <div className="h-6 w-px bg-zinc-600"></div>
-            
             <button
               onClick={() => setSelectedDesigner(null)}
               className={`px-4 py-2 rounded-full whitespace-nowrap transition mobile-touch-target ${
@@ -277,11 +303,11 @@ function ShopContent() {
                   : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
               }`}
             >
-              All
+              All Designers
             </button>
             
-            {mockDesigners
-              .slice(0, showAllDesigners ? mockDesigners.length : 2)
+            {designers
+              .slice(0, showAllDesigners ? designers.length : 4)
               .map((designer) => (
                 <button
                   key={designer.id}
@@ -292,16 +318,28 @@ function ShopContent() {
                       : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
                   }`}
                 >
-                  <PlaceholderImage 
-                    type="logo" 
-                    alt={designer.name}
-                    className="w-6 h-6 rounded-full"
-                  />
-                  <span className="mobile-text-sm">{designer.name}</span>
+                  {designer.logo_url ? (
+                    <div className="w-6 h-6 rounded-full overflow-hidden">
+                      <Image
+                        src={designer.logo_url}
+                        alt={designer.brand_name}
+                        width={24}
+                        height={24}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <PlaceholderImage 
+                      type="logo" 
+                      alt={designer.brand_name}
+                      className="w-6 h-6 rounded-full"
+                    />
+                  )}
+                  <span className="mobile-text-sm">{designer.brand_name}</span>
                 </button>
               ))}
             
-            {!showAllDesigners && mockDesigners.length > 2 && (
+            {!showAllDesigners && designers.length > 4 && (
               <button
                 onClick={() => setShowAllDesigners(true)}
                 className="px-3 py-2 text-zinc-400 hover:text-white transition text-sm mobile-touch-target"
@@ -315,56 +353,110 @@ function ShopContent() {
 
       {/* Products Grid */}
       <main className="max-w-7xl mx-auto px-4 py-8 pt-44 safe-area-bottom">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mobile-grid-2 mobile-gap-4">
-          {filteredProducts.map((product) => (
-            <div key={product.id} className="group cursor-pointer mobile-fade-in mobile-card" onClick={() => setSelectedProduct(product)}>
-              <div className="relative aspect-[3/4] bg-zinc-800 rounded-lg overflow-hidden mb-3">
-                {product.isUpcoming && (
-                  <div className="absolute top-2 left-2 bg-amber-200 text-zinc-900 px-2 py-1 rounded-full text-xs font-bold z-10">
-                    Coming Soon
-                  </div>
-                )}
-                <div className="absolute top-2 right-2 z-10">
-                  <button className="p-2 bg-black/50 hover:bg-black/70 rounded-full transition mobile-touch-target">
-                    <Heart size={16} className="text-white" />
-                  </button>
-                </div>
-                <PlaceholderImage 
-                  type="product" 
-                  alt={product.name}
-                  className="w-full h-full group-hover:scale-105 transition-transform duration-300"
-                />
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
               </div>
+              <p className="text-zinc-400">Loading products...</p>
+            </div>
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-8 max-w-md mx-auto">
+              <ShoppingCart size={48} className="mx-auto mb-4 text-zinc-400" />
+              <h3 className="text-xl font-semibold mb-2">No Products Available</h3>
+              <p className="text-zinc-400">
+                No live products found. Check back soon for new arrivals!
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mobile-grid-2 mobile-gap-4">
+            {filteredProducts.map((product) => {
+              // Handle colors - it might be a string or already an object
+              let colors = [];
+              try {
+                if (typeof product.colors === 'string') {
+                  colors = JSON.parse(product.colors);
+                } else if (Array.isArray(product.colors)) {
+                  colors = product.colors;
+                } else {
+                  colors = [];
+                }
+              } catch (error) {
+                console.error('Error parsing colors:', error);
+                colors = [];
+              }
               
-              <div className="space-y-2 mobile-p-2">
-                <Link 
-                  href={`/designer/${product.designer.logo}`}
-                  className="flex items-center gap-2 hover:text-white transition mobile-touch-target"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <PlaceholderImage 
-                    type="logo" 
-                    alt={product.designer.name}
-                    className="w-6 h-6 rounded-full"
-                  />
-                  <span className="text-xs text-zinc-400 font-medium hover:text-white transition mobile-text-xs mobile-truncate">{product.designer.name}</span>
-                </Link>
-                
-                <h3 className="font-medium text-white group-hover:text-white transition mobile-text-sm mobile-line-clamp-2">{product.name}</h3>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-lg mobile-text-base">{product.price} lei</span>
-                    {product.originalPrice && (
-                      <span className="text-sm text-zinc-500 line-through mobile-text-xs">{product.originalPrice} lei</span>
+              const firstColor = colors[0];
+              const firstImage = firstColor?.images?.[0];
+              
+              return (
+                <div key={product.id} className="group cursor-pointer mobile-fade-in mobile-card" onClick={() => setSelectedProduct(product)}>
+                  <div className="relative aspect-[3/4] bg-zinc-800 rounded-lg overflow-hidden mb-3">
+                    <div className="absolute top-2 right-2 z-10">
+                      <button className="p-2 bg-black/50 hover:bg-black/70 rounded-full transition mobile-touch-target">
+                        <Heart size={16} className="text-white" />
+                      </button>
+                    </div>
+                    {firstImage ? (
+                      <Image
+                        src={firstImage}
+                        alt={product.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <PlaceholderImage 
+                        type="product" 
+                        alt={product.name}
+                        className="w-full h-full group-hover:scale-105 transition-transform duration-300"
+                      />
                     )}
                   </div>
-                  <StockStatusBadge stockStatus={product.stockStatus} />
+                  
+                  <div className="space-y-2 mobile-p-2">
+                    <Link 
+                      href={`/designer/${product.designers?.brand_name?.toLowerCase().replace(/\s+/g, '-')}`}
+                      className="flex items-center gap-2 hover:text-white transition mobile-touch-target"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {product.designers?.logo_url ? (
+                        <div className="w-6 h-6 rounded-full overflow-hidden">
+                          <Image
+                            src={product.designers.logo_url}
+                            alt={product.designers.brand_name}
+                            width={24}
+                            height={24}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <PlaceholderImage 
+                          type="logo" 
+                          alt={product.designers?.brand_name || 'Designer'}
+                          className="w-6 h-6 rounded-full"
+                        />
+                      )}
+                      <span className="text-xs text-zinc-400 font-medium hover:text-white transition mobile-text-xs mobile-truncate">{product.designers?.brand_name}</span>
+                    </Link>
+                    
+                    <h3 className="font-medium text-white group-hover:text-white transition mobile-text-sm mobile-line-clamp-2">{product.name}</h3>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-lg mobile-text-base">{product.price} lei</span>
+                      </div>
+                      <StockStatusBadge stockStatus={product.stock_status || 'in_stock'} />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </main>
 
       {/* Product Modal */}
@@ -388,8 +480,49 @@ function ProductModal({ product, onClose, onAddToCart }: {
   onClose: () => void;
   onAddToCart: (product: any, size: string, color: string) => void;
 }) {
-  const [selectedSize, setSelectedSize] = useState(product.sizes[0]);
-  const [selectedColor, setSelectedColor] = useState(product.colors[0]);
+  // Handle colors - it might be a string or already an object
+  let colors = [];
+  try {
+    if (typeof product.colors === 'string') {
+      colors = JSON.parse(product.colors);
+    } else if (Array.isArray(product.colors)) {
+      colors = product.colors;
+    } else {
+      colors = [];
+    }
+  } catch (error) {
+    console.error('Error parsing colors:', error);
+    colors = [];
+  }
+  
+  const [selectedColorIndex, setSelectedColorIndex] = useState(0);
+  const [selectedSize, setSelectedSize] = useState('');
+  
+  const selectedColor = colors[selectedColorIndex];
+  const availableSizes = selectedColor?.sizes || [];
+  
+  // Set default size when color changes
+  useEffect(() => {
+    if (availableSizes.length > 0) {
+      setSelectedSize(availableSizes[0].size);
+    }
+  }, [selectedColorIndex, availableSizes]);
+
+  const handleAddToCart = () => {
+    if (selectedColor && selectedSize) {
+      const productForCart = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: selectedColor.images?.[0] || '/placeholder-product.jpg',
+        designer: { 
+          name: product.designers?.brand_name || 'Designer', 
+          logo: product.designers?.logo_url || '' 
+        }
+      };
+      onAddToCart(productForCart, selectedSize, selectedColor.name);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 safe-area-inset" onClick={onClose}>
@@ -402,93 +535,116 @@ function ProductModal({ product, onClose, onAddToCart }: {
             </button>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-6 mobile-grid-1 mobile-gap-4">
+          <div className="grid md:grid-cols-2 gap-6 mobile-gap-4">
+            {/* Product Image */}
             <div className="aspect-[3/4] bg-zinc-800 rounded-lg overflow-hidden">
-              <PlaceholderImage 
-                type="product" 
-                alt={product.name}
-                className="w-full h-full"
-              />
+              {selectedColor?.images?.[0] ? (
+                <Image
+                  src={selectedColor.images[0]}
+                  alt={product.name}
+                  width={400}
+                  height={500}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <PlaceholderImage 
+                  type="product" 
+                  alt={product.name}
+                  className="w-full h-full"
+                />
+              )}
             </div>
             
+            {/* Product Details */}
             <div className="space-y-4 mobile-gap-3">
               <Link 
-                href={`/designer/${product.designer.logo}`}
+                href={`/designer/${product.designers?.brand_name?.toLowerCase().replace(/\s+/g, '-')}`}
                 className="flex items-center gap-2 hover:text-white transition mobile-touch-target"
               >
-                <PlaceholderImage 
-                  type="logo" 
-                  alt={product.designer.name}
-                  className="w-8 h-8 rounded-full"
-                />
-                <span className="text-zinc-400 font-medium hover:text-white transition mobile-text-sm">{product.designer.name}</span>
+                {product.designers?.logo_url ? (
+                  <div className="w-8 h-8 rounded-full overflow-hidden">
+                    <Image
+                      src={product.designers.logo_url}
+                      alt={product.designers.brand_name}
+                      width={32}
+                      height={32}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <PlaceholderImage 
+                    type="logo" 
+                    alt={product.designers?.brand_name || 'Designer'}
+                    className="w-8 h-8 rounded-full"
+                  />
+                )}
+                <span className="text-zinc-400 font-medium hover:text-white transition mobile-text-sm">{product.designers?.brand_name}</span>
               </Link>
               
-              <div className="flex items-center justify-between">
+              <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-2xl mobile-text-xl">{product.price} lei</span>
-                  {product.originalPrice && (
-                    <span className="text-lg text-zinc-500 line-through mobile-text-base">{product.originalPrice} lei</span>
-                  )}
+                  <span className="text-2xl font-bold mobile-text-xl">{product.price} lei</span>
                 </div>
-                <StockStatusBadge stockStatus={product.stockStatus} />
+                <StockStatusBadge stockStatus={product.stock_status || 'in_stock'} />
               </div>
               
-              <div>
-                <label className="block text-sm font-medium mb-2 mobile-text-sm">Size</label>
-                <div className="flex gap-2 mobile-gap-2 flex-wrap">
-                  {product.sizes.map((size: string) => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      className={`px-3 py-2 border rounded-lg mobile-touch-target mobile-text-sm ${
-                        selectedSize === size
-                          ? 'border-white bg-white text-zinc-900'
-                          : 'border-zinc-600 hover:border-zinc-500'
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <p className="text-zinc-300 mobile-text-sm">{product.description}</p>
               
-              <div>
-                <label className="block text-sm font-medium mb-2 mobile-text-sm">Color</label>
-                <div className="flex gap-2 mobile-gap-2 flex-wrap">
-                  {product.colors.map((color: string) => (
-                    <button
-                      key={color}
-                      onClick={() => setSelectedColor(color)}
-                      className={`px-3 py-2 border rounded-lg mobile-touch-target mobile-text-sm ${
-                        selectedColor === color
-                          ? 'border-white bg-white text-zinc-900'
-                          : 'border-zinc-600 hover:border-zinc-500'
-                      }`}
-                    >
-                      {color}
-                    </button>
-                  ))}
+              {/* Color Selection */}
+              {colors.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Color: {selectedColor?.name}</label>
+                  <div className="flex gap-2">
+                    {colors.map((color: any, index: number) => (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedColorIndex(index)}
+                        className={`px-3 py-2 rounded-lg border text-sm transition mobile-touch-target ${
+                          selectedColorIndex === index
+                            ? 'border-white bg-white text-zinc-900'
+                            : 'border-zinc-600 hover:border-zinc-500'
+                        }`}
+                      >
+                        {color.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               
+              {/* Size Selection */}
+              {availableSizes.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Size</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {availableSizes.map((sizeObj: any) => (
+                      <button
+                        key={sizeObj.size}
+                        onClick={() => setSelectedSize(sizeObj.size)}
+                        disabled={sizeObj.stock === 0}
+                        className={`py-2 rounded-lg border text-sm transition mobile-touch-target ${
+                          selectedSize === sizeObj.size
+                            ? 'border-white bg-white text-zinc-900'
+                            : sizeObj.stock === 0
+                            ? 'border-zinc-700 text-zinc-500 cursor-not-allowed'
+                            : 'border-zinc-600 hover:border-zinc-500'
+                        }`}
+                      >
+                        {sizeObj.size}
+                        {sizeObj.stock === 0 && <div className="text-xs">Out</div>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Add to Cart Button */}
               <button
-                onClick={() => onAddToCart(product, selectedSize, selectedColor)}
-                disabled={product.stockStatus === 'coming_soon'}
-                className={`w-full py-3 rounded-lg font-medium transition mobile-touch-target mobile-text-base ${
-                  product.stockStatus === 'coming_soon'
-                    ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed'
-                    : product.stockStatus === 'made_to_order'
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-white text-zinc-900 hover:bg-zinc-200'
-                }`}
+                onClick={handleAddToCart}
+                disabled={!selectedColor || !selectedSize || availableSizes.find((s: any) => s.size === selectedSize)?.stock === 0}
+                className="w-full bg-white text-zinc-900 py-3 rounded-lg font-medium hover:bg-zinc-200 transition disabled:opacity-50 disabled:cursor-not-allowed mobile-touch-target"
               >
-                {product.stockStatus === 'coming_soon' 
-                  ? 'Coming Soon' 
-                  : product.stockStatus === 'made_to_order'
-                  ? 'Order Now'
-                  : 'Add to Cart'
-                }
+                Add to Cart
               </button>
             </div>
           </div>

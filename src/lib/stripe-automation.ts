@@ -1,6 +1,6 @@
 // Types for product creation
 export interface ProductData {
-  id: number;
+  id: string;
   name: string;
   description: string;
   price: number;
@@ -20,17 +20,18 @@ export interface StripeProductResult {
 }
 
 // In-memory store for dynamic product mappings (in production, this would be in a database)
-let dynamicStripeMapping: Record<number, StripeProductResult> = {};
+let dynamicStripeMapping: Record<string, StripeProductResult> = {};
 
-export function addToStripeMapping(productId: number, stripeData: StripeProductResult) {
+export function addToStripeMapping(productId: string, stripeData: StripeProductResult) {
   dynamicStripeMapping[productId] = stripeData;
 }
 
-export function getStripeDataForProduct(productId: number): StripeProductResult | null {
-  return dynamicStripeMapping[productId] || null;
+export function getStripeDataForProduct(productId: string | number): StripeProductResult | null {
+  const key = String(productId);
+  return dynamicStripeMapping[key] || null;
 }
 
-export function getAllStripeMappings(): Record<number, StripeProductResult> {
+export function getAllStripeMappings(): Record<string, StripeProductResult> {
   return { ...dynamicStripeMapping };
 }
 
@@ -66,7 +67,7 @@ export async function createStripeProductAndPrice(productData: ProductData): Pro
 }
 
 // Function to approve a product and make it available for purchase
-export async function approveProduct(productId: number): Promise<boolean> {
+export async function approveProduct(productId: string): Promise<boolean> {
   try {
     const stripeData = getStripeDataForProduct(productId);
     
@@ -91,7 +92,7 @@ export async function approveProduct(productId: number): Promise<boolean> {
 }
 
 // Function to get payment URL for a product
-export function getPaymentUrlForProduct(productId: number): string | null {
+export function getPaymentUrlForProduct(productId: string): string | null {
   const stripeData = getStripeDataForProduct(productId);
   return stripeData?.paymentLinkUrl || null;
 } 

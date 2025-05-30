@@ -12,6 +12,9 @@ export type DesignerProfileForm = {
   logoUrl: string;
   secondaryLogoUrl: string;
   instagramHandle: string;
+  instagramVerified: boolean;
+  instagramUserId?: string;
+  instagramAccessToken?: string;
   tiktokHandle: string;
   website: string;
   specialties: string[];
@@ -37,19 +40,114 @@ export type DesignerProduct = {
   sizes: string[];
   colors: ProductColor[];
   stockStatus: 'in_stock' | 'made_to_order' | 'coming_soon';
+  stockQuantity: number;
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type DesignerWallet = {
+  id: string;
+  designerId: string;
+  balance: number;
+  totalEarnings: number;
+  totalWithdrawn: number;
+  pendingBalance: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WalletTransaction = {
+  id: string;
+  walletId: string;
+  type: 'sale' | 'withdrawal' | 'refund' | 'adjustment';
+  amount: number;
+  status: 'pending' | 'completed' | 'failed';
+  description: string;
+  orderId?: string;
+  stripeTransferId?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CommissionTier = {
+  name: string;
+  baguriFeePct: number;
+  designerEarningsPct: number;
+  minSales: number;
+  maxSales?: number;
+  salesNeeded?: number;
 };
 
 export type DesignerDashboardData = {
   profile: DesignerProfileForm;
   products: DesignerProduct[];
+  wallet: DesignerWallet | null;
+  salesTotal: number;
+  currentTier: CommissionTier;
+  nextTier: CommissionTier | null;
   status: 'draft' | 'submitted' | 'approved' | 'rejected';
   submittedAt: string | null;
   completionPercentage: number;
 };
 
 class DesignerService {
+  // Commission tier definitions
+  private getCommissionTiers(): CommissionTier[] {
+    return [
+      {
+        name: 'Bronze',
+        baguriFeePct: 50,
+        designerEarningsPct: 50,
+        minSales: 0,
+        maxSales: 999.99
+      },
+      {
+        name: 'Silver', 
+        baguriFeePct: 40,
+        designerEarningsPct: 60,
+        minSales: 1000,
+        maxSales: 9999.99
+      },
+      {
+        name: 'Gold',
+        baguriFeePct: 30,
+        designerEarningsPct: 70,
+        minSales: 10000
+      }
+    ];
+  }
+
+  // Get current commission tier based on sales total
+  getCurrentCommissionTier(salesTotal: number): CommissionTier {
+    const tiers = this.getCommissionTiers();
+    
+    for (const tier of tiers) {
+      if (salesTotal >= tier.minSales && (!tier.maxSales || salesTotal <= tier.maxSales)) {
+        return tier;
+      }
+    }
+    
+    // Default to highest tier if sales exceed all thresholds
+    return tiers[tiers.length - 1];
+  }
+
+  // Get next commission tier
+  getNextCommissionTier(salesTotal: number): CommissionTier | null {
+    const tiers = this.getCommissionTiers();
+    const currentTier = this.getCurrentCommissionTier(salesTotal);
+    
+    const currentIndex = tiers.findIndex(t => t.name === currentTier.name);
+    if (currentIndex < tiers.length - 1) {
+      const nextTier = tiers[currentIndex + 1];
+      return {
+        ...nextTier,
+        salesNeeded: nextTier.minSales - salesTotal
+      };
+    }
+    
+    return null; // Already at highest tier
+  }
+
   // Get designer profile by user ID (from auth)
   async getDesignerByUserId(userId: string): Promise<DesignerProfile | null> {
     try {
@@ -79,25 +177,54 @@ class DesignerService {
   // Get complete dashboard data for a designer
   async getDashboardData(userId: string): Promise<DesignerDashboardData | null> {
     try {
-      const designerProfile = await this.getDesignerByUserId(userId);
-      if (!designerProfile) {
-        // Return null for new users - let the dashboard handle the empty state
+      // Get user from auth
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        console.error('Error getting user:', userError);
         return null;
       }
 
-      // Get products
+      // Get designer auth record
+      const { data: designerAuth, error: authError } = await supabase
+        .from('designer_auth')
+        .select('designer_id')
+        .eq('user_id', userId)
+        .single();
+
+      if (authError || !designerAuth) {
+        console.error('Error getting designer auth:', authError);
+        return null;
+      }
+
+      // Get designer profile with sales total
+      const { data: designerProfile, error: profileError } = await supabase
+        .from('designers')
+        .select('*, sales_total')
+        .eq('id', designerAuth.designer_id)
+        .single();
+
+      if (profileError || !designerProfile) {
+        console.error('Error getting designer profile:', profileError);
+        return null;
+      }
+
+      // Get designer products
       const { data: products, error: productsError } = await supabase
         .from('designer_products')
         .select('*')
-        .eq('designer_id', designerProfile.id)
-        .order('created_at', { ascending: false });
+        .eq('designer_id', designerAuth.designer_id);
 
       if (productsError) {
-        console.error('Error fetching products:', productsError);
+        console.error('Error getting designer products:', productsError);
       }
 
-      // Get the current auth user to ensure email sync
-      const { data: { user } } = await supabase.auth.getUser();
+      // Get wallet data
+      const wallet = await this.getDesignerWallet(designerAuth.designer_id);
+      
+      // Calculate commission tiers
+      const salesTotal = parseFloat(designerProfile.sales_total) || 0;
+      const currentTier = this.getCurrentCommissionTier(salesTotal);
+      const nextTier = this.getNextCommissionTier(salesTotal);
       
       // Convert database data to form format
       const profile: DesignerProfileForm = {
@@ -110,6 +237,9 @@ class DesignerService {
         logoUrl: designerProfile.logo_url || '',
         secondaryLogoUrl: designerProfile.secondary_logo_url || '',
         instagramHandle: designerProfile.instagram || '',
+        instagramVerified: designerProfile.instagram_verified || false,
+        instagramUserId: designerProfile.instagram_user_id,
+        instagramAccessToken: designerProfile.instagram_access_token,
         tiktokHandle: designerProfile.tiktok || '',
         website: designerProfile.website || '',
         specialties: designerProfile.specialties || [],
@@ -131,6 +261,7 @@ class DesignerService {
         sizes: p.sizes || [],
         colors: p.colors || [{ name: '', images: [] }],
         stockStatus: p.stock_status as 'in_stock' | 'made_to_order' | 'coming_soon',
+        stockQuantity: parseFloat(p.stock_quantity) || 0,
         createdAt: p.created_at,
         updatedAt: p.updated_at,
       }));
@@ -141,11 +272,15 @@ class DesignerService {
       return {
         profile,
         products: dashboardProducts,
+        wallet,
+        salesTotal,
+        currentTier,
+        nextTier,
         status: designerProfile.status as 'draft' | 'submitted' | 'approved' | 'rejected',
-        submittedAt: designerProfile.submitted_at || null,
+        submittedAt: designerProfile.submitted_at,
         completionPercentage,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting dashboard data:', error);
       return null;
     }
@@ -190,6 +325,9 @@ class DesignerService {
           logo_url: profileData.logoUrl,
           secondary_logo_url: profileData.secondaryLogoUrl,
           instagram: profileData.instagramHandle,
+          instagram_verified: profileData.instagramVerified,
+          instagram_user_id: profileData.instagramUserId,
+          instagram_access_token: profileData.instagramAccessToken,
           tiktok: profileData.tiktokHandle,
           website: profileData.website,
           specialties: profileData.specialties,
@@ -241,6 +379,7 @@ class DesignerService {
           sizes: product.sizes,
           colors: product.colors,
           stock_status: product.stockStatus,
+          stock_quantity: product.stockQuantity.toString(),
         };
 
         // Check if this is an existing product (has a valid UUID that exists in DB)
@@ -370,6 +509,7 @@ class DesignerService {
           brand_name: brandName,
           email: user.email, // Always use auth user's email as source of truth
           status: 'draft',
+          sales_total: 0.00, // Initialize with 0 sales
         })
         .select()
         .single();
@@ -449,6 +589,438 @@ class DesignerService {
     } catch (error: any) {
       console.error('Error uploading file:', error);
       return { success: false, error: error.message };
+    }
+  }
+
+  // Get designer wallet
+  async getDesignerWallet(designerId: string): Promise<DesignerWallet | null> {
+    try {
+      const { data: wallet, error } = await supabase
+        .from('designer_wallets')
+        .select('*')
+        .eq('designer_id', designerId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No wallet found, create one
+          return await this.createDesignerWallet(designerId);
+        }
+        console.error('Error fetching designer wallet:', error);
+        return null;
+      }
+
+      return {
+        id: wallet.id,
+        designerId: wallet.designer_id,
+        balance: parseFloat(wallet.balance) || 0,
+        totalEarnings: parseFloat(wallet.total_earnings) || 0,
+        totalWithdrawn: parseFloat(wallet.total_withdrawn) || 0,
+        pendingBalance: parseFloat(wallet.pending_balance) || 0,
+        createdAt: wallet.created_at,
+        updatedAt: wallet.updated_at,
+      };
+    } catch (error) {
+      console.error('Error getting designer wallet:', error);
+      return null;
+    }
+  }
+
+  // Create designer wallet
+  async createDesignerWallet(designerId: string): Promise<DesignerWallet | null> {
+    try {
+      const { data: wallet, error } = await supabase
+        .from('designer_wallets')
+        .insert({
+          designer_id: designerId,
+          balance: 0,
+          total_earnings: 0,
+          total_withdrawn: 0,
+          pending_balance: 0,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating designer wallet:', error);
+        return null;
+      }
+
+      return {
+        id: wallet.id,
+        designerId: wallet.designer_id,
+        balance: parseFloat(wallet.balance) || 0,
+        totalEarnings: parseFloat(wallet.total_earnings) || 0,
+        totalWithdrawn: parseFloat(wallet.total_withdrawn) || 0,
+        pendingBalance: parseFloat(wallet.pending_balance) || 0,
+        createdAt: wallet.created_at,
+        updatedAt: wallet.updated_at,
+      };
+    } catch (error) {
+      console.error('Error creating designer wallet:', error);
+      return null;
+    }
+  }
+
+  // Add earnings to designer wallet (called when a product is sold)
+  async addEarnings(designerId: string, amount: number, orderId: string, description: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Get or create wallet
+      let wallet = await this.getDesignerWallet(designerId);
+      if (!wallet) {
+        wallet = await this.createDesignerWallet(designerId);
+        if (!wallet) {
+          return { success: false, error: 'Failed to create wallet' };
+        }
+      }
+
+      // Start a transaction
+      const { data, error } = await supabase.rpc('add_designer_earnings', {
+        p_designer_id: designerId,
+        p_amount: amount,
+        p_order_id: orderId,
+        p_description: description
+      });
+
+      if (error) {
+        console.error('Error adding earnings:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error adding earnings:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Request withdrawal
+  async requestWithdrawal(designerId: string, amount: number): Promise<{ success: boolean; error?: string }> {
+    try {
+      const wallet = await this.getDesignerWallet(designerId);
+      if (!wallet) {
+        return { success: false, error: 'Wallet not found' };
+      }
+
+      if (amount > wallet.balance) {
+        return { success: false, error: 'Insufficient balance' };
+      }
+
+      if (amount < 50) {
+        return { success: false, error: 'Minimum withdrawal amount is 50 lei' };
+      }
+
+      // Create withdrawal transaction
+      const { error } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          wallet_id: wallet.id,
+          type: 'withdrawal',
+          amount: -amount, // Negative for withdrawal
+          status: 'pending',
+          description: `Withdrawal request for ${amount} lei`,
+        });
+
+      if (error) {
+        console.error('Error creating withdrawal request:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error requesting withdrawal:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Get wallet transactions
+  async getWalletTransactions(designerId: string, limit: number = 50): Promise<WalletTransaction[]> {
+    try {
+      const wallet = await this.getDesignerWallet(designerId);
+      if (!wallet) {
+        return [];
+      }
+
+      const { data: transactions, error } = await supabase
+        .from('wallet_transactions')
+        .select('*')
+        .eq('wallet_id', wallet.id)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error('Error fetching wallet transactions:', error);
+        return [];
+      }
+
+      return (transactions || []).map(t => ({
+        id: t.id,
+        walletId: t.wallet_id,
+        type: t.type as 'sale' | 'withdrawal' | 'refund' | 'adjustment',
+        amount: parseFloat(t.amount) || 0,
+        status: t.status as 'pending' | 'completed' | 'failed',
+        description: t.description || '',
+        orderId: t.order_id,
+        stripeTransferId: t.stripe_transfer_id,
+        createdAt: t.created_at,
+        updatedAt: t.updated_at,
+      }));
+    } catch (error) {
+      console.error('Error getting wallet transactions:', error);
+      return [];
+    }
+  }
+
+  // Process withdrawal
+  async processWithdrawal(designerId: string, amount: number, stripeTransferId?: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { data, error } = await supabase.rpc('process_withdrawal', {
+        p_designer_id: designerId,
+        p_amount: amount,
+        p_stripe_transfer_id: stripeTransferId
+      });
+
+      if (error) {
+        console.error('Error processing withdrawal:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error processing withdrawal:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Get designer sales total
+  async getDesignerSalesTotal(designerId: string): Promise<number> {
+    try {
+      const { data: designer, error } = await supabase
+        .from('designers')
+        .select('sales_total')
+        .eq('id', designerId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching sales total:', error);
+        return 0;
+      }
+
+      return parseFloat(designer.sales_total) || 0;
+    } catch (error) {
+      console.error('Error getting sales total:', error);
+      return 0;
+    }
+  }
+
+  // Get designer sales and earnings summary
+  async getDesignerSalesSummary(designerId: string): Promise<{
+    totalSales: number;
+    totalEarnings: number;
+    orderCount: number;
+    averageOrderValue: number;
+    currentTier: CommissionTier;
+    nextTier: CommissionTier | null;
+  }> {
+    try {
+      // Get sales total
+      const salesTotal = await this.getDesignerSalesTotal(designerId);
+      
+      // Get wallet data
+      const wallet = await this.getDesignerWallet(designerId);
+      
+      // Get order count from order_items
+      const { data: orderItems, error: orderError } = await supabase
+        .from('order_items')
+        .select('total_price')
+        .eq('designer_id', designerId);
+
+      if (orderError) {
+        console.error('Error fetching order items:', orderError);
+        throw orderError;
+      }
+
+      const orderCount = orderItems?.length || 0;
+      const averageOrderValue = orderCount > 0 ? salesTotal / orderCount : 0;
+      
+      // Get commission tiers
+      const currentTier = this.getCurrentCommissionTier(salesTotal);
+      const nextTier = this.getNextCommissionTier(salesTotal);
+
+      return {
+        totalSales: salesTotal,
+        totalEarnings: wallet?.totalEarnings || 0,
+        orderCount,
+        averageOrderValue,
+        currentTier,
+        nextTier
+      };
+    } catch (error) {
+      console.error('Error getting designer sales summary:', error);
+      throw error;
+    }
+  }
+
+  // Instagram OAuth verification methods
+  async initiateInstagramOAuth(userId: string): Promise<{ success: boolean; authUrl?: string; error?: string }> {
+    try {
+      const instagramAppId = process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID;
+      const instagramAppSecret = process.env.INSTAGRAM_APP_SECRET;
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+      
+      // Check if Instagram OAuth is properly configured
+      if (!instagramAppId || !instagramAppSecret || !appUrl) {
+        console.error('Instagram OAuth not configured. Missing environment variables:', {
+          hasAppId: !!instagramAppId,
+          hasAppSecret: !!instagramAppSecret,
+          hasAppUrl: !!appUrl
+        });
+        
+        return { 
+          success: false, 
+          error: 'Instagram verification is not currently available. Please contact support for assistance.' 
+        };
+      }
+
+      const redirectUri = `${appUrl}/api/auth/instagram/callback`;
+      
+      // Store user ID in session/state for callback verification
+      const state = btoa(JSON.stringify({ userId, timestamp: Date.now() }));
+      
+      const authUrl = `https://api.instagram.com/oauth/authorize?` +
+        `client_id=${instagramAppId}&` +
+        `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+        `scope=user_profile,user_media&` +
+        `response_type=code&` +
+        `state=${state}`;
+
+      return { success: true, authUrl };
+    } catch (error) {
+      console.error('Error initiating Instagram OAuth:', error);
+      return { 
+        success: false, 
+        error: 'Failed to initiate Instagram verification. Please try again later.' 
+      };
+    }
+  }
+
+  async verifyInstagramCallback(code: string, state: string): Promise<{ success: boolean; error?: string; instagramData?: any }> {
+    try {
+      // Decode and verify state
+      const stateData = JSON.parse(atob(state));
+      const { userId } = stateData;
+
+      // Exchange code for access token
+      const tokenResponse = await fetch('https://api.instagram.com/oauth/access_token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          client_id: process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID!,
+          client_secret: process.env.INSTAGRAM_APP_SECRET!,
+          grant_type: 'authorization_code',
+          redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/instagram/callback`,
+          code
+        })
+      });
+
+      if (!tokenResponse.ok) {
+        throw new Error('Failed to exchange code for token');
+      }
+
+      const tokenData = await tokenResponse.json();
+      const { access_token, user_id } = tokenData;
+
+      // Get user profile from Instagram
+      const profileResponse = await fetch(
+        `https://graph.instagram.com/me?fields=id,username&access_token=${access_token}`
+      );
+
+      if (!profileResponse.ok) {
+        throw new Error('Failed to fetch Instagram profile');
+      }
+
+      const profileData = await profileResponse.json();
+
+      // Update designer profile with verified Instagram data
+      const { error: updateError } = await supabase
+        .from('designers')
+        .update({
+          instagram: `@${profileData.username}`,
+          instagram_verified: true,
+          instagram_user_id: user_id.toString(),
+          instagram_access_token: access_token,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', (await this.getDesignerByUserId(userId))?.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      return {
+        success: true,
+        instagramData: {
+          username: profileData.username,
+          userId: user_id,
+          verified: true
+        }
+      };
+    } catch (error) {
+      console.error('Error verifying Instagram callback:', error);
+      return { success: false, error: 'Failed to verify Instagram account' };
+    }
+  }
+
+  async revokeInstagramVerification(userId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const designer = await this.getDesignerByUserId(userId);
+      if (!designer) {
+        return { success: false, error: 'Designer not found' };
+      }
+
+      // Clear Instagram verification data
+      const { error: updateError } = await supabase
+        .from('designers')
+        .update({
+          instagram_verified: false,
+          instagram_user_id: null,
+          instagram_access_token: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', designer.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error revoking Instagram verification:', error);
+      return { success: false, error: 'Failed to revoke Instagram verification' };
+    }
+  }
+
+  async checkInstagramVerification(userId: string, instagramHandle: string): Promise<{ success: boolean; verified: boolean; error?: string }> {
+    try {
+      const designer = await this.getDesignerByUserId(userId);
+      if (!designer) {
+        return { success: false, verified: false, error: 'Designer not found' };
+      }
+
+      // Check if the Instagram handle matches the verified account
+      const normalizedHandle = instagramHandle.replace('@', '');
+      const verifiedHandle = designer.instagram?.replace('@', '');
+
+      if (designer.instagram_verified && verifiedHandle === normalizedHandle) {
+        return { success: true, verified: true };
+      }
+
+      return { success: true, verified: false };
+    } catch (error) {
+      console.error('Error checking Instagram verification:', error);
+      return { success: false, verified: false, error: 'Failed to check verification status' };
     }
   }
 }

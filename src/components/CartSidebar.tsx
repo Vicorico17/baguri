@@ -4,8 +4,9 @@ import { X, Plus, Minus } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { getStripePaymentUrl, hasStripeIntegration, getStripeData } from '@/lib/stripe';
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 
-// Placeholder component for images
+// Placeholder component for images when no image is available
 function PlaceholderImage({ type, className, alt }: { type: 'product' | 'logo'; className?: string; alt: string }) {
   const colors = {
     product: ['bg-gradient-to-br from-amber-100 to-amber-200', 'bg-gradient-to-br from-zinc-100 to-zinc-300', 'bg-gradient-to-br from-emerald-100 to-emerald-200', 'bg-gradient-to-br from-rose-100 to-rose-200'],
@@ -49,42 +50,82 @@ export function CartSidebar() {
     setError(null);
 
     try {
-      // Get the first item for demo purposes
+      // For now, handle the first item (in production, you'd create a session with all items)
       const firstItem = cart[0];
+      
+      console.log('Starting checkout for item:', firstItem);
       
       // Check if this product has Stripe integration
       if (!hasStripeIntegration(firstItem.id)) {
         throw new Error(`Product "${firstItem.name}" doesn't have Stripe integration set up yet.`);
       }
       
-      // Get the payment URL
-      const paymentUrl = getStripePaymentUrl(firstItem.id);
-      
-      if (!paymentUrl) {
-        throw new Error(`No payment link found for product: ${firstItem.name}`);
-      }
-      
-      // Get Stripe data for display purposes
+      // Get Stripe data for the product
       const stripeData = getStripeData(firstItem.id);
       
-      // Open the Stripe checkout
-      window.open(paymentUrl, '_blank');
+      console.log('Stripe data for product:', stripeData);
       
-      // Show success message with integration info
-      const integrationSource = stripeData.source === 'dynamic' ? 'automatically created' : 'pre-configured';
-      const message = `Checkout opened for ${firstItem.name}!\n\nTotal: ${firstItem.price * firstItem.quantity} lei\nIntegration: ${integrationSource}\n\nNote: This demo checkout is for the first item only. In production, you'd create a single checkout session with all cart items.`;
+      if (!stripeData.priceId) {
+        throw new Error(`No price found for product: ${firstItem.name}`);
+      }
+
+      // Prepare items for checkout
+      const checkoutItems = cart.map(item => {
+        const itemStripeData = getStripeData(item.id);
+        return {
+          priceId: itemStripeData.priceId,
+          quantity: item.quantity,
+          productName: item.name,
+          productId: item.id
+        };
+      }).filter(item => item.priceId); // Only include items with valid Stripe integration
+
+      console.log('Checkout items:', checkoutItems);
+
+      if (checkoutItems.length === 0) {
+        throw new Error('No products in cart have Stripe integration set up.');
+      }
+
+      // Create checkout session via API
+      console.log('Making API call to create checkout session...');
       
-      alert(message);
-      
-      console.log('💳 Checkout Details:', {
-        product: firstItem.name,
-        price: `${firstItem.price * firstItem.quantity} lei`,
-        stripeProductId: stripeData.productId,
-        stripePriceId: stripeData.priceId,
-        paymentUrl: paymentUrl,
-        integrationSource: stripeData.source
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: checkoutItems
+        }),
       });
 
+      console.log('API response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API error response:', errorText);
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText };
+        }
+        
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to create checkout session`);
+      }
+
+      const result = await response.json();
+      console.log('Checkout session result:', result);
+      
+      if (!result.url) {
+        throw new Error('No checkout URL received from server');
+      }
+      
+      // Redirect to Stripe checkout
+      console.log('Redirecting to:', result.url);
+      window.location.href = result.url;
+      
     } catch (err) {
       console.error('Checkout error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred during checkout');
@@ -119,11 +160,22 @@ export function CartSidebar() {
                   
                   return (
                     <div key={`${item.id}-${item.size}-${item.color}-${index}`} className="flex gap-3 p-3 bg-zinc-800 rounded-lg mobile-p-3 mobile-card">
-                      <PlaceholderImage 
-                        type="product" 
-                        alt={item.name}
-                        className="w-15 h-20 rounded mobile-w-12 mobile-h-16"
-                      />
+                      {item.image ? (
+                        <div className="w-15 h-20 rounded mobile-w-12 mobile-h-16 relative overflow-hidden">
+                          <Image
+                            src={item.image}
+                            alt={item.name}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <PlaceholderImage 
+                          type="product" 
+                          alt={item.name}
+                          className="w-15 h-20 rounded mobile-w-12 mobile-h-16"
+                        />
+                      )}
                       <div className="flex-1">
                         <h3 className="font-medium mb-1 mobile-text-sm mobile-line-clamp-2">{item.name}</h3>
                         <p className="text-xs text-zinc-400 mb-1 mobile-truncate">{item.designer.name}</p>

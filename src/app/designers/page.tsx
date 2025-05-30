@@ -85,7 +85,9 @@ export default function DesignersPage() {
         
         const { data: approvedDesigners, error } = await supabase
           .from('designers')
-          .select('*')
+          .select(`
+            *
+          `)
           .eq('status', 'approved')
           .not('brand_name', 'is', null)
           .order('created_at', { ascending: false });
@@ -102,7 +104,7 @@ export default function DesignersPage() {
         // Transform database data to match the expected format
         const transformedDesigners = (approvedDesigners || []).map((designer, index) => ({
           id: designer.id,
-          name: designer.brand_name,
+          brandName: designer.brand_name,
           slug: designer.brand_name?.toLowerCase().replace(/\s+/g, '-') || `designer-${index}`,
           logo: designer.logo_url || 'placeholder',
           tagline: designer.short_description || 'Romanian fashion designer',
@@ -110,6 +112,7 @@ export default function DesignersPage() {
           location: designer.city ? `${designer.city}, Romania` : 'Romania',
           yearFounded: designer.year_founded || new Date().getFullYear(),
           specialties: designer.specialties || ['Fashion Design'],
+          salesTotal: parseFloat(designer.sales_total) || 0,
           socialLinks: {
             instagram: designer.instagram || '',
             website: designer.website || ''
@@ -280,24 +283,33 @@ export default function DesignersPage() {
 function DesignerCard({ designer }: { designer: any }) {
   return (
     <Link href={`/designer/${designer.slug}`} className="group">
-              <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-xl p-6 hover:border-white/50 transition-all duration-300 hover:bg-zinc-800/95">
+      <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-xl p-6 hover:border-white/50 transition-all duration-300 hover:bg-zinc-800/95">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-4">
-          <PlaceholderImage 
-            type="logo" 
-            alt={designer.name}
-            className="w-12 h-12 rounded-full"
-          />
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-lg group-hover:text-white transition">{designer.name}</h3>
-              {designer.isUpcoming && (
-                <span className="bg-white text-zinc-900 px-2 py-1 rounded-full text-xs font-bold">
-                  Coming Soon
-                </span>
-              )}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            {designer.logo && designer.logo !== 'placeholder' ? (
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-800">
+                <Image
+                  src={designer.logo}
+                  alt={designer.brandName}
+                  width={48}
+                  height={48}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <PlaceholderImage 
+                type="logo" 
+                alt={designer.brandName}
+                className="w-12 h-12 rounded-full"
+              />
+            )}
+            <div>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-white mb-2">{designer.brandName}</h3>
+              </div>
+              <p className="text-gray-400 text-sm">{designer.location}</p>
             </div>
-            <p className="text-white text-sm">{designer.tagline}</p>
           </div>
         </div>
         
@@ -335,24 +347,28 @@ function DesignerCard({ designer }: { designer: any }) {
         {/* Footer */}
         <div className="flex items-center justify-between pt-4 border-t border-zinc-800">
           <div className="flex items-center gap-3">
-            <a 
-              href={`https://instagram.com/${designer.socialLinks.instagram.replace('@', '')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-zinc-500 hover:text-white transition"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Instagram size={16} />
-            </a>
-            <a 
-              href={`https://${designer.socialLinks.website}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-zinc-500 hover:text-white transition"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Globe size={16} />
-            </a>
+            {designer.socialLinks.instagram && (
+              <a 
+                href={`https://instagram.com/${designer.socialLinks.instagram.replace('@', '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-zinc-500 hover:text-white transition flex items-center gap-1"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Instagram size={16} />
+              </a>
+            )}
+            {designer.socialLinks.website && (
+              <a 
+                href={`https://${designer.socialLinks.website}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-zinc-500 hover:text-white transition"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Globe size={16} />
+              </a>
+            )}
           </div>
           <span className="text-xs text-zinc-500">
             {designer.productCount} products

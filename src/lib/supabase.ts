@@ -20,6 +20,9 @@ export type Designer = {
   logo_url?: string
   secondary_logo_url?: string
   instagram?: string
+  instagram_verified?: boolean
+  instagram_user_id?: string
+  instagram_access_token?: string
   tiktok?: string
   website?: string
   fulfillment?: 'baguri' | 'designer'
@@ -34,6 +37,7 @@ export type Designer = {
   rejection_reason?: string
   created_at?: string
   updated_at?: string
+  sales_total?: number
 }
 
 export type DesignerAuth = {
@@ -57,6 +61,7 @@ export type DesignerProduct = {
   colors?: any[] // JSON field for color objects
   stock_status: 'in_stock' | 'made_to_order' | 'coming_soon'
   is_active: boolean
+  is_live: boolean
   created_at: string
   updated_at: string
 }

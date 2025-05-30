@@ -4,12 +4,14 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Edit, Send, CheckCircle, Clock, XCircle, Upload, Plus, X, Instagram, Globe, Camera, Save, ChevronDown, ChevronUp, LogOut } from 'lucide-react';
+import { ArrowLeft, Edit, Send, CheckCircle, Clock, XCircle, Upload, Plus, X, Instagram, Globe, Camera, Save, ChevronDown, ChevronUp, LogOut, User, Package, Wallet, ArrowUpRight, BarChart3, Percent, Loader2 } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { BrandShowcase } from "@/components/ui/brand-showcase";
 import { ProgressCircle } from "@/components/ui/progress-circle";
 import { useDesignerAuth } from '@/contexts/DesignerAuthContext';
-import { designerService, type DesignerDashboardData, type DesignerProfileForm } from '@/lib/designerService';
+import { designerService, type DesignerDashboardData, type DesignerProfileForm, type CommissionTier } from '@/lib/designerService';
+import { ChangeEmailModal } from '@/components/modals/ChangeEmailModal';
+import { ChangePasswordModal } from '@/components/modals/ChangePasswordModal';
 
 // Product stock status options - removed since products management is removed
 // const STOCK_STATUS_OPTIONS = [...]
@@ -53,7 +55,7 @@ function DesignerDashboardContent() {
   const router = useRouter();
   
   // Use the same auth context as the auth page
-  const { loading, user, initialized, signOut } = useDesignerAuth();
+  const { loading, user, session, initialized, signOut } = useDesignerAuth();
 
   const [profile, setProfile] = useState<DesignerProfileForm>({
     brandName: '',
@@ -65,6 +67,7 @@ function DesignerDashboardContent() {
     logoUrl: '',
     secondaryLogoUrl: '',
     instagramHandle: '',
+    instagramVerified: false,
     tiktokHandle: '',
     website: '',
     specialties: []
@@ -73,6 +76,30 @@ function DesignerDashboardContent() {
   const [status, setStatus] = useState<'draft' | 'submitted' | 'approved' | 'rejected'>('draft');
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
   const [completionPercentage, setCompletionPercentage] = useState(0);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [verifyingInstagram, setVerifyingInstagram] = useState(false);
+  const [salesSummary, setSalesSummary] = useState<{
+    totalSales: number;
+    totalEarnings: number;
+    orderCount: number;
+    averageOrderValue: number;
+    currentTier: CommissionTier;
+    nextTier: CommissionTier | null;
+  }>({
+    totalSales: 0,
+    totalEarnings: 0,
+    orderCount: 0,
+    averageOrderValue: 0,
+    currentTier: {
+      name: 'Bronze',
+      baguriFeePct: 50,
+      designerEarningsPct: 50,
+      minSales: 0,
+      maxSales: 999.99
+    },
+    nextTier: null
+  });
 
   // Optimized redirect logic - immediate redirect if not authenticated
   useEffect(() => {
@@ -126,7 +153,14 @@ function DesignerDashboardContent() {
           setProfile(data.profile);
           setStatus(data.status);
           setSubmittedAt(data.submittedAt);
-          setCompletionPercentage(data.completionPercentage);
+          // Don't set completion percentage from database - let local calculation handle it
+          setDashboardReady(true);
+
+          // Load sales summary if designer is approved
+          if (data.status === 'approved') {
+            const summary = await designerService.getDesignerSalesSummary(data.profile.brandName); // We'll need to get designer ID properly
+            setSalesSummary(summary);
+          }
         } else {
           console.log('No dashboard data returned, using defaults for new user');
           // Set default values for new users
@@ -140,13 +174,14 @@ function DesignerDashboardContent() {
             logoUrl: '',
             secondaryLogoUrl: '',
             instagramHandle: '',
+            instagramVerified: false,
             tiktokHandle: '',
             website: '',
             specialties: []
           });
           setStatus('draft');
           setSubmittedAt(null);
-          setCompletionPercentage(0);
+          setDashboardReady(true);
         }
         
         setDashboardReady(true);
@@ -167,17 +202,36 @@ function DesignerDashboardContent() {
   useEffect(() => {
     // Calculate completion based on filled fields (without products)
     let completed = 0;
-    const total = 6; // Reduced from 10 since we removed products
+    const total = 8; // Updated total to include more fields
 
-    if (profile.brandName) completed++;
-    if (profile.shortDescription) completed++;
-    if (profile.longDescription) completed++;
-    if (profile.logoUrl) completed++;
-    if (profile.instagramHandle) completed++;
-    if (profile.city) completed++;
+    // Required fields (6 total)
+    if (profile.brandName?.trim()) completed++;
+    if (profile.shortDescription?.trim()) completed++;
+    if (profile.longDescription?.trim()) completed++;
+    if (profile.logoUrl?.trim()) completed++;
+    if (profile.instagramHandle?.trim()) completed++;
+    if (profile.city?.trim()) completed++;
+    
+    // Optional fields that contribute to completion (2 total)
+    if (profile.website?.trim()) completed++;
+    if (profile.yearFounded && profile.yearFounded > 1900) completed++;
 
     const percentage = Math.round((completed / total) * 100);
     setCompletionPercentage(percentage);
+    
+    console.log('Profile completion calculation:', {
+      brandName: !!profile.brandName?.trim(),
+      shortDescription: !!profile.shortDescription?.trim(),
+      longDescription: !!profile.longDescription?.trim(),
+      logoUrl: !!profile.logoUrl?.trim(),
+      instagramHandle: !!profile.instagramHandle?.trim(),
+      city: !!profile.city?.trim(),
+      website: !!profile.website?.trim(),
+      yearFounded: !!(profile.yearFounded && profile.yearFounded > 1900),
+      completed,
+      total,
+      percentage
+    });
   }, [profile]);
 
   // Database connectivity test function
@@ -202,6 +256,140 @@ function DesignerDashboardContent() {
       console.error('💥 Database test error:', error);
     }
   };
+
+  // Instagram verification handlers
+  const handleInstagramVerification = async () => {
+    try {
+      setVerifyingInstagram(true);
+      
+      // Get the access token from the session
+      if (!session?.access_token) {
+        alert('Authentication required. Please refresh the page and try again.');
+        return;
+      }
+      
+      const response = await fetch('/api/auth/instagram/initiate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Non-JSON response received:', response.status, response.statusText);
+        alert('Instagram verification is temporarily unavailable. Please try again later or contact support.');
+        return;
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.authUrl) {
+        // Redirect to Instagram OAuth
+        window.location.href = result.authUrl;
+      } else {
+        console.error('Instagram verification failed:', result.error);
+        
+        // Show user-friendly error message
+        if (result.error?.includes('not currently available')) {
+          alert('Instagram verification is not currently available. This feature is being set up. Please check back later or contact support for assistance.');
+        } else {
+          alert(`Failed to initiate Instagram verification: ${result.error || 'Unknown error'}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error initiating Instagram verification:', error);
+      
+      // Handle JSON parsing errors specifically
+      if (error instanceof SyntaxError && error.message.includes('JSON')) {
+        alert('Instagram verification is temporarily unavailable due to a server error. Please try again later or contact support.');
+      } else {
+        alert('Failed to start Instagram verification. Please check your internet connection and try again.');
+      }
+    } finally {
+      setVerifyingInstagram(false);
+    }
+  };
+
+  const handleRevokeInstagramVerification = async () => {
+    if (!confirm('Are you sure you want to revoke Instagram verification? You will need to verify again to prevent impersonation.')) {
+      return;
+    }
+
+    try {
+      // Get the access token from the session
+      if (!session?.access_token) {
+        alert('Authentication required. Please refresh the page and try again.');
+        return;
+      }
+      
+      const response = await fetch('/api/auth/instagram/revoke', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Update local state
+        setProfile(prev => ({
+          ...prev,
+          instagramVerified: false
+        }));
+        alert('Instagram verification revoked successfully.');
+      } else {
+        alert(`Failed to revoke Instagram verification: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error revoking Instagram verification:', error);
+      alert('Failed to revoke Instagram verification. Please try again.');
+    }
+  };
+
+  // Check for Instagram verification success/error in URL params
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const instagramSuccess = urlParams.get('instagram_success');
+    const instagramError = urlParams.get('instagram_error');
+
+    if (instagramSuccess === 'true') {
+      alert('Instagram account verified successfully!');
+      // Reload profile data to get updated verification status
+      if (user?.id) {
+        designerService.getDashboardData(user.id).then(data => {
+          if (data) {
+            setProfile(data.profile);
+          }
+        });
+      }
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (instagramError) {
+      let errorMessage = 'Instagram verification failed.';
+      switch (instagramError) {
+        case 'access_denied':
+          errorMessage = 'Instagram verification was cancelled.';
+          break;
+        case 'invalid_request':
+          errorMessage = 'Invalid Instagram verification request.';
+          break;
+        case 'verification_failed':
+          errorMessage = 'Instagram verification failed. Please try again.';
+          break;
+        case 'server_error':
+          errorMessage = 'Server error during Instagram verification.';
+          break;
+      }
+      alert(errorMessage);
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [user?.id]);
 
   // Show loading state while checking authentication
   if (!initialized) {
@@ -362,7 +550,6 @@ function DesignerDashboardContent() {
         setProfile(updatedData.profile);
         setStatus(updatedData.status);
         setSubmittedAt(updatedData.submittedAt);
-        setCompletionPercentage(updatedData.completionPercentage);
       }
       
       // Show success feedback
@@ -399,7 +586,6 @@ function DesignerDashboardContent() {
           setProfile(updatedData.profile);
           setStatus(updatedData.status);
           setSubmittedAt(updatedData.submittedAt);
-          setCompletionPercentage(updatedData.completionPercentage);
         }
         
         // Different messages for initial submission vs resubmission
@@ -439,9 +625,9 @@ function DesignerDashboardContent() {
       case 'approved':
         return {
           icon: <CheckCircle size={20} />,
-          text: 'Approved',
+          text: '',
           color: 'text-green-400 bg-green-400/10',
-          description: 'Congratulations! Your brand is now live on Baguri'
+          description: ''
         };
       case 'rejected':
         return {
@@ -462,7 +648,7 @@ function DesignerDashboardContent() {
 
   const statusInfo = getStatusInfo(status);
 
-  const canSubmit = completionPercentage >= 83 && (status === 'draft' || status === 'rejected'); // Updated threshold since we removed products
+  const canSubmit = completionPercentage >= 75 && (status === 'draft' || status === 'rejected'); // 6 out of 8 required fields (75%)
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
@@ -558,11 +744,13 @@ function DesignerDashboardContent() {
                   )}
                 </div>
                 <p className="text-zinc-400 mobile-text-sm mobile-line-clamp-2">{statusInfo.description}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className={`px-2 py-1 rounded-md text-xs font-medium mobile-text-xs ${statusInfo.color}`}>
-                    {statusInfo.text}
+                {status !== 'approved' && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className={`px-2 py-1 rounded-md text-xs font-medium mobile-text-xs ${statusInfo.color}`}>
+                      {statusInfo.text}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
             
@@ -581,61 +769,6 @@ function DesignerDashboardContent() {
           </div>
         </div>
       </section>
-
-      {/* Error Display */}
-      {error && (
-        <section className="relative z-10 py-4 mobile-py-3">
-          <div className="max-w-7xl mx-auto px-4 mobile-px-3">
-            <div className="bg-red-900/20 border border-red-700/50 rounded-lg p-4 flex items-center gap-3 mobile-p-3 mobile-flex-col mobile-items-start">
-              <div className="text-red-400 mobile-self-start">⚠️</div>
-              <div className="flex-1 mobile-w-full">
-                <div className="text-red-300 font-medium mobile-text-sm">Data Loading Error</div>
-                <div className="text-red-400 text-sm mobile-text-xs mobile-line-clamp-3">{error}</div>
-                <div className="flex gap-2 mt-3 mobile-gap-2 mobile-flex-wrap">
-                  <button
-                    onClick={() => {
-                      setError(null);
-                      // Retry loading data
-                      if (user?.id) {
-                        const loadDashboardData = async () => {
-                          try {
-                            const data = await designerService.getDashboardData(user.id);
-                            setDashboardData(data);
-                            if (data) {
-                              setProfile(data.profile);
-                              setStatus(data.status);
-                              setSubmittedAt(data.submittedAt);
-                              setCompletionPercentage(data.completionPercentage);
-                            }
-                          } catch (error) {
-                            console.error('Retry failed:', error);
-                            setError(error instanceof Error ? error.message : 'Retry failed');
-                          }
-                        };
-                        loadDashboardData();
-                      }
-                    }}
-                    className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white text-sm rounded transition-colors mobile-touch-target mobile-text-xs"
-                  >
-                    Retry
-                  </button>
-                  <button
-                    onClick={testDatabaseConnectivity}
-                    className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded transition-colors mobile-touch-target mobile-text-xs"
-                  >
-                    Test Database
-                  </button>
-                </div>
-                {dbTestResult && (
-                  <div className="mt-2 text-sm text-zinc-300 bg-zinc-800/50 p-2 rounded mobile-text-xs mobile-p-2">
-                    {dbTestResult}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Main Content */}
       <section className="relative z-10 py-8 mobile-py-4 safe-area-bottom">
@@ -942,29 +1075,89 @@ function DesignerDashboardContent() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="text-sm font-medium mb-2 flex items-center gap-2">
-                            <ProgressCircle isComplete={!!profile.instagramHandle.trim()} />
+                            <ProgressCircle isComplete={!!profile.instagramHandle.trim() && profile.instagramVerified} />
                             Instagram Handle
+                            {profile.instagramVerified && (
+                              <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
+                                Verified
+                              </span>
+                            )}
                           </label>
                           {!isEditMode && profile.instagramHandle ? (
-                            <div className="flex items-center gap-3 px-4 py-3">
-                              <Instagram size={20} className="text-zinc-400" />
-                              <span className="text-zinc-300">{profile.instagramHandle}</span>
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-3 px-4 py-3">
+                                <Instagram size={20} className="text-zinc-400" />
+                                <span className="text-zinc-300">{profile.instagramHandle}</span>
+                                {profile.instagramVerified && (
+                                  <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                                    <CheckCircle size={12} className="text-white" />
+                                  </div>
+                                )}
+                              </div>
+                              {!profile.instagramVerified && (
+                                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+                                  <p className="text-amber-400 text-sm mb-2">
+                                    ⚠️ Instagram account not verified. Verify ownership to prevent impersonation.
+                                  </p>
+                                  <button
+                                    onClick={handleInstagramVerification}
+                                    disabled={verifyingInstagram}
+                                    className="bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white px-3 py-1 rounded text-sm font-medium transition flex items-center gap-2"
+                                  >
+                                    {verifyingInstagram ? (
+                                      <>
+                                        <Loader2 size={14} className="animate-spin" />
+                                        Verifying...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Instagram size={14} />
+                                        Verify with Instagram
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              )}
+                              {profile.instagramVerified && (
+                                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-green-400 text-sm">
+                                      ✅ Instagram account verified and secured
+                                    </p>
+                                    <button
+                                      onClick={handleRevokeInstagramVerification}
+                                      className="text-red-400 hover:text-red-300 text-xs underline"
+                                    >
+                                      Revoke
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           ) : (
-                            <div className="relative">
-                              <Instagram size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400" />
-                              <input
-                                type="text"
-                                value={profile.instagramHandle}
-                                onChange={(e) => updateProfile('instagramHandle', e.target.value)}
-                                disabled={!isEditMode}
-                                className={`w-full pl-12 pr-4 py-3 border rounded-lg transition ${
-                                  isEditMode 
-                                    ? 'bg-zinc-800 border-zinc-700 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent'
-                                    : 'bg-zinc-700/50 border-zinc-600 text-zinc-300 cursor-not-allowed'
-                                }`}
-                                placeholder="@yourbrand"
-                              />
+                            <div className="space-y-3">
+                              <div className="relative">
+                                <Instagram size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400" />
+                                <input
+                                  type="text"
+                                  value={profile.instagramHandle}
+                                  onChange={(e) => updateProfile('instagramHandle', e.target.value)}
+                                  disabled={!isEditMode}
+                                  className={`w-full pl-12 pr-4 py-3 border rounded-lg transition ${
+                                    isEditMode 
+                                      ? 'bg-zinc-800 border-zinc-700 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent'
+                                      : 'bg-zinc-700/50 border-zinc-600 text-zinc-300 cursor-not-allowed'
+                                  }`}
+                                  placeholder="@yourbrand"
+                                />
+                              </div>
+                              {isEditMode && profile.instagramHandle && !profile.instagramVerified && (
+                                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+                                  <p className="text-amber-400 text-sm mb-2">
+                                    💡 Save your changes first, then verify your Instagram account to prevent impersonation.
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -1046,8 +1239,7 @@ function DesignerDashboardContent() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <button
                           onClick={() => {
-                            // TODO: Implement email change functionality
-                            alert('Email change functionality will be implemented soon');
+                            setShowEmailModal(true);
                           }}
                           className="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-800 text-white border border-zinc-600 rounded-lg hover:bg-zinc-700 transition font-medium"
                         >
@@ -1056,8 +1248,7 @@ function DesignerDashboardContent() {
                         
                         <button
                           onClick={() => {
-                            // TODO: Implement password change functionality
-                            alert('Password change functionality will be implemented soon');
+                            setShowPasswordModal(true);
                           }}
                           className="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-800 text-white border border-zinc-600 rounded-lg hover:bg-zinc-700 transition font-medium"
                         >
@@ -1072,21 +1263,102 @@ function DesignerDashboardContent() {
             
             {/* Sidebar */}
             <div className="space-y-6">
-              <ActionCard
-                status={status}
-                canSubmit={canSubmit}
-                onSubmit={handleSubmitForReview}
-                completionPercentage={completionPercentage}
-                setIsEditMode={setIsEditMode}
-                submitting={submitting}
-                profile={profile}
-              />
+              {status === 'approved' && (
+                <>
+                  {/* Action Buttons */}
+                  <div className="space-y-3">
+                    <Link
+                      href="/products"
+                      className="w-full py-3 bg-white text-black rounded-lg font-medium transition flex items-center justify-center gap-2 hover:bg-zinc-200"
+                    >
+                      <Plus size={16} />
+                      Manage Products
+                    </Link>
+                    
+                    <button
+                      onClick={() => {
+                        const slug = profile.brandName?.toLowerCase().replace(/\s+/g, '-');
+                        if (slug) {
+                          window.open(`/designer/${slug}`, '_blank');
+                        } else {
+                          window.open('/designers', '_blank');
+                        }
+                      }}
+                      className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+                    >
+                      <Globe size={16} />
+                      View Your Store
+                    </button>
+                  </div>
+
+                  {/* Wallet & Earnings */}
+                  {dashboardData?.wallet && (
+                    <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-xl p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Wallet size={20} className="text-green-400" />
+                        <h3 className="text-lg font-bold">Wallet & Earnings</h3>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="bg-zinc-800/50 rounded-lg p-3">
+                          <p className="text-xs text-zinc-400 mb-1">Available Balance</p>
+                          <p className="text-lg font-bold text-green-400">{dashboardData.wallet.balance.toFixed(2)} RON</p>
+                        </div>
+                        <div className="bg-zinc-800/50 rounded-lg p-3">
+                          <p className="text-xs text-zinc-400 mb-1">Total Sales</p>
+                          <p className="text-lg font-bold text-blue-400">{dashboardData.salesTotal.toFixed(2)} RON</p>
+                        </div>
+                      </div>
+                      
+                      <Link 
+                        href="/wallet"
+                        className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+                      >
+                        <Wallet size={16} />
+                        Manage Wallet
+                      </Link>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {status !== 'approved' && (
+                <ActionCard
+                  status={status}
+                  canSubmit={canSubmit}
+                  onSubmit={handleSubmitForReview}
+                  completionPercentage={completionPercentage}
+                  setIsEditMode={setIsEditMode}
+                  submitting={submitting}
+                  profile={profile}
+                />
+              )}
               
               <GuidelinesCard />
+              
+              {status !== 'approved' && <WalletCard wallet={dashboardData?.wallet} />}
             </div>
           </div>
         </div>
       </section>
+
+      {/* Modals */}
+      <ChangeEmailModal
+        isOpen={showEmailModal}
+        onClose={() => setShowEmailModal(false)}
+        onSuccess={() => {
+          // Optionally refresh the profile data
+          console.log('Email updated successfully');
+        }}
+      />
+      
+      <ChangePasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        onSuccess={() => {
+          console.log('Password updated successfully');
+        }}
+      />
     </div>
   );
 }
@@ -1101,7 +1373,7 @@ function ActionCard({ status, canSubmit, onSubmit, completionPercentage, setIsEd
           <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
             <p className="text-amber-400 text-sm mb-2">Complete your profile to submit for review</p>
             <div className="text-xs text-amber-300">
-              {completionPercentage < 63 ? 'At least 5 out of 6 required fields needed' : 'Ready to submit!'}
+              {completionPercentage < 75 ? 'At least 6 out of 8 fields needed (75% minimum)' : 'Ready to submit!'}
             </div>
           </div>
           
@@ -1117,16 +1389,40 @@ function ActionCard({ status, canSubmit, onSubmit, completionPercentage, setIsEd
             <Send size={16} className="inline mr-2" />
             {submitting ? 'Submitting...' : 'Submit for Review'}
           </button>
+          
+          <div className="pt-2 border-t border-zinc-800">
+            <Link
+              href="/products"
+              className="w-full py-2 text-zinc-400 hover:text-white rounded-lg font-medium transition flex items-center justify-center gap-2 text-sm"
+            >
+              <Plus size={14} />
+              Prepare Products (Preview)
+            </Link>
+            <p className="text-xs text-zinc-500 text-center mt-1">Get your products ready while waiting for approval</p>
+          </div>
         </div>
       )}
       
       {status === 'submitted' && (
-        <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-          <div className="flex items-center gap-2 mb-2">
-            <Clock size={16} className="text-amber-400" />
-            <p className="text-amber-400 text-sm font-medium">Under Review</p>
+        <div className="space-y-4">
+          <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock size={16} className="text-amber-400" />
+              <p className="text-amber-400 text-sm font-medium">Under Review</p>
+            </div>
+            <p className="text-amber-300 text-xs">Your application is being reviewed. We&apos;ll notify you within 24 hours via email.</p>
           </div>
-          <p className="text-amber-300 text-xs">Your application is being reviewed. We&apos;ll notify you within 24 hours via email.</p>
+          
+          <div className="pt-2 border-t border-zinc-800">
+            <Link
+              href="/products"
+              className="w-full py-2 text-zinc-400 hover:text-white rounded-lg font-medium transition flex items-center justify-center gap-2 text-sm"
+            >
+              <Plus size={14} />
+              Prepare Products (Preview)
+            </Link>
+            <p className="text-xs text-zinc-500 text-center mt-1">Get your products ready while waiting for approval</p>
+          </div>
         </div>
       )}
       
@@ -1135,12 +1431,20 @@ function ActionCard({ status, canSubmit, onSubmit, completionPercentage, setIsEd
         <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               <CheckCircle size={16} className="text-green-400" />
-              <p className="text-green-400 text-sm font-medium">Congratulations! 🎉</p>
+              <p className="text-green-400 text-sm font-medium">Profile Approved</p>
             </div>
-            <p className="text-green-300 text-xs">Your brand is now live on Baguri! You can view your store page.</p>
+            <p className="text-green-300 text-xs">Your designer profile is now active on the platform.</p>
           </div>
           
           <div className="space-y-2">
+            <Link
+              href="/products"
+              className="w-full py-3 bg-white text-black rounded-lg font-medium transition flex items-center justify-center gap-2 hover:bg-zinc-200"
+            >
+              <Plus size={16} />
+              Manage Products
+            </Link>
+            
             <button
               onClick={() => {
                 const slug = profile.brandName?.toLowerCase().replace(/\s+/g, '-');
@@ -1192,6 +1496,17 @@ function ActionCard({ status, canSubmit, onSubmit, completionPercentage, setIsEd
               Complete your profile to resubmit ({Math.round(completionPercentage)}% complete)
             </p>
           )}
+          
+          <div className="pt-2 border-t border-zinc-800">
+            <Link
+              href="/products"
+              className="w-full py-2 text-zinc-400 hover:text-white rounded-lg font-medium transition flex items-center justify-center gap-2 text-sm"
+            >
+              <Plus size={14} />
+              Prepare Products (Preview)
+            </Link>
+            <p className="text-xs text-zinc-500 text-center mt-1">Get your products ready while waiting for approval</p>
+          </div>
         </div>
       )}
     </div>
@@ -1229,6 +1544,62 @@ function GuidelinesCard() {
           Read Full Guidelines →
         </Link>
       </div>
+    </div>
+  );
+}
+
+function WalletCard({ wallet }: any) {
+  return (
+    <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-xl p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <Wallet size={20} className="text-green-400" />
+        <h3 className="text-lg font-bold">Wallet & Earnings</h3>
+      </div>
+      
+      {wallet ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-zinc-800/50 rounded-lg p-3">
+              <p className="text-xs text-zinc-400 mb-1">Available Balance</p>
+              <p className="text-lg font-bold text-green-400">{wallet.balance.toFixed(2)} RON</p>
+            </div>
+            <div className="bg-zinc-800/50 rounded-lg p-3">
+              <p className="text-xs text-zinc-400 mb-1">Total Sales</p>
+              <p className="text-lg font-bold text-blue-400">{wallet.totalEarnings.toFixed(2)} RON</p>
+            </div>
+          </div>
+          
+          {wallet.balance >= 50 && (
+            <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+              <p className="text-green-400 text-xs">💰 You can request a withdrawal!</p>
+            </div>
+          )}
+          
+          <Link 
+            href="/wallet"
+            className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+          >
+            <Wallet size={16} />
+            Manage Wallet
+          </Link>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="p-4 bg-zinc-800/50 rounded-lg text-center">
+            <Wallet size={32} className="mx-auto text-zinc-600 mb-2" />
+            <p className="text-sm text-zinc-400 mb-1">No wallet data yet</p>
+            <p className="text-xs text-zinc-500">Your earnings will appear here once you start selling</p>
+          </div>
+          
+          <Link 
+            href="/wallet"
+            className="w-full py-3 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+          >
+            <Wallet size={16} />
+            View Wallet
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
