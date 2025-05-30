@@ -501,7 +501,7 @@ function ProductManagement() {
                     <h3 className="text-amber-400 font-semibold">Profile Incomplete</h3>
                   </div>
                   <p className="text-amber-300 text-sm mb-3">
-                    You can prepare your products here, but they won't be visible to customers until your designer profile is approved.
+                    You can prepare your products here, but they won&apos;t be visible to customers until your designer profile is approved.
                   </p>
                   <Link 
                     href="/designer-dashboard"
@@ -520,7 +520,7 @@ function ProductManagement() {
                     <h3 className="text-blue-400 font-semibold">Under Review</h3>
                   </div>
                   <p className="text-blue-300 text-sm">
-                    Your profile is being reviewed. You can prepare your products here, but they won't be visible to customers until you're approved.
+                    Your profile is being reviewed. You can prepare your products here, but they won&apos;t be visible to customers until you&apos;re approved.
                   </p>
                 </div>
               )}

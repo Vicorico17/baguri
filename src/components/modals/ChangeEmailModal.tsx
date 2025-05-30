@@ -153,7 +153,7 @@ export function ChangeEmailModal({ isOpen, onClose, onSuccess }: ChangeEmailModa
 
             <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
               <p className="text-amber-400 text-sm">
-                <strong>Important:</strong> You'll need to verify your new email address before you can use it to sign in.
+                <strong>Important:</strong> You&apos;ll need to verify your new email address before you can use it to sign in.
               </p>
             </div>
 

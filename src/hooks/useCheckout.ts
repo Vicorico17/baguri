@@ -26,7 +26,7 @@ export function useCheckout() {
           };
         }
         return acc;
-      }, {} as Record<number, { productId: number; quantity: number; priceId: string | null }>);
+      }, {} as Record<string, { productId: string | number; quantity: number; priceId: string | null }>);
 
       // Create payment links for each unique product
       const checkoutPromises = Object.values(groupedItems).map(async (item) => {
