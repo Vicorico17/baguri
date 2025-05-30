@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { designerService } from '@/lib/designerService';
 
+// Force dynamic rendering for this route since it uses request.url
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
