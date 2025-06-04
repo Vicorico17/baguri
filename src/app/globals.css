@@ -96,6 +96,65 @@
     transform: translateY(0);
   }
 
+  /* Mobile modal slide-up animation */
+  .mobile-slide-up {
+    animation: mobile-slideUpModal 0.3s ease-out;
+  }
+
+  @keyframes mobile-slideUpModal {
+    from { 
+      transform: translateY(100%); 
+      opacity: 0; 
+    }
+    to { 
+      transform: translateY(0); 
+      opacity: 1; 
+    }
+  }
+
+  /* Mobile product grid optimizations */
+  .mobile-product-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    padding: 0 1rem;
+  }
+
+  /* Mobile floating button */
+  .mobile-floating-cart {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1rem;
+    z-index: 40;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    animation: mobile-floatIn 0.3s ease-out;
+  }
+
+  @keyframes mobile-floatIn {
+    from { 
+      transform: translateY(100px) scale(0.8); 
+      opacity: 0; 
+    }
+    to { 
+      transform: translateY(0) scale(1); 
+      opacity: 1; 
+    }
+  }
+
+  /* Enhanced mobile touch targets */
+  .mobile-enhanced-touch {
+    min-height: 48px;
+    min-width: 48px;
+    padding: 12px;
+  }
+
+  /* Mobile modal backdrop */
+  .mobile-modal-backdrop {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.6);
+  }
+
   /* Mobile sidebar animations */
   .mobile-sidebar {
     transform: translateX(-100%);
@@ -180,18 +239,9 @@
     animation: mobile-fadeIn 0.3s ease-out;
   }
 
-  .mobile-slide-up {
-    animation: mobile-slideUp 0.3s ease-out;
-  }
-
   @keyframes mobile-fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
-  }
-
-  @keyframes mobile-slideUp {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
   }
 
   /* Mobile scrollbar styling */

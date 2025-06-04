@@ -277,11 +277,11 @@ function ShopContent() {
               
               <button
                 onClick={() => setIsCartOpen(true)}
-                className="relative p-2 hover:bg-zinc-800 rounded-full transition mobile-touch-target"
+                className="relative p-3 hover:bg-zinc-800 rounded-full transition mobile-touch-target bg-zinc-800/50 md:bg-transparent md:p-2"
               >
-                <ShoppingCart size={20} className="md:w-6 md:h-6" />
+                <ShoppingCart size={24} className="md:w-5 md:h-5" />
                 {cartItemCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-white text-zinc-900 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 bg-white text-zinc-900 text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center md:w-5 md:h-5">
                     {cartItemCount}
                   </span>
                 )}
@@ -373,7 +373,7 @@ function ShopContent() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mobile-grid-2 mobile-gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
             {filteredProducts.map((product) => {
               // Handle colors - it might be a string or already an object
               let colors = [];
@@ -394,7 +394,7 @@ function ShopContent() {
               const firstImage = firstColor?.images?.[0];
               
               return (
-                <div key={product.id} className="group cursor-pointer mobile-fade-in mobile-card" onClick={() => setSelectedProduct(product)}>
+                <div key={product.id} className="group cursor-pointer mobile-fade-in" onClick={() => setSelectedProduct(product)}>
                   <div className="relative aspect-[3/4] bg-zinc-800 rounded-lg overflow-hidden mb-3">
                     <div className="absolute top-2 right-2 z-10">
                       <button className="p-2 bg-black/50 hover:bg-black/70 rounded-full transition mobile-touch-target">
@@ -417,14 +417,14 @@ function ShopContent() {
                     )}
                   </div>
                   
-                  <div className="space-y-2 mobile-p-2">
+                  <div className="space-y-2 p-2 md:p-0">
                     <Link 
                       href={`/designer/${product.designers?.brand_name?.toLowerCase().replace(/\s+/g, '-')}`}
                       className="flex items-center gap-2 hover:text-white transition mobile-touch-target"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {product.designers?.logo_url ? (
-                        <div className="w-6 h-6 rounded-full overflow-hidden">
+                        <div className="w-5 h-5 md:w-6 md:h-6 rounded-full overflow-hidden">
                           <Image
                             src={product.designers.logo_url}
                             alt={product.designers.brand_name}
@@ -437,18 +437,25 @@ function ShopContent() {
                         <PlaceholderImage 
                           type="logo" 
                           alt={product.designers?.brand_name || 'Designer'}
-                          className="w-6 h-6 rounded-full"
+                          className="w-5 h-5 md:w-6 md:h-6 rounded-full"
                         />
                       )}
-                      <span className="text-xs text-zinc-400 font-medium hover:text-white transition mobile-text-xs mobile-truncate">{product.designers?.brand_name}</span>
+                      <span className="text-xs text-zinc-400 font-medium hover:text-white transition mobile-truncate">{product.designers?.brand_name}</span>
                     </Link>
                     
-                    <h3 className="font-medium text-white group-hover:text-white transition mobile-text-sm mobile-line-clamp-2">{product.name}</h3>
+                    <h3 className="font-medium text-white group-hover:text-white transition text-sm md:text-base mobile-line-clamp-2">{product.name}</h3>
                     
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-lg mobile-text-base">{product.price} lei</span>
+                        <span className="font-bold text-base md:text-lg">{product.price} lei</span>
                       </div>
+                      <div className="hidden md:block">
+                        <StockStatusBadge stockStatus={product.stock_status || 'in_stock'} />
+                      </div>
+                    </div>
+                    
+                    {/* Mobile-only stock badge */}
+                    <div className="md:hidden">
                       <StockStatusBadge stockStatus={product.stock_status || 'in_stock'} />
                     </div>
                   </div>
@@ -470,6 +477,21 @@ function ShopContent() {
 
       {/* Global Shopping Cart Sidebar */}
       <GlobalCartSidebar />
+      
+      {/* Floating Cart Button for Mobile */}
+      <div className="md:hidden fixed bottom-6 right-4 z-40 safe-area-bottom mobile-floating-cart">
+        <button
+          onClick={() => setIsCartOpen(true)}
+          className="bg-white text-zinc-900 p-4 rounded-full shadow-lg hover:bg-zinc-200 transition mobile-enhanced-touch flex items-center gap-2"
+        >
+          <ShoppingCart size={20} />
+          {cartItemCount > 0 && (
+            <span className="bg-zinc-900 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[20px] text-center">
+              {cartItemCount}
+            </span>
+          )}
+        </button>
+      </div>
     </div>
   );
 }
@@ -525,17 +547,17 @@ function ProductModal({ product, onClose, onAddToCart }: {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 safe-area-inset" onClick={onClose}>
-      <div className="bg-zinc-900 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto mobile-modal mobile-slide-up" onClick={e => e.stopPropagation()}>
-        <div className="p-6 mobile-p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center p-0 md:p-4 z-50 safe-area-inset" onClick={onClose}>
+      <div className="bg-zinc-900 rounded-t-xl md:rounded-xl w-full md:max-w-2xl max-h-[95vh] md:max-h-[90vh] overflow-y-auto mobile-modal mobile-slide-up" onClick={e => e.stopPropagation()}>
+        <div className="p-4 md:p-6">
           <div className="flex justify-between items-start mb-4">
-            <h2 className="text-xl font-bold mobile-text-lg mobile-line-clamp-2">{product.name}</h2>
-            <button onClick={onClose} className="p-1 hover:bg-zinc-800 rounded mobile-touch-target">
+            <h2 className="text-lg md:text-xl font-bold mobile-line-clamp-2 pr-2">{product.name}</h2>
+            <button onClick={onClose} className="p-2 hover:bg-zinc-800 rounded mobile-touch-target flex-shrink-0">
               <X size={20} />
             </button>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-6 mobile-gap-4">
+          <div className="flex flex-col md:grid md:grid-cols-2 gap-4 md:gap-6">
             {/* Product Image */}
             <div className="aspect-[3/4] bg-zinc-800 rounded-lg overflow-hidden">
               {selectedColor?.images?.[0] ? (
@@ -556,7 +578,7 @@ function ProductModal({ product, onClose, onAddToCart }: {
             </div>
             
             {/* Product Details */}
-            <div className="space-y-4 mobile-gap-3">
+            <div className="space-y-4 md:space-y-4">
               <Link 
                 href={`/designer/${product.designers?.brand_name?.toLowerCase().replace(/\s+/g, '-')}`}
                 className="flex items-center gap-2 hover:text-white transition mobile-touch-target"
@@ -578,28 +600,28 @@ function ProductModal({ product, onClose, onAddToCart }: {
                     className="w-8 h-8 rounded-full"
                   />
                 )}
-                <span className="text-zinc-400 font-medium hover:text-white transition mobile-text-sm">{product.designers?.brand_name}</span>
+                <span className="text-zinc-400 font-medium hover:text-white transition text-sm md:text-base">{product.designers?.brand_name}</span>
               </Link>
               
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold mobile-text-xl">{product.price} lei</span>
+                  <span className="text-xl md:text-2xl font-bold">{product.price} lei</span>
                 </div>
                 <StockStatusBadge stockStatus={product.stock_status || 'in_stock'} />
               </div>
               
-              <p className="text-zinc-300 mobile-text-sm">{product.description}</p>
+              <p className="text-zinc-300 text-sm md:text-base">{product.description}</p>
               
               {/* Color Selection */}
               {colors.length > 0 && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Color: {selectedColor?.name}</label>
-                  <div className="flex gap-2">
+                <div className="space-y-3">
+                  <label className="text-sm font-medium block">Color: {selectedColor?.name}</label>
+                  <div className="flex flex-wrap gap-2">
                     {colors.map((color: any, index: number) => (
                       <button
                         key={index}
                         onClick={() => setSelectedColorIndex(index)}
-                        className={`px-3 py-2 rounded-lg border text-sm transition mobile-touch-target ${
+                        className={`px-4 py-3 rounded-lg border text-sm transition mobile-touch-target ${
                           selectedColorIndex === index
                             ? 'border-white bg-white text-zinc-900'
                             : 'border-zinc-600 hover:border-zinc-500'
@@ -612,40 +634,45 @@ function ProductModal({ product, onClose, onAddToCart }: {
                 </div>
               )}
               
-              {/* Size Selection */}
+              {/* Size Selection - Enhanced for Mobile */}
               {availableSizes.length > 0 && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Size</label>
-                  <div className="grid grid-cols-4 gap-2">
+                <div className="space-y-3 bg-zinc-800/30 p-4 rounded-lg border border-zinc-700">
+                  <label className="text-sm font-medium block text-white">Select Size</label>
+                  <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
                     {availableSizes.map((sizeObj: any) => (
                       <button
                         key={sizeObj.size}
                         onClick={() => setSelectedSize(sizeObj.size)}
                         disabled={sizeObj.stock === 0}
-                        className={`py-2 rounded-lg border text-sm transition mobile-touch-target ${
+                        className={`py-3 px-2 rounded-lg border text-sm font-medium transition mobile-touch-target ${
                           selectedSize === sizeObj.size
                             ? 'border-white bg-white text-zinc-900'
                             : sizeObj.stock === 0
-                            ? 'border-zinc-700 text-zinc-500 cursor-not-allowed'
-                            : 'border-zinc-600 hover:border-zinc-500'
+                            ? 'border-zinc-700 text-zinc-500 cursor-not-allowed bg-zinc-800/50'
+                            : 'border-zinc-600 hover:border-zinc-500 bg-zinc-800/50'
                         }`}
                       >
                         {sizeObj.size}
-                        {sizeObj.stock === 0 && <div className="text-xs">Out</div>}
+                        {sizeObj.stock === 0 && <div className="text-xs mt-1">Out</div>}
                       </button>
                     ))}
                   </div>
+                  {selectedSize && (
+                    <p className="text-xs text-zinc-400 mt-2">Selected: {selectedSize}</p>
+                  )}
                 </div>
               )}
               
-              {/* Add to Cart Button */}
-              <button
-                onClick={handleAddToCart}
-                disabled={!selectedColor || !selectedSize || availableSizes.find((s: any) => s.size === selectedSize)?.stock === 0}
-                className="w-full bg-white text-zinc-900 py-3 rounded-lg font-medium hover:bg-zinc-200 transition disabled:opacity-50 disabled:cursor-not-allowed mobile-touch-target"
-              >
-                Add to Cart
-              </button>
+              {/* Add to Cart Button - Enhanced for Mobile */}
+              <div className="pt-4 border-t border-zinc-700 md:border-t-0 md:pt-0">
+                <button
+                  onClick={handleAddToCart}
+                  disabled={!selectedColor || !selectedSize || availableSizes.find((s: any) => s.size === selectedSize)?.stock === 0}
+                  className="w-full bg-white text-zinc-900 py-4 md:py-3 rounded-lg font-medium hover:bg-zinc-200 transition disabled:opacity-50 disabled:cursor-not-allowed mobile-touch-target text-base"
+                >
+                  {!selectedSize ? 'Select Size to Add to Cart' : 'Add to Cart'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
