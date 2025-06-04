@@ -394,10 +394,26 @@ function ShopContent() {
               const firstImage = firstColor?.images?.[0];
               
               return (
-                <div key={product.id} className="group cursor-pointer mobile-fade-in" onClick={() => setSelectedProduct(product)}>
+                <div 
+                  key={product.id} 
+                  className="group cursor-pointer mobile-fade-in" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Product clicked:', product);
+                    setSelectedProduct(product);
+                  }}
+                >
                   <div className="relative aspect-[3/4] bg-zinc-800 rounded-lg overflow-hidden mb-3">
                     <div className="absolute top-2 right-2 z-10">
-                      <button className="p-2 bg-black/50 hover:bg-black/70 rounded-full transition mobile-touch-target">
+                      <button 
+                        className="p-2 bg-black/50 hover:bg-black/70 rounded-full transition mobile-touch-target"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          // Handle wishlist functionality here
+                        }}
+                      >
                         <Heart size={16} className="text-white" />
                       </button>
                     </div>
@@ -502,6 +518,8 @@ function ProductModal({ product, onClose, onAddToCart }: {
   onClose: () => void;
   onAddToCart: (product: any, size: string, color: string) => void;
 }) {
+  console.log('ProductModal opened with product:', product);
+  
   // Handle colors - it might be a string or already an object
   let colors = [];
   try {
@@ -517,11 +535,36 @@ function ProductModal({ product, onClose, onAddToCart }: {
     colors = [];
   }
   
+  // Fallback: If no colors found, create a default color structure
+  if (colors.length === 0) {
+    colors = [{
+      name: 'Default',
+      images: ['/placeholder-product.jpg'],
+      sizes: [
+        { size: 'XS', stock: 10 },
+        { size: 'S', stock: 10 },
+        { size: 'M', stock: 10 },
+        { size: 'L', stock: 10 },
+        { size: 'XL', stock: 10 }
+      ]
+    }];
+  }
+  
+  console.log('Processed colors:', colors);
+  
   const [selectedColorIndex, setSelectedColorIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState('');
   
   const selectedColor = colors[selectedColorIndex];
-  const availableSizes = selectedColor?.sizes || [];
+  const availableSizes = selectedColor?.sizes || [
+    { size: 'XS', stock: 10 },
+    { size: 'S', stock: 10 },
+    { size: 'M', stock: 10 },
+    { size: 'L', stock: 10 },
+    { size: 'XL', stock: 10 }
+  ];
+  
+  console.log('Available sizes:', availableSizes);
   
   // Set default size when color changes
   useEffect(() => {
@@ -529,6 +572,22 @@ function ProductModal({ product, onClose, onAddToCart }: {
       setSelectedSize(availableSizes[0].size);
     }
   }, [selectedColorIndex, availableSizes]);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
 
   const handleAddToCart = () => {
     if (selectedColor && selectedSize) {
@@ -547,25 +606,34 @@ function ProductModal({ product, onClose, onAddToCart }: {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center p-0 md:p-4 z-50 safe-area-inset" onClick={onClose}>
-      <div className="bg-zinc-900 rounded-t-xl md:rounded-xl w-full md:max-w-2xl max-h-[95vh] md:max-h-[90vh] overflow-y-auto mobile-modal mobile-slide-up" onClick={e => e.stopPropagation()}>
+    <div 
+      className="fixed inset-0 bg-black/60 flex items-end md:items-center justify-center p-0 md:p-4 z-[9999]" 
+      onClick={handleBackdropClick}
+    >
+      <div 
+        className="bg-zinc-900 rounded-t-xl md:rounded-xl w-full md:max-w-2xl max-h-[95vh] md:max-h-[90vh] overflow-y-auto" 
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-4 md:p-6">
           <div className="flex justify-between items-start mb-4">
-            <h2 className="text-lg md:text-xl font-bold mobile-line-clamp-2 pr-2">{product.name}</h2>
-            <button onClick={onClose} className="p-2 hover:bg-zinc-800 rounded mobile-touch-target flex-shrink-0">
+            <h2 className="text-lg md:text-xl font-bold pr-2 flex-1">{product.name}</h2>
+            <button 
+              onClick={onClose} 
+              className="p-2 hover:bg-zinc-800 rounded mobile-touch-target flex-shrink-0"
+            >
               <X size={20} />
             </button>
           </div>
           
           <div className="flex flex-col md:grid md:grid-cols-2 gap-4 md:gap-6">
-            {/* Product Image */}
-            <div className="aspect-[3/4] bg-zinc-800 rounded-lg overflow-hidden">
+            {/* Product Image - Made Smaller */}
+            <div className="w-full max-w-[200px] md:max-w-none aspect-[3/4] bg-zinc-800 rounded-lg overflow-hidden mx-auto md:mx-0">
               {selectedColor?.images?.[0] ? (
                 <Image
                   src={selectedColor.images[0]}
                   alt={product.name}
-                  width={400}
-                  height={500}
+                  width={200}
+                  height={267}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -578,10 +646,11 @@ function ProductModal({ product, onClose, onAddToCart }: {
             </div>
             
             {/* Product Details */}
-            <div className="space-y-4 md:space-y-4">
+            <div className="space-y-4">
               <Link 
                 href={`/designer/${product.designers?.brand_name?.toLowerCase().replace(/\s+/g, '-')}`}
                 className="flex items-center gap-2 hover:text-white transition mobile-touch-target"
+                onClick={(e) => e.stopPropagation()}
               >
                 {product.designers?.logo_url ? (
                   <div className="w-8 h-8 rounded-full overflow-hidden">
@@ -610,17 +679,20 @@ function ProductModal({ product, onClose, onAddToCart }: {
                 <StockStatusBadge stockStatus={product.stock_status || 'in_stock'} />
               </div>
               
-              <p className="text-zinc-300 text-sm md:text-base">{product.description}</p>
+              <p className="text-zinc-300 text-sm md:text-base">{product.description || 'No description available.'}</p>
               
               {/* Color Selection */}
-              {colors.length > 0 && (
+              {colors.length > 1 && (
                 <div className="space-y-3">
                   <label className="text-sm font-medium block">Color: {selectedColor?.name}</label>
                   <div className="flex flex-wrap gap-2">
                     {colors.map((color: any, index: number) => (
                       <button
                         key={index}
-                        onClick={() => setSelectedColorIndex(index)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedColorIndex(index);
+                        }}
                         className={`px-4 py-3 rounded-lg border text-sm transition mobile-touch-target ${
                           selectedColorIndex === index
                             ? 'border-white bg-white text-zinc-900'
@@ -642,7 +714,10 @@ function ProductModal({ product, onClose, onAddToCart }: {
                     {availableSizes.map((sizeObj: any) => (
                       <button
                         key={sizeObj.size}
-                        onClick={() => setSelectedSize(sizeObj.size)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedSize(sizeObj.size);
+                        }}
                         disabled={sizeObj.stock === 0}
                         className={`py-3 px-2 rounded-lg border text-sm font-medium transition mobile-touch-target ${
                           selectedSize === sizeObj.size
@@ -666,8 +741,11 @@ function ProductModal({ product, onClose, onAddToCart }: {
               {/* Add to Cart Button - Enhanced for Mobile */}
               <div className="pt-4 border-t border-zinc-700 md:border-t-0 md:pt-0">
                 <button
-                  onClick={handleAddToCart}
-                  disabled={!selectedColor || !selectedSize || availableSizes.find((s: any) => s.size === selectedSize)?.stock === 0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAddToCart();
+                  }}
+                  disabled={!selectedSize || availableSizes.find((s: any) => s.size === selectedSize)?.stock === 0}
                   className="w-full bg-white text-zinc-900 py-4 md:py-3 rounded-lg font-medium hover:bg-zinc-200 transition disabled:opacity-50 disabled:cursor-not-allowed mobile-touch-target text-base"
                 >
                   {!selectedSize ? 'Select Size to Add to Cart' : 'Add to Cart'}
