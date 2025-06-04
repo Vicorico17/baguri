@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2025-02-24.acacia',
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,37 +14,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Product name is required' }, { status: 400 });
     }
 
-    // In a real implementation, this would use the MCP function directly
-    // For demonstration purposes, we'll use the same format as the actual Stripe response
-    // but generate it locally. In production, you would call the MCP function here.
-    
-    // Example of what the actual call would look like:
-    // const stripeProduct = await mcp_stripe_create_product({ name, description });
-    
-    const stripeProduct = {
-      id: `prod_${Math.random().toString(36).substr(2, 14)}`,
-      object: 'product',
-      active: true,
-      attributes: [],
-      created: Math.floor(Date.now() / 1000),
-      default_price: null,
-      description: description || '',
-      images: [],
-      livemode: false,
-      marketing_features: [],
-      metadata: {},
-      name,
-      package_dimensions: null,
-      shippable: null,
-      statement_descriptor: null,
-      tax_code: null,
-      type: 'service',
-      unit_label: null,
-      updated: Math.floor(Date.now() / 1000),
-      url: null
-    };
+    console.log('🚀 Creating Stripe product:', { name, description });
 
+    // Create Stripe product using official SDK
+    const stripeProduct = await stripe.products.create({
+      name,
+      description: description || '',
+      metadata: {
+        created_via: 'baguri_automation',
+        created_at: new Date().toISOString()
+      }
+    });
+
+    console.log('✅ Stripe product created:', stripeProduct.id);
     return NextResponse.json(stripeProduct);
+    
   } catch (error) {
     console.error('Error creating Stripe product:', error);
     return NextResponse.json(

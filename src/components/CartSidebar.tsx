@@ -25,10 +25,74 @@ function PlaceholderImage({ type, className, alt }: { type: 'product' | 'logo'; 
   );
 }
 
+// Type for Stripe data
+interface StripeDataResult {
+  productId: string | null;
+  priceId: string | null;
+  paymentUrl: string | null;
+  source: 'dynamic' | 'static' | 'none';
+}
+
 export function CartSidebar() {
   const { cart, isCartOpen, setIsCartOpen, updateCartItemQuantity, cartTotal } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stripeDataCache, setStripeDataCache] = useState<Record<string, StripeDataResult>>({});
+  const [loadingStripeData, setLoadingStripeData] = useState<Set<string>>(new Set());
+
+  // Function to fetch Stripe data for a product
+  const fetchStripeData = async (productId: string): Promise<StripeDataResult> => {
+    if (stripeDataCache[productId]) {
+      return stripeDataCache[productId];
+    }
+
+    if (loadingStripeData.has(productId)) {
+      // Wait for existing request
+      return new Promise((resolve) => {
+        const checkCache = () => {
+          if (stripeDataCache[productId]) {
+            resolve(stripeDataCache[productId]);
+          } else {
+            setTimeout(checkCache, 100);
+          }
+        };
+        checkCache();
+      });
+    }
+
+    setLoadingStripeData(prev => new Set(prev).add(productId));
+
+    try {
+      const response = await fetch(`/api/stripe-data/${productId}`);
+      const data = await response.json();
+      
+      setStripeDataCache(prev => ({ ...prev, [productId]: data }));
+      return data;
+    } catch (error) {
+      console.error('Error fetching Stripe data:', error);
+      const fallbackData = getStripeData(productId);
+      setStripeDataCache(prev => ({ ...prev, [productId]: fallbackData }));
+      return fallbackData;
+    } finally {
+      setLoadingStripeData(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(productId);
+        return newSet;
+      });
+    }
+  };
+
+  // Load Stripe data for all cart items
+  useEffect(() => {
+    if (isCartOpen && cart.length > 0) {
+      cart.forEach(item => {
+        const productIdStr = String(item.id);
+        if (!stripeDataCache[productIdStr] && !loadingStripeData.has(productIdStr)) {
+          fetchStripeData(productIdStr);
+        }
+      });
+    }
+  }, [isCartOpen, cart, stripeDataCache, loadingStripeData]);
 
   // Prevent body scroll when cart is open on mobile
   useEffect(() => {
@@ -50,35 +114,23 @@ export function CartSidebar() {
     setError(null);
 
     try {
-      // For now, handle the first item (in production, you'd create a session with all items)
-      const firstItem = cart[0];
-      
-      console.log('Starting checkout for item:', firstItem);
-      
-      // Check if this product has Stripe integration
-      if (!hasStripeIntegration(firstItem.id)) {
-        throw new Error(`Product "${firstItem.name}" doesn't have Stripe integration set up yet.`);
-      }
-      
-      // Get Stripe data for the product
-      const stripeData = getStripeData(firstItem.id);
-      
-      console.log('Stripe data for product:', stripeData);
-      
-      if (!stripeData.priceId) {
-        throw new Error(`No price found for product: ${firstItem.name}`);
-      }
+      // Get Stripe data for all cart items
+      const cartWithStripeData = await Promise.all(
+        cart.map(async (item) => {
+          const stripeData = await fetchStripeData(String(item.id));
+          return { ...item, stripeData };
+        })
+      );
 
       // Prepare items for checkout
-      const checkoutItems = cart.map(item => {
-        const itemStripeData = getStripeData(item.id);
-        return {
-          priceId: itemStripeData.priceId,
+      const checkoutItems = cartWithStripeData
+        .filter(item => item.stripeData.priceId)
+        .map(item => ({
+          priceId: item.stripeData.priceId!,
           quantity: item.quantity,
           productName: item.name,
           productId: item.id
-        };
-      }).filter(item => item.priceId); // Only include items with valid Stripe integration
+        }));
 
       console.log('Checkout items:', checkoutItems);
 
@@ -156,7 +208,14 @@ export function CartSidebar() {
             <>
               <div className="space-y-4 mb-6 mobile-gap-3 mobile-mb-4">
                 {cart.map((item, index) => {
-                  const stripeData = getStripeData(item.id);
+                  const productIdStr = String(item.id);
+                  const stripeData = stripeDataCache[productIdStr] || { 
+                    productId: null, 
+                    priceId: null, 
+                    paymentUrl: null, 
+                    source: 'none' as const 
+                  };
+                  const isLoadingStripe = loadingStripeData.has(productIdStr);
                   
                   return (
                     <div key={`${item.id}-${item.size}-${item.color}-${index}`} className="flex gap-3 p-3 bg-zinc-800 rounded-lg mobile-p-3 mobile-card">
@@ -183,13 +242,17 @@ export function CartSidebar() {
                         
                         {/* Stripe Integration Status - Collapsible on mobile */}
                         <div className="mb-2 mobile-collapsible">
-                          {stripeData.source !== 'none' ? (
+                          {isLoadingStripe ? (
+                            <span className="text-xs px-2 py-1 rounded bg-zinc-500/20 text-zinc-400 mobile-text-xs">
+                              🔄 Verifying stock...
+                            </span>
+                          ) : stripeData.source !== 'none' ? (
                             <span className={`text-xs px-2 py-1 rounded mobile-text-xs ${
                               stripeData.source === 'dynamic' 
                                 ? 'bg-green-500/20 text-green-400' 
                                 : 'bg-blue-500/20 text-blue-400'
                             }`}>
-                              {stripeData.source === 'dynamic' ? '🤖 Auto-integrated' : '📦 Pre-configured'}
+                              {stripeData.source === 'dynamic' ? '✅ In Stock' : '📦 Pre-configured'}
                             </span>
                           ) : (
                             <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400 mobile-text-xs">
@@ -234,26 +297,6 @@ export function CartSidebar() {
                   </div>
                 )}
                 
-                {/* Integration Status Summary - Collapsible on mobile */}
-                <div className="text-xs text-zinc-400 space-y-1 mobile-collapsible mobile-text-xs">
-                  <p className="font-medium">Payment Integration Status:</p>
-                  {cart.map((item, index) => {
-                    const stripeData = getStripeData(item.id);
-                    return (
-                      <div key={`status-${item.id}-${index}`} className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${
-                          stripeData.source !== 'none' ? 'bg-green-400' : 'bg-red-400'
-                        }`}></span>
-                        <span className="mobile-truncate">{item.name}: {
-                          stripeData.source === 'dynamic' ? 'Auto-created' :
-                          stripeData.source === 'static' ? 'Pre-configured' :
-                          'Missing integration'
-                        }</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                
                 <div className="space-y-2 mobile-gap-3">
                   <button 
                     onClick={handleQuickCheckout}
@@ -266,10 +309,6 @@ export function CartSidebar() {
                   >
                     {isProcessing ? 'Processing...' : 'Quick Checkout'}
                   </button>
-                  
-                  <p className="text-xs text-zinc-500 text-center mobile-text-xs mobile-px-2">
-                    ✨ Products with automated integration are ready for immediate checkout
-                  </p>
                 </div>
               </div>
             </>

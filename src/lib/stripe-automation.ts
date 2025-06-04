@@ -26,9 +26,61 @@ export function addToStripeMapping(productId: string, stripeData: StripeProductR
   dynamicStripeMapping[productId] = stripeData;
 }
 
+// Function to get Stripe data from database
+export async function getStripeDataFromDatabase(productId: string): Promise<StripeProductResult | null> {
+  try {
+    // Import supabase here to avoid circular dependencies
+    const { supabase } = await import('./supabase');
+    
+    const { data, error } = await supabase
+      .from('designer_products')
+      .select('stripe_product_id, stripe_price_id, stripe_payment_link')
+      .eq('id', productId)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    if (data.stripe_product_id && data.stripe_price_id) {
+      return {
+        productId: data.stripe_product_id,
+        priceId: data.stripe_price_id,
+        paymentLinkUrl: data.stripe_payment_link || undefined
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error fetching Stripe data from database:', error);
+    return null;
+  }
+}
+
 export function getStripeDataForProduct(productId: string | number): StripeProductResult | null {
   const key = String(productId);
   return dynamicStripeMapping[key] || null;
+}
+
+// Enhanced function that checks both memory and database
+export async function getStripeDataForProductEnhanced(productId: string | number): Promise<StripeProductResult | null> {
+  const key = String(productId);
+  
+  // First check in-memory mapping
+  const memoryData = dynamicStripeMapping[key];
+  if (memoryData) {
+    return memoryData;
+  }
+  
+  // Then check database
+  const dbData = await getStripeDataFromDatabase(key);
+  if (dbData) {
+    // Cache it in memory for future use
+    dynamicStripeMapping[key] = dbData;
+    return dbData;
+  }
+  
+  return null;
 }
 
 export function getAllStripeMappings(): Record<string, StripeProductResult> {

@@ -1,30 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2025-02-24.acacia',
+});
 
 export async function POST(request: NextRequest) {
   try {
-    const { price, quantity } = await request.json();
+    const body = await request.json();
+    const { price, quantity } = body;
 
     if (!price || !quantity) {
-      return NextResponse.json({ error: 'Price and quantity are required' }, { status: 400 });
+      return NextResponse.json({ 
+        error: 'Price ID and quantity are required' 
+      }, { status: 400 });
     }
 
-    // Import the MCP Stripe function
-    const { mcp_stripe_create_payment_link } = await import('@/lib/mcp_stripe');
+    console.log('🚀 Creating Stripe payment link:', { price, quantity });
 
-    // Create payment link using Stripe MCP
-    const paymentLink = await mcp_stripe_create_payment_link({
-      price: price,
-      quantity: quantity
+    // Create Stripe payment link using official SDK
+    const paymentLink = await stripe.paymentLinks.create({
+      line_items: [
+        {
+          price,
+          quantity,
+        },
+      ],
+      metadata: {
+        created_via: 'baguri_automation',
+        created_at: new Date().toISOString()
+      }
     });
 
-    console.log('Created payment link via MCP:', paymentLink);
-
+    console.log('✅ Stripe payment link created:', paymentLink.url);
     return NextResponse.json(paymentLink);
-
+    
   } catch (error) {
-    console.error('Error creating payment link:', error);
+    console.error('Error creating Stripe payment link:', error);
     return NextResponse.json(
-      { error: 'Failed to create payment link' },
+      { error: error instanceof Error ? error.message : 'Failed to create payment link' },
       { status: 500 }
     );
   }

@@ -30,7 +30,6 @@ import { BackgroundPaths } from "@/components/ui/background-paths";
 import { useDesignerAuth } from '@/contexts/DesignerAuthContext';
 import { designerService } from '@/lib/designerService';
 import { supabase } from '@/lib/supabase';
-import { mcp_stripe_create_product, mcp_stripe_create_price } from '@/lib/mcp_stripe';
 import { addToStripeMapping } from '@/lib/stripe-automation';
 
 // Updated DesignerProduct type to match new structure
@@ -227,6 +226,7 @@ function ProductManagement() {
       // If going live, create Stripe product first
       let stripeProductId = null;
       let stripePriceId = null;
+      let paymentLinkUrl = null;
       
       if (newLiveStatus) {
         const product = products.find(p => p.id === productId);
@@ -234,13 +234,68 @@ function ProductManagement() {
           throw new Error('Product not found');
         }
 
-        // Create Stripe product
-        const stripeProduct = await createStripeProduct(product);
-        stripeProductId = stripeProduct.id;
+        console.log('🚀 Creating Stripe product for:', product.name);
 
-        // Create Stripe price
-        const stripePrice = await createStripePrice(stripeProductId, product.price);
+        // Create Stripe product using API route
+        const stripeProductResponse = await fetch('/api/mcp/stripe/create-product', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: product.name,
+            description: product.description
+          }),
+        });
+
+        if (!stripeProductResponse.ok) {
+          throw new Error('Failed to create Stripe product');
+        }
+
+        const stripeProduct = await stripeProductResponse.json();
+        stripeProductId = stripeProduct.id;
+        console.log('✅ Stripe product created:', stripeProductId);
+
+        // Create Stripe price using API route
+        const stripePriceResponse = await fetch('/api/mcp/stripe/create-price', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            product: stripeProductId,
+            unit_amount: Math.round(product.price * 100), // Convert to cents
+            currency: 'ron' // Romanian Lei
+          }),
+        });
+
+        if (!stripePriceResponse.ok) {
+          throw new Error('Failed to create Stripe price');
+        }
+
+        const stripePrice = await stripePriceResponse.json();
         stripePriceId = stripePrice.id;
+        console.log('✅ Stripe price created:', stripePriceId);
+
+        // Create Stripe payment link using API route
+        const paymentLinkResponse = await fetch('/api/mcp/stripe/create-payment-link', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            price: stripePriceId,
+            quantity: 1
+          }),
+        });
+
+        if (!paymentLinkResponse.ok) {
+          throw new Error('Failed to create Stripe payment link');
+        }
+
+        const paymentLink = await paymentLinkResponse.json();
+        paymentLinkUrl = paymentLink.url;
+        console.log('✅ Stripe payment link created:', paymentLinkUrl);
       }
       
       const { data, error } = await supabase
@@ -249,6 +304,7 @@ function ProductManagement() {
           is_live: newLiveStatus,
           stripe_product_id: stripeProductId,
           stripe_price_id: stripePriceId,
+          stripe_payment_link: paymentLinkUrl,
           updated_at: new Date().toISOString()
         })
         .eq('id', productId)
@@ -265,7 +321,7 @@ function ProductManagement() {
         addToStripeMapping(productId, {
           productId: stripeProductId,
           priceId: stripePriceId,
-          paymentLinkUrl: undefined // We'll create payment links separately if needed
+          paymentLinkUrl: paymentLinkUrl
         });
       }
 
@@ -278,7 +334,7 @@ function ProductManagement() {
 
       // Show success message
       if (newLiveStatus) {
-        alert('🎉 Product is now live! It will appear on your designer page and in the shop. Stripe product created successfully.');
+        alert('🎉 Product is now live! It will appear on your designer page and in the shop. Stripe product and payment link created successfully.');
       } else {
         alert('Product has been taken offline.');
       }
@@ -287,39 +343,6 @@ function ProductManagement() {
       alert(`Failed to update product status: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setTogglingLive(null); // Clear loading state
-    }
-  };
-
-  // Helper function to create Stripe product
-  const createStripeProduct = async (product: DesignerProduct) => {
-    try {
-      // Use Stripe MCP to create product
-      const stripeProduct = await mcp_stripe_create_product({
-        name: product.name,
-        description: product.description
-      });
-
-      return stripeProduct;
-    } catch (error) {
-      console.error('Error creating Stripe product:', error);
-      throw error;
-    }
-  };
-
-  // Helper function to create Stripe price
-  const createStripePrice = async (productId: string, price: number) => {
-    try {
-      // Use Stripe MCP to create price
-      const stripePrice = await mcp_stripe_create_price({
-        product: productId,
-        unit_amount: Math.round(price * 100), // Convert to cents
-        currency: 'ron' // Romanian Lei
-      });
-
-      return stripePrice;
-    } catch (error) {
-      console.error('Error creating Stripe price:', error);
-      throw error;
     }
   };
 
@@ -465,11 +488,11 @@ function ProductManagement() {
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center gap-4">
                 <Link 
-                  href="/designer-dashboard"
+                  href="/shop"
                   className="flex items-center gap-2 text-zinc-400 hover:text-white transition"
                 >
                   <ArrowLeft size={20} />
-                  <span>Back to Dashboard</span>
+                  <span>Back to Shop</span>
                 </Link>
                 <div className="h-6 w-px bg-zinc-700" />
                 <div className="flex items-center gap-2">

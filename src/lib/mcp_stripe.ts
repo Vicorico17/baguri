@@ -59,7 +59,8 @@ export async function mcp_stripe_create_product(params: StripeProductParams): Pr
     });
 
     if (!response.ok) {
-      throw new Error('Failed to create Stripe product');
+      const errorText = await response.text();
+      throw new Error(`Failed to create Stripe product: ${errorText}`);
     }
 
     return await response.json();
@@ -80,7 +81,8 @@ export async function mcp_stripe_create_price(params: StripePriceParams): Promis
     });
 
     if (!response.ok) {
-      throw new Error('Failed to create Stripe price');
+      const errorText = await response.text();
+      throw new Error(`Failed to create Stripe price: ${errorText}`);
     }
 
     return await response.json();
@@ -92,24 +94,20 @@ export async function mcp_stripe_create_price(params: StripePriceParams): Promis
 
 export async function mcp_stripe_create_payment_link(params: StripePaymentLinkParams): Promise<StripePaymentLink> {
   try {
-    // For now, we'll create a simple demo payment link since we don't have Stripe MCP configured
-    // In production, this would use the actual Stripe MCP tool
-    console.log('Creating payment link with params:', params);
-    
-    // Return a demo payment link that redirects to a simple success page
-    const paymentLink: StripePaymentLink = {
-      id: `plink_demo_${Date.now()}`,
-      object: 'payment_link',
-      active: true,
-      url: `/checkout/demo?price=${params.price}&quantity=${params.quantity}`,
-      price: params.price,
-      quantity: params.quantity,
-      created: Math.floor(Date.now() / 1000)
-    };
+    const response = await fetch('/api/mcp/stripe/create-payment-link', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(params),
+    });
 
-    console.log('Created demo payment link:', paymentLink);
-    return paymentLink;
-    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to create Stripe payment link: ${errorText}`);
+    }
+
+    return await response.json();
   } catch (error) {
     console.error('Error in mcp_stripe_create_payment_link:', error);
     throw error;

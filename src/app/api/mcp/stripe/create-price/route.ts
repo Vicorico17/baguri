@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2025-02-24.acacia',
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -7,40 +12,26 @@ export async function POST(request: NextRequest) {
 
     if (!product || !unit_amount || !currency) {
       return NextResponse.json({ 
-        error: 'Product ID, unit amount, and currency are required' 
+        error: 'Product ID, unit_amount, and currency are required' 
       }, { status: 400 });
     }
 
-    // In a real implementation, this would use the MCP function directly
-    // For demonstration purposes, we'll use the same format as the actual Stripe response
-    // but generate it locally. In production, you would call the MCP function here.
-    
-    // Example of what the actual call would look like:
-    // const stripePrice = await mcp_stripe_create_price({ product, unit_amount, currency });
-    
-    const stripePrice = {
-      id: `price_${Math.random().toString(36).substr(2, 14)}`,
-      object: 'price',
-      active: true,
-      billing_scheme: 'per_unit',
-      created: Math.floor(Date.now() / 1000),
-      currency,
-      custom_unit_amount: null,
-      livemode: false,
-      lookup_key: null,
-      metadata: {},
-      nickname: null,
-      product,
-      recurring: null,
-      tax_behavior: 'unspecified',
-      tiers_mode: null,
-      transform_quantity: null,
-      type: 'one_time',
-      unit_amount,
-      unit_amount_decimal: unit_amount.toString()
-    };
+    console.log('🚀 Creating Stripe price:', { product, unit_amount, currency });
 
+    // Create Stripe price using official SDK
+    const stripePrice = await stripe.prices.create({
+      product,
+      unit_amount,
+      currency,
+      metadata: {
+        created_via: 'baguri_automation',
+        created_at: new Date().toISOString()
+      }
+    });
+
+    console.log('✅ Stripe price created:', stripePrice.id);
     return NextResponse.json(stripePrice);
+    
   } catch (error) {
     console.error('Error creating Stripe price:', error);
     return NextResponse.json(
