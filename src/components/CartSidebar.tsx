@@ -217,22 +217,42 @@ export function CartSidebar() {
                   };
                   const isLoadingStripe = loadingStripeData.has(productIdStr);
                   
+                  // Debug logging
+                  console.log('Cart item image:', item.image, 'for product:', item.name);
+                  
                   return (
-                    <div key={`${item.id}-${item.size}-${item.color}-${index}`} className="flex gap-3 p-3 bg-zinc-800 rounded-lg mobile-p-3 mobile-card">
+                    <div key={`${item.id}-${item.size}-${item.color}-${index}`} className="flex gap-4 p-4 bg-zinc-800 rounded-lg mobile-p-3 mobile-card border border-zinc-700">
                       {item.image ? (
-                        <div className="w-15 h-20 rounded mobile-w-12 mobile-h-16 relative overflow-hidden">
+                        <div className="w-16 h-20 rounded-lg mobile-w-12 mobile-h-16 relative overflow-hidden flex-shrink-0 bg-zinc-700 border border-zinc-600">
                           <Image
                             src={item.image}
                             alt={item.name}
                             fill
                             className="object-cover"
+                            onError={(e) => {
+                              console.error('Failed to load image:', item.image, 'for product:', item.name);
+                              // If image fails to load, hide it and show placeholder
+                              e.currentTarget.style.display = 'none';
+                              const placeholder = e.currentTarget.parentElement?.nextElementSibling as HTMLElement;
+                              if (placeholder) {
+                                placeholder.style.display = 'flex';
+                              }
+                            }}
+                            onLoad={() => {
+                              console.log('Successfully loaded image:', item.image, 'for product:', item.name);
+                            }}
+                          />
+                          <PlaceholderImage 
+                            type="product" 
+                            alt={item.name}
+                            className="w-full h-full absolute inset-0 hidden"
                           />
                         </div>
                       ) : (
                         <PlaceholderImage 
                           type="product" 
                           alt={item.name}
-                          className="w-15 h-20 rounded mobile-w-12 mobile-h-16"
+                          className="w-16 h-20 rounded-lg mobile-w-12 mobile-h-16 flex-shrink-0 border border-zinc-600"
                         />
                       )}
                       <div className="flex-1">
