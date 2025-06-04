@@ -880,10 +880,10 @@ function ProductFormModal({ product, onSave, onCancel, saving, onImageUpload }: 
             sizes: color.sizes.filter((_, i) => i !== existingSizeIndex)
           };
         } else {
-          // Add size with default stock
+          // Add size with default stock of 1
           return {
             ...color,
-            sizes: [...color.sizes, { size, stock: 0 }]
+            sizes: [...color.sizes, { size, stock: 1 }]
           };
         }
       })
@@ -966,8 +966,8 @@ function ProductFormModal({ product, onSave, onCancel, saving, onImageUpload }: 
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.price}
-                  onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+                  value={formData.price === 0 ? '' : formData.price}
+                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 }))}
                   className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:ring-2 focus:ring-white focus:border-transparent"
                   placeholder="450.00"
                   required
@@ -1109,7 +1109,7 @@ function ProductFormModal({ product, onSave, onCancel, saving, onImageUpload }: 
                                     updateStock(colorIndex, sizeIndex, parseInt(e.target.value) || 0);
                                   }}
                                   className="w-20 p-2 bg-zinc-700 border border-zinc-600 rounded text-center"
-                                  placeholder="0"
+                                  placeholder="1"
                                 />
                               )}
                             </div>
