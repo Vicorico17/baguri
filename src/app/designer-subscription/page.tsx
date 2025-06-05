@@ -12,7 +12,7 @@ interface SubscriptionPlan {
   name: string;
   price: number;
   currency: string;
-  interval: 'week' | 'year' | 'trial';
+  interval: 'week' | 'year';
   description: string;
   features: string[];
   popular?: boolean;
@@ -21,23 +21,6 @@ interface SubscriptionPlan {
 }
 
 const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
-  {
-    id: 'trial',
-    name: 'Free Trial',
-    price: 0,
-    currency: 'RON',
-    interval: 'trial',
-    description: '1 month free trial - Perfect to get started',
-    features: [
-      'Full platform access for 30 days',
-      'Upload unlimited products',
-      'Access to all designer tools',
-      'Customer analytics dashboard',
-      'Direct customer communication',
-      'Standard commission rates'
-    ],
-    paymentUrl: 'https://buy.stripe.com/test_7sYbJ3fel4Yc4CXeQ38og0j'
-  },
   {
     id: 'weekly',
     name: 'Weekly Plan',
@@ -124,11 +107,10 @@ export default function DesignerSubscriptionPage() {
       }
 
       if (plan.paymentUrl) {
-        // Redirect to Stripe payment link
+        // Redirect to Stripe payment link for other plans
         window.location.href = plan.paymentUrl;
       } else {
-        // For trial plan, handle locally
-        alert('Free trial activated! You now have 30 days of full access.');
+        throw new Error('Payment URL not configured');
       }
       
     } catch (error) {
@@ -175,7 +157,7 @@ export default function DesignerSubscriptionPage() {
             Choose the perfect plan to grow your design business
           </p>
           <p className="text-zinc-500">
-            Start with a free trial, then choose weekly or yearly billing
+            Choose between flexible weekly or cost-effective yearly billing
           </p>
         </div>
 
@@ -221,7 +203,7 @@ export default function DesignerSubscriptionPage() {
                 <div className="mb-2">
                   <span className="text-3xl font-bold text-white">{plan.price}</span>
                   <span className="text-zinc-400 ml-1">{plan.currency}</span>
-                  {plan.interval !== 'trial' && (
+                  {(
                     <span className="text-zinc-400">/{plan.interval}</span>
                   )}
                 </div>
@@ -249,13 +231,10 @@ export default function DesignerSubscriptionPage() {
                 className={`w-full py-3 rounded-lg font-medium transition ${
                   plan.popular
                     ? 'bg-yellow-500 text-black hover:bg-yellow-400'
-                    : plan.id === 'trial'
-                    ? 'bg-green-500 text-white hover:bg-green-400'
                     : 'bg-white text-black hover:bg-zinc-200'
                 } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {isProcessing && selectedPlan === plan.id ? 'Processing...' : 
-                 plan.id === 'trial' ? 'Start Free Trial' :
                  currentSubscription ? 'Switch Plan' : 'Subscribe Now'}
               </button>
             </div>
@@ -304,12 +283,7 @@ export default function DesignerSubscriptionPage() {
                 Yes, you can cancel your subscription at any time. Your access will continue until the end of your billing period.
               </p>
             </div>
-            <div className="bg-zinc-900 rounded-lg p-4">
-              <h4 className="font-semibold text-white mb-2">What happens after the free trial?</h4>
-              <p className="text-zinc-400 text-sm">
-                After your 30-day free trial, you&apos;ll need to choose a paid plan to continue accessing premium features.
-              </p>
-            </div>
+
             <div className="bg-zinc-900 rounded-lg p-4">
               <h4 className="font-semibold text-white mb-2">Do you offer refunds?</h4>
               <p className="text-zinc-400 text-sm">

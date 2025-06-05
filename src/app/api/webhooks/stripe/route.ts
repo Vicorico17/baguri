@@ -15,20 +15,46 @@ if (stripeSecretKey) {
   });
 }
 
-// Commission tier structure
-const COMMISSION_TIERS = [
-  { name: 'Bronze', baguriFeePct: 50, designerEarningsPct: 50, minSales: 0, maxSales: 999.99 },
-  { name: 'Silver', baguriFeePct: 40, designerEarningsPct: 60, minSales: 1000, maxSales: 9999.99 },
-  { name: 'Gold', baguriFeePct: 30, designerEarningsPct: 70, minSales: 10000, maxSales: undefined }
+// Commission tier structure - matches commission-levels page
+const COMMISSION_LEVELS = [
+  { 
+    id: 'bronze',
+    name: 'Bronze Designer', 
+    platformFeePct: 30, 
+    designerEarningsPct: 70, 
+    threshold: 0 
+  },
+  { 
+    id: 'silver',
+    name: 'Silver Designer', 
+    platformFeePct: 25, 
+    designerEarningsPct: 75, 
+    threshold: 100 
+  },
+  { 
+    id: 'gold',
+    name: 'Gold Designer', 
+    platformFeePct: 20, 
+    designerEarningsPct: 80, 
+    threshold: 1000 
+  },
+  { 
+    id: 'platinum',
+    name: 'Platinum Designer', 
+    platformFeePct: 17, 
+    designerEarningsPct: 83, 
+    threshold: 10000 
+  }
 ];
 
 function getCommissionTier(salesTotal: number) {
-  for (const tier of COMMISSION_TIERS) {
-    if (salesTotal >= tier.minSales && (tier.maxSales === undefined || salesTotal <= tier.maxSales)) {
-      return tier;
+  // Find the highest tier the designer qualifies for
+  for (let i = COMMISSION_LEVELS.length - 1; i >= 0; i--) {
+    if (salesTotal >= COMMISSION_LEVELS[i].threshold) {
+      return COMMISSION_LEVELS[i];
     }
   }
-  return COMMISSION_TIERS[0]; // Default to Bronze
+  return COMMISSION_LEVELS[0]; // Default to Bronze
 }
 
 export async function POST(req: NextRequest) {
@@ -144,7 +170,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       // Calculate commission based on current tier
       const currentTier = getCommissionTier(designer.sales_total || 0);
       const designerEarnings = totalPrice * (currentTier.designerEarningsPct / 100);
-      const baguriEarnings = totalPrice * (currentTier.baguriFeePct / 100);
+      const platformFee = totalPrice * (currentTier.platformFeePct / 100);
+
+      console.log(`Processing sale: Designer ${designerId}, Amount: ${totalPrice} RON`);
+      console.log(`Tier: ${currentTier.name}, Designer gets: ${designerEarnings} RON (${currentTier.designerEarningsPct}%)`);
 
       // Create order item
       const { error: itemError } = await supabase
@@ -157,7 +186,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           unit_price: unitPrice,
           total_price: totalPrice,
           designer_earnings: designerEarnings,
-          baguri_earnings: baguriEarnings,
+          platform_fee: platformFee,
           commission_tier: currentTier.name,
           commission_percentage: currentTier.designerEarningsPct
         });
@@ -167,23 +196,101 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         continue;
       }
 
-      // Update designer's sales total and wallet balance
-      const { error: updateError } = await supabase.rpc('process_order_earnings', {
-        p_designer_id: designerId,
-        p_order_id: order.id,
-        p_earnings_amount: designerEarnings,
-        p_sales_amount: totalPrice
-      });
+      // Add earnings to designer wallet
+      await addEarningsToWallet(designerId, designerEarnings, order.id, productId);
 
-      if (updateError) {
-        console.error('Error processing earnings:', updateError);
+      // Update designer's sales total
+      const { error: updateSalesError } = await supabase
+        .from('designers')
+        .update({ 
+          sales_total: (designer.sales_total || 0) + totalPrice,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', designerId);
+
+      if (updateSalesError) {
+        console.error('Error updating designer sales total:', updateSalesError);
       } else {
-        console.log(`Processed earnings for designer ${designerId}: ${designerEarnings} RON`);
+        console.log(`Updated designer ${designerId} sales total: ${(designer.sales_total || 0) + totalPrice} RON`);
       }
     }
 
   } catch (error) {
     console.error('Error handling checkout completed:', error);
+  }
+}
+
+async function addEarningsToWallet(designerId: string, earnings: number, orderId: string, productId: string) {
+  try {
+    // Get or create wallet
+    let { data: wallet, error: walletError } = await supabase
+      .from('designer_wallets')
+      .select('*')
+      .eq('designer_id', designerId)
+      .single();
+
+    if (walletError) {
+      // Create wallet if it doesn't exist
+      const { data: newWallet, error: createError } = await supabase
+        .from('designer_wallets')
+        .insert({
+          designer_id: designerId,
+          balance: 0,
+          total_earnings: 0,
+          total_withdrawn: 0,
+          pending_balance: 0
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating wallet:', createError);
+        return;
+      }
+      wallet = newWallet;
+    }
+
+    // Update wallet balance and total earnings
+    const newBalance = parseFloat(wallet.balance) + earnings;
+    const newTotalEarnings = parseFloat(wallet.total_earnings) + earnings;
+
+    const { error: updateError } = await supabase
+      .from('designer_wallets')
+      .update({
+        balance: newBalance,
+        total_earnings: newTotalEarnings,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', wallet.id);
+
+    if (updateError) {
+      console.error('Error updating wallet:', updateError);
+      return;
+    }
+
+    // Create wallet transaction record
+    const { error: transactionError } = await supabase
+      .from('wallet_transactions')
+      .insert({
+        wallet_id: wallet.id,
+        type: 'sale',
+        amount: earnings,
+        status: 'completed',
+        description: `Sale commission from order ${orderId}`,
+        metadata: {
+          order_id: orderId,
+          product_id: productId
+        }
+      });
+
+    if (transactionError) {
+      console.error('Error creating wallet transaction:', transactionError);
+    } else {
+      console.log(`Added ${earnings} RON to designer ${designerId} wallet`);
+    }
+
+  } catch (error) {
+    console.error('Error adding earnings to wallet:', error);
   }
 }
 
@@ -222,7 +329,7 @@ async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent) {
       .eq('stripe_payment_intent_id', paymentIntent.id);
 
     if (error) {
-      console.error('Error updating order status:', error);
+      console.error('Error updating order status for failed payment:', error);
     }
   } catch (error) {
     console.error('Error handling payment failed:', error);

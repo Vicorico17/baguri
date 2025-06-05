@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Edit, Send, CheckCircle, Clock, XCircle, Upload, Plus, X, Instagram, Globe, Camera, Save, ChevronDown, ChevronUp, LogOut, User, Package, Wallet, ArrowUpRight, BarChart3, Percent, Loader2, Crown } from 'lucide-react';
+import { ArrowLeft, Edit, Send, CheckCircle, Clock, XCircle, Upload, Plus, X, Instagram, Globe, Camera, Save, ChevronDown, ChevronUp, LogOut, User, Package, Wallet, ArrowUpRight, BarChart3, Percent, Loader2, Crown, Trophy } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { BrandShowcase } from "@/components/ui/brand-showcase";
 import { ProgressCircle } from "@/components/ui/progress-circle";
@@ -1266,32 +1266,7 @@ function DesignerDashboardContent() {
               {status === 'approved' && (
                 <>
                   {/* Action Buttons */}
-                  <div className="space-y-3">
-                    <Link
-                      href="/products"
-                      className="w-full py-3 bg-white text-black rounded-lg font-medium transition flex items-center justify-center gap-2 hover:bg-zinc-200"
-                    >
-                      <Plus size={16} />
-                      Manage Products
-                    </Link>
-                    
-                    <button
-                      onClick={() => {
-                        const slug = profile.brandName?.toLowerCase().replace(/\s+/g, '-');
-                        if (slug) {
-                          window.open(`/designer/${slug}`, '_blank');
-                        } else {
-                          window.open('/designers', '_blank');
-                        }
-                      }}
-                      className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
-                    >
-                      <Globe size={16} />
-                      View Your Store
-                    </button>
-                  </div>
-
-                  {/* Wallet & Earnings */}
+                  {/* Wallet & Earnings - Now First */}
                   {dashboardData?.wallet && (
                     <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-xl p-6">
                       <div className="flex items-center gap-2 mb-4">
@@ -1319,6 +1294,47 @@ function DesignerDashboardContent() {
                       </Link>
                     </div>
                   )}
+
+                  <div className="space-y-3">
+                    <Link
+                      href="/products"
+                      className="w-full py-3 bg-white text-black rounded-lg font-medium transition flex items-center justify-center gap-2 hover:bg-zinc-200"
+                    >
+                      <Plus size={16} />
+                      Manage Products
+                    </Link>
+                    
+                    <button
+                      onClick={() => {
+                        const slug = profile.brandName?.toLowerCase().replace(/\s+/g, '-');
+                        if (slug) {
+                          window.open(`/designer/${slug}`, '_blank');
+                        } else {
+                          window.open('/designers', '_blank');
+                        }
+                      }}
+                      className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+                    >
+                      <Globe size={16} />
+                      View Your Store
+                    </button>
+                    
+                    <Link
+                      href="/designer-subscription"
+                      className="w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-black rounded-lg font-medium transition flex items-center justify-center gap-2"
+                    >
+                      <Crown size={16} />
+                      View Plans
+                    </Link>
+                    
+                    <Link
+                      href="/commission-levels"
+                      className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 hover:from-purple-500 hover:to-blue-500"
+                    >
+                      <Trophy size={16} />
+                      Commission Levels
+                    </Link>
+                  </div>
                 </>
               )}
 
@@ -1335,43 +1351,6 @@ function DesignerDashboardContent() {
               )}
               
               <GuidelinesCard />
-              
-              {/* Subscription Card */}
-              <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-xl p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Crown size={20} className="text-yellow-400" />
-                  <h3 className="text-lg font-bold">Designer Subscription</h3>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="bg-zinc-800/50 rounded-lg p-3">
-                    <p className="text-zinc-300 text-sm mb-2">
-                      Unlock premium features with our designer subscription plans
-                    </p>
-                    <ul className="text-xs text-zinc-400 space-y-1">
-                      <li>• Lower commission rates</li>
-                      <li>• Priority listing placement</li>
-                      <li>• Advanced marketing tools</li>
-                      <li>• Dedicated support</li>
-                    </ul>
-                  </div>
-                  
-                  <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
-                    <p className="text-green-400 text-sm font-medium mb-1">🎉 Start with 1 month FREE!</p>
-                    <p className="text-green-300 text-xs">
-                      Then 49 RON/week or 499 RON/year (80% savings!)
-                    </p>
-                  </div>
-                  
-                  <Link
-                    href="/designer-subscription"
-                    className="w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-black rounded-lg font-medium transition flex items-center justify-center gap-2"
-                  >
-                    <Crown size={16} />
-                    View Plans
-                  </Link>
-                </div>
-              </div>
               
               {status !== 'approved' && <WalletCard wallet={dashboardData?.wallet} />}
             </div>
