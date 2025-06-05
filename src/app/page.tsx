@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { TextLoop } from "@/components/ui/text-loop";
+import { ScarcityNotifications } from "@/components/ui/scarcity-notifications";
 
 function WaitlistModal({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess?: () => void }) {
   const [email, setEmail] = useState("");
@@ -232,6 +233,13 @@ export default function Home() {
 
         <WaitlistModal open={modalOpen} onClose={() => setModalOpen(false)} onSuccess={() => setWaitlistJoined(true)} />
       </div>
+      
+      {/* Scarcity Marketing Notifications */}
+      <ScarcityNotifications 
+        enabled={true}
+        interval={25} // Show notification every 25 seconds on homepage
+        maxVisible={2}
+      />
     </main>
   );
 }

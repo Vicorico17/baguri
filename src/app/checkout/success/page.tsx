@@ -88,7 +88,7 @@ function CheckoutSuccessContent() {
               Thank you for supporting Romanian designers! 🇷🇴
             </p>
             <p className="text-zinc-500 text-sm mt-2">
-              You'll receive email updates as your order progresses
+              You&apos;ll receive email updates as your order progresses
             </p>
           </div>
 
@@ -97,7 +97,7 @@ function CheckoutSuccessContent() {
 
           {/* Action Buttons */}
           <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
-            <h3 className="text-lg font-semibold text-white mb-4 text-center">What's Next?</h3>
+            <h3 className="text-lg font-semibold text-white mb-4 text-center">What&apos;s Next?</h3>
             <div className="grid md:grid-cols-3 gap-4">
               <Link 
                 href="/shop"

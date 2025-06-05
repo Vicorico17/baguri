@@ -8,6 +8,7 @@ import { useCart } from '@/contexts/CartContext';
 import { CartSidebar as GlobalCartSidebar } from '@/components/CartSidebar';
 import { useDesignerAuth } from '@/contexts/DesignerAuthContext';
 import { supabase } from '@/lib/supabase';
+import { ScarcityNotifications } from '@/components/ui/scarcity-notifications';
 
 // Placeholder component for images
 // Stock status display component
@@ -508,6 +509,13 @@ function ShopContent() {
           )}
         </button>
       </div>
+      
+      {/* Scarcity Marketing Notifications */}
+      <ScarcityNotifications 
+        enabled={true}
+        interval={15} // Show notification every 15 seconds on shop page (more frequent)
+        maxVisible={3}
+      />
     </div>
   );
 }

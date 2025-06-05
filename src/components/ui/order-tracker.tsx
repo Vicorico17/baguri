@@ -315,7 +315,7 @@ export function OrderTracker({ sessionId, className }: OrderTrackerProps) {
       <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
         <h4 className="font-medium text-blue-400 mb-2">Need Help?</h4>
         <p className="text-sm text-blue-300 mb-3">
-          Have questions about your order? We're here to help!
+          Have questions about your order? We&apos;re here to help!
         </p>
         <div className="flex flex-wrap gap-2">
           <a 
