@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { supabase } from '@/lib/supabase';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
@@ -28,12 +29,63 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No items provided' }, { status: 400 });
     }
 
-    // Validate all items have price IDs
+    // Validate all items have price IDs and check product status
     for (const item of items) {
       if (!item.priceId) {
         console.log('Missing price ID for item:', item);
         return NextResponse.json({ error: `No price ID found for product: ${item.productName}` }, { status: 400 });
       }
+
+      // Server-side validation: Check product status and designer approval
+      const { data: product, error: productError } = await supabase
+        .from('designer_products')
+        .select(`
+          *,
+          designers!inner (
+            status,
+            brand_name
+          )
+        `)
+        .eq('id', item.productId)
+        .single();
+
+      if (productError || !product) {
+        console.log('Product not found:', item.productId);
+        return NextResponse.json({ error: `Product "${item.productName}" not found` }, { status: 400 });
+      }
+
+      // Check if designer is approved
+      if (product.designers.status !== 'approved') {
+        console.log('Designer not approved for product:', item.productId);
+        return NextResponse.json({ 
+          error: `Cannot purchase "${item.productName}" - designer pending approval` 
+        }, { status: 400 });
+      }
+
+      // Check if product is active and live
+      if (!product.is_active) {
+        console.log('Product not active:', item.productId);
+        return NextResponse.json({ 
+          error: `"${item.productName}" is currently not available` 
+        }, { status: 400 });
+      }
+
+      if (!product.is_live) {
+        console.log('Product not live:', item.productId);
+        return NextResponse.json({ 
+          error: `"${item.productName}" is not currently available for purchase` 
+        }, { status: 400 });
+      }
+
+      // Check stock status
+      if (product.stock_status === 'coming_soon') {
+        console.log('Product coming soon:', item.productId);
+        return NextResponse.json({ 
+          error: `"${item.productName}" is coming soon - not yet available` 
+        }, { status: 400 });
+      }
+
+      console.log(`✅ Product validated: ${item.productName} (ID: ${item.productId})`);
     }
 
     console.log('Creating Stripe Checkout Session for', items.length, 'items');

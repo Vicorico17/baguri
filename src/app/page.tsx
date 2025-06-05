@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { BackgroundPaths } from "@/components/ui/background-paths";
+import { TextLoop } from "@/components/ui/text-loop";
 
 function WaitlistModal({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess?: () => void }) {
   const [email, setEmail] = useState("");
@@ -129,7 +130,19 @@ export default function Home() {
             style={{ filter: "invert(1) brightness(2)" }}
             priority
           />
-          <h2 className="text-base md:text-2xl text-neutral-300 mb-0 font-semibold">Romanian fashion, reimagined.</h2>
+          <h2 className="text-base md:text-2xl text-neutral-300 mb-0 font-semibold">
+            Romanian{" "}
+            <TextLoop
+              interval={2}
+              className="text-amber-200"
+              transition={{ duration: 0.5 }}
+            >
+              {["fashion", "retail", "products", "designers"].map((text) => (
+                <span key={text}>{text}</span>
+              ))}
+            </TextLoop>
+            , reimagined.
+          </h2>
           <p className="mb-6 md:mb-8 text-sm md:text-lg text-neutral-400 px-2">
             Join the waitlist for an exclusive
             <span className="inline-block ml-2 px-3 py-1 rounded-full bg-amber-200 text-zinc-900 font-semibold text-xs md:text-sm align-middle shadow-sm">lifetime discount</span>

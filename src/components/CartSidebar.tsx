@@ -5,6 +5,7 @@ import { useCart } from '@/contexts/CartContext';
 import { getStripePaymentUrl, hasStripeIntegration, getStripeData } from '@/lib/stripe';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { supabase } from "@/lib/supabase";
 
 // Placeholder component for images when no image is available
 function PlaceholderImage({ type, className, alt }: { type: 'product' | 'logo'; className?: string; alt: string }) {
@@ -39,6 +40,152 @@ export function CartSidebar() {
   const [error, setError] = useState<string | null>(null);
   const [stripeDataCache, setStripeDataCache] = useState<Record<string, StripeDataResult>>({});
   const [loadingStripeData, setLoadingStripeData] = useState<Set<string>>(new Set());
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  // Function to validate product availability and status
+  const validateProduct = async (productId: string): Promise<{ isValid: boolean; error?: string; product?: any }> => {
+    try {
+      const { data: product, error: productError } = await supabase
+        .from('designer_products')
+        .select(`
+          *,
+          designers!inner (
+            status,
+            brand_name
+          )
+        `)
+        .eq('id', productId)
+        .single();
+
+      if (productError || !product) {
+        return { isValid: false, error: 'Product not found' };
+      }
+
+      // Check if designer is approved
+      if (product.designers.status !== 'approved') {
+        return { 
+          isValid: false, 
+          error: `${product.name} is not available - designer pending approval` 
+        };
+      }
+
+      // Check if product is active
+      if (!product.is_active) {
+        return { 
+          isValid: false, 
+          error: `${product.name} has been deactivated` 
+        };
+      }
+
+      // Check if product is live
+      if (!product.is_live) {
+        return { 
+          isValid: false, 
+          error: `${product.name} is not currently available` 
+        };
+      }
+
+      // Check stock status
+      if (product.stock_status === 'coming_soon') {
+        return { 
+          isValid: false, 
+          error: `${product.name} is coming soon - not yet available` 
+        };
+      }
+
+      // For products with size/color variants, check specific stock
+      if (product.colors && Array.isArray(product.colors)) {
+        // This validation would need to be more specific based on the selected size/color
+        // For now, we'll just check if the product has any available variants
+        const hasAvailableVariants = product.colors.some((color: any) => 
+          color.sizes && Array.isArray(color.sizes) && 
+          color.sizes.some((size: any) => size.stock > 0)
+        );
+
+        if (!hasAvailableVariants) {
+          return { 
+            isValid: false, 
+            error: `${product.name} is out of stock` 
+          };
+        }
+      }
+
+      return { isValid: true, product };
+    } catch (error) {
+      console.error('Error validating product:', error);
+      return { 
+        isValid: false, 
+        error: 'Unable to verify product availability' 
+      };
+    }
+  };
+
+  // Function to validate cart item stock for specific size/color
+  const validateCartItemStock = (product: any, cartItem: any): { isValid: boolean; error?: string } => {
+    if (!product.colors || !Array.isArray(product.colors)) {
+      return { isValid: true }; // No variant system, assume available
+    }
+
+    // Find the specific color
+    const selectedColor = product.colors.find((color: any) => 
+      color.name.toLowerCase() === cartItem.color.toLowerCase()
+    );
+
+    if (!selectedColor) {
+      return { 
+        isValid: false, 
+        error: `Color "${cartItem.color}" is no longer available for ${product.name}` 
+      };
+    }
+
+    // Find the specific size
+    const selectedSize = selectedColor.sizes?.find((size: any) => 
+      size.size === cartItem.size
+    );
+
+    if (!selectedSize) {
+      return { 
+        isValid: false, 
+        error: `Size "${cartItem.size}" is no longer available in ${cartItem.color} for ${product.name}` 
+      };
+    }
+
+    // Check if enough stock is available
+    if (selectedSize.stock < cartItem.quantity) {
+      return { 
+        isValid: false, 
+        error: `Only ${selectedSize.stock} items available for ${product.name} in ${cartItem.size}/${cartItem.color}` 
+      };
+    }
+
+    return { isValid: true };
+  };
+
+  // Validate all cart items before checkout
+  const validateCartForCheckout = async (): Promise<{ isValid: boolean; errors: string[] }> => {
+    const errors: string[] = [];
+    const itemValidation: Record<string, string> = {};
+
+    for (const item of cart) {
+      const validation = await validateProduct(String(item.id));
+      
+      if (!validation.isValid) {
+        errors.push(validation.error || 'Product validation failed');
+        itemValidation[`${item.id}-${item.size}-${item.color}`] = validation.error || 'Invalid';
+        continue;
+      }
+
+      // Check specific variant stock
+      const stockValidation = validateCartItemStock(validation.product, item);
+      if (!stockValidation.isValid) {
+        errors.push(stockValidation.error || 'Stock validation failed');
+        itemValidation[`${item.id}-${item.size}-${item.color}`] = stockValidation.error || 'Out of stock';
+      }
+    }
+
+    setValidationErrors(itemValidation);
+    return { isValid: errors.length === 0, errors };
+  };
 
   // Function to fetch Stripe data for a product
   const fetchStripeData = async (productId: string): Promise<StripeDataResult> => {
@@ -112,8 +259,16 @@ export function CartSidebar() {
     
     setIsProcessing(true);
     setError(null);
+    setValidationErrors({});
 
     try {
+      // First, validate all cart items
+      const validation = await validateCartForCheckout();
+      
+      if (!validation.isValid) {
+        throw new Error(`Cannot proceed with checkout:\n${validation.errors.join('\n')}`);
+      }
+
       // Get Stripe data for all cart items
       const cartWithStripeData = await Promise.all(
         cart.map(async (item) => {
@@ -216,6 +371,8 @@ export function CartSidebar() {
                     source: 'none' as const 
                   };
                   const isLoadingStripe = loadingStripeData.has(productIdStr);
+                  const itemKey = `${item.id}-${item.size}-${item.color}`;
+                  const validationError = validationErrors[itemKey];
                   
                   // Debug logging
                   console.log('Cart item image:', item.image, 'for product:', item.name);
@@ -260,26 +417,35 @@ export function CartSidebar() {
                         <p className="text-xs text-zinc-400 mb-1 mobile-truncate">{item.designer.name}</p>
                         <p className="text-xs text-zinc-400 mb-2">{item.size} • {item.color}</p>
                         
-                        {/* Stripe Integration Status - Collapsible on mobile */}
-                        <div className="mb-2 mobile-collapsible">
-                          {isLoadingStripe ? (
-                            <span className="text-xs px-2 py-1 rounded bg-zinc-500/20 text-zinc-400 mobile-text-xs">
-                              🔄 Verifying stock...
+                        {/* Validation Error - Priority Display */}
+                        {validationError ? (
+                          <div className="mb-2">
+                            <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400 border border-red-500/30 mobile-text-xs">
+                              ❌ {validationError}
                             </span>
-                          ) : stripeData.source !== 'none' ? (
-                            <span className={`text-xs px-2 py-1 rounded mobile-text-xs ${
-                              stripeData.source === 'dynamic' 
-                                ? 'bg-green-500/20 text-green-400' 
-                                : 'bg-blue-500/20 text-blue-400'
-                            }`}>
-                              {stripeData.source === 'dynamic' ? '✅ In Stock' : '📦 Pre-configured'}
-                            </span>
-                          ) : (
-                            <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400 mobile-text-xs">
-                              ⚠️ No payment setup
-                            </span>
-                          )}
-                        </div>
+                          </div>
+                        ) : (
+                          /* Stripe Integration Status - Collapsible on mobile */
+                          <div className="mb-2 mobile-collapsible">
+                            {isLoadingStripe ? (
+                              <span className="text-xs px-2 py-1 rounded bg-zinc-500/20 text-zinc-400 mobile-text-xs">
+                                🔄 Verifying stock...
+                              </span>
+                            ) : stripeData.source !== 'none' ? (
+                              <span className={`text-xs px-2 py-1 rounded mobile-text-xs ${
+                                stripeData.source === 'dynamic' 
+                                  ? 'bg-green-500/20 text-green-400' 
+                                  : 'bg-blue-500/20 text-blue-400'
+                              }`}>
+                                {stripeData.source === 'dynamic' ? '✅ In Stock' : '📦 Pre-configured'}
+                              </span>
+                            ) : (
+                              <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400 mobile-text-xs">
+                                ⚠️ No payment setup
+                              </span>
+                            )}
+                          </div>
+                        )}
                         
                         <div className="flex items-center justify-between">
                           <span className="font-bold mobile-text-sm">{item.price} lei</span>
@@ -312,22 +478,54 @@ export function CartSidebar() {
                 </div>
                 
                 {error && (
-                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mobile-p-2">
-                    <p className="text-red-400 text-sm mobile-text-xs">{error}</p>
+                  <div className={`${
+                    error.includes('✅') 
+                      ? 'bg-green-500/10 border border-green-500/20' 
+                      : 'bg-red-500/10 border border-red-500/20'
+                  } rounded-lg p-3 mobile-p-2`}>
+                    <p className={`${
+                      error.includes('✅') ? 'text-green-400' : 'text-red-400'
+                    } text-sm mobile-text-xs`}>
+                      {error}
+                    </p>
                   </div>
                 )}
                 
                 <div className="space-y-2 mobile-gap-3">
+                  {/* Validation Check Button */}
+                  <button 
+                    onClick={async () => {
+                      setError(null);
+                      setValidationErrors({});
+                      const validation = await validateCartForCheckout();
+                      if (validation.isValid) {
+                        // Show success message temporarily
+                        setError("✅ All items are verified and available for purchase!");
+                        setTimeout(() => setError(null), 3000);
+                      }
+                    }}
+                    className="w-full py-2 text-sm border border-zinc-600 text-zinc-300 rounded-lg hover:bg-zinc-800 transition mobile-touch-target"
+                  >
+                    🔍 Check Product Availability
+                  </button>
+                  
                   <button 
                     onClick={handleQuickCheckout}
-                    disabled={isProcessing || cart.length === 0}
+                    disabled={isProcessing || cart.length === 0 || Object.keys(validationErrors).length > 0}
                     className={`w-full py-3 rounded-lg font-medium transition mobile-touch-target mobile-text-base ${
                       isProcessing 
-                        ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed mobile-loading' 
+                        ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed mobile-loading'
+                        : Object.keys(validationErrors).length > 0
+                        ? 'bg-red-500/20 text-red-400 cursor-not-allowed border border-red-500/30'
                         : 'bg-white text-zinc-900 hover:bg-zinc-200'
                     }`}
                   >
-                    {isProcessing ? 'Processing...' : 'Quick Checkout'}
+                    {isProcessing 
+                      ? 'Processing...' 
+                      : Object.keys(validationErrors).length > 0
+                      ? 'Fix Issues Above First'
+                      : 'Quick Checkout'
+                    }
                   </button>
                 </div>
               </div>
