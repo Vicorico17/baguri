@@ -177,7 +177,7 @@ export default function DesignerSubscriptionPage() {
         )}
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-12">
+        <div className="grid md:grid-cols-4 gap-6 max-w-7xl mx-auto mb-12">
           {SUBSCRIPTION_PLANS.map((plan) => (
             <div
               key={plan.id}
@@ -239,6 +239,63 @@ export default function DesignerSubscriptionPage() {
               </button>
             </div>
           ))}
+          
+          {/* Special Offer - Free Trial */}
+          <div className="relative bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-xl p-6 border border-emerald-500/50 shadow-xl shadow-emerald-500/20">
+            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+              <div className="bg-emerald-500 text-white px-4 py-1 rounded-full text-sm font-bold flex items-center gap-1">
+                <Sparkles size={14} />
+                Special Offer
+              </div>
+            </div>
+
+            <div className="text-center mb-6">
+              <h3 className="text-xl font-bold text-white mb-2">1 Month FREE</h3>
+              <div className="mb-2">
+                <span className="text-3xl font-bold text-emerald-400">FREE</span>
+                <span className="text-zinc-400 ml-1">TRIAL</span>
+              </div>
+              <p className="text-emerald-400 text-sm font-medium">No commitment required</p>
+              <p className="text-zinc-400 text-sm">Experience all premium features</p>
+            </div>
+
+            <ul className="space-y-3 mb-8">
+              <li className="flex items-start gap-3">
+                <Check size={16} className="text-emerald-400 mt-0.5 flex-shrink-0" />
+                <span className="text-zinc-300 text-sm">Full platform access for 30 days</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check size={16} className="text-emerald-400 mt-0.5 flex-shrink-0" />
+                <span className="text-zinc-300 text-sm">Unlimited product uploads</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check size={16} className="text-emerald-400 mt-0.5 flex-shrink-0" />
+                <span className="text-zinc-300 text-sm">Priority customer support</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check size={16} className="text-emerald-400 mt-0.5 flex-shrink-0" />
+                <span className="text-zinc-300 text-sm">Advanced analytics</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check size={16} className="text-emerald-400 mt-0.5 flex-shrink-0" />
+                <span className="text-zinc-300 text-sm">Marketing tools & promotion</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check size={16} className="text-emerald-400 mt-0.5 flex-shrink-0" />
+                <span className="text-zinc-300 text-sm">Cancel anytime</span>
+              </li>
+            </ul>
+
+            <button
+              onClick={() => {
+                // You can implement trial signup logic here
+                alert('Free trial coming soon! Contact support for early access.');
+              }}
+              className="w-full py-3 rounded-lg font-medium transition bg-emerald-500 text-white hover:bg-emerald-400"
+            >
+              Start Free Trial
+            </button>
+          </div>
         </div>
 
         {/* Benefits Section */}

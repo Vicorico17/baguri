@@ -91,6 +91,8 @@ export async function POST(request: NextRequest) {
     console.log('Creating Stripe Checkout Session for', items.length, 'items');
 
     // Create line items for Stripe Checkout Session
+    // Product images will automatically display in Stripe checkout because
+    // we now add images to Stripe products when they're created live
     const lineItems = items.map((item: any) => ({
       price: item.priceId,
       quantity: item.quantity,

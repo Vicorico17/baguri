@@ -236,6 +236,16 @@ function ProductManagement() {
 
         console.log('🚀 Creating Stripe product for:', product.name);
 
+        // Collect all images from all color variants for Stripe product
+        const allImages: string[] = [];
+        if (product.colors && Array.isArray(product.colors)) {
+          product.colors.forEach(color => {
+            if (color.images && Array.isArray(color.images)) {
+              allImages.push(...color.images);
+            }
+          });
+        }
+
         // Create Stripe product using API route
         const stripeProductResponse = await fetch('/api/mcp/stripe/create-product', {
           method: 'POST',
@@ -244,7 +254,8 @@ function ProductManagement() {
           },
           body: JSON.stringify({
             name: product.name,
-            description: product.description
+            description: product.description,
+            images: allImages.length > 0 ? allImages : undefined
           }),
         });
 

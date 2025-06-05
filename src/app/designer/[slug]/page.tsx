@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Instagram, Globe, Heart, ShoppingCart, User } from 'lucide-react';
+import { ArrowLeft, Instagram, Globe, Heart, ShoppingCart, User, X } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { useCart } from '@/contexts/CartContext';
 import { CartSidebar } from '@/components/CartSidebar';
@@ -492,6 +492,8 @@ function ProductCard({ product, designer, onAddToCart }: {
   designer: any;
   onAddToCart: (product: any, size: string, color: string) => void; 
 }) {
+  const [showModal, setShowModal] = useState(false);
+
   // Handle colors - it might be a string or already an object
   let colors = [];
   try {
@@ -515,9 +517,9 @@ function ProductCard({ product, designer, onAddToCart }: {
     return total + (color.sizes?.length || 0);
   }, 0);
 
-  const handleAddToCart = () => {
-    // For now, add the product with the first available variant
-    if (firstColor && firstColor.sizes?.length > 0) {
+  const handleQuickAdd = () => {
+    // For quick add, use the first available variant if there's only one size
+    if (firstColor && firstColor.sizes?.length === 1) {
       const productForCart = {
         id: product.id,
         name: product.name,
@@ -526,51 +528,266 @@ function ProductCard({ product, designer, onAddToCart }: {
         designer: { name: designer.name, logo: designer.logo }
       };
       onAddToCart(productForCart, firstColor.sizes[0].size, firstColor.name);
+    } else {
+      // If multiple variants, show modal for selection
+      setShowModal(true);
+    }
+  };
+
+  const handleModalAddToCart = (product: any, size: string, color: string) => {
+    onAddToCart(product, size, color);
+    setShowModal(false);
+  };
+
+  return (
+    <>
+      <div className="bg-zinc-900 rounded-lg overflow-hidden hover:bg-zinc-800 transition group">
+        {/* Product Image */}
+        <div className="aspect-[4/3] bg-zinc-800 relative overflow-hidden">
+          {firstImage ? (
+            <Image
+              src={firstImage}
+              alt={product.name}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          ) : (
+            <PlaceholderImage 
+              type="product" 
+              alt={product.name}
+              className="w-full h-full"
+            />
+          )}
+          
+          {/* Add to Cart Overlay */}
+          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <button
+              onClick={handleQuickAdd}
+              className="bg-white text-zinc-900 px-6 py-2 rounded-lg font-medium hover:bg-zinc-200 transition flex items-center gap-2"
+            >
+              <ShoppingCart size={16} />
+              {totalVariants > 1 ? 'Select Options' : 'Add to Cart'}
+            </button>
+          </div>
+        </div>
+        
+        {/* Product Info */}
+        <div className="p-4">
+          <h3 className="font-semibold mb-2 line-clamp-2">{product.name}</h3>
+          <p className="text-zinc-400 text-sm mb-3 line-clamp-2">{product.description}</p>
+          
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xl font-bold">{product.price} lei</span>
+            <div className="flex items-center gap-1 text-sm text-zinc-400">
+              <span>{colors.length} colors</span>
+              <span>•</span>
+              <span>{totalVariants} variants</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Product Selection Modal */}
+      {showModal && (
+        <ProductModal 
+          product={product}
+          onClose={() => setShowModal(false)}
+          onAddToCart={handleModalAddToCart}
+        />
+      )}
+    </>
+  );
+}
+
+// Product Modal Component (similar to shop page)
+function ProductModal({ product, onClose, onAddToCart }: {
+  product: any;
+  onClose: () => void;
+  onAddToCart: (product: any, size: string, color: string) => void;
+}) {
+  // Handle colors - it might be a string or already an object
+  let colors = [];
+  try {
+    if (typeof product.colors === 'string') {
+      colors = JSON.parse(product.colors);
+    } else if (Array.isArray(product.colors)) {
+      colors = product.colors;
+    } else {
+      colors = [];
+    }
+  } catch (error) {
+    console.error('Error parsing colors:', error);
+    colors = [];
+  }
+
+  const [selectedColorIndex, setSelectedColorIndex] = useState(0);
+  const [selectedSize, setSelectedSize] = useState('');
+
+  const selectedColor = colors[selectedColorIndex];
+  
+  // Get available sizes for selected color
+  const availableSizes = selectedColor?.sizes || [];
+  
+  // Set default size when color changes
+  useEffect(() => {
+    if (availableSizes.length > 0) {
+      setSelectedSize(availableSizes[0].size);
+    }
+  }, [selectedColorIndex, availableSizes]);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  const handleAddToCart = () => {
+    if (selectedColor && selectedSize) {
+      const productForCart = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: selectedColor.images?.[0] || '/placeholder-product.jpg',
+        designer: { 
+          name: product.designers?.brand_name || 'Designer', 
+          logo: product.designers?.logo_url || '' 
+        }
+      };
+      onAddToCart(productForCart, selectedSize, selectedColor.name);
     }
   };
 
   return (
-    <div className="bg-zinc-900 rounded-lg overflow-hidden hover:bg-zinc-800 transition group">
-      {/* Product Image */}
-      <div className="aspect-[4/3] bg-zinc-800 relative overflow-hidden">
-        {firstImage ? (
-          <Image
-            src={firstImage}
-            alt={product.name}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-        ) : (
-          <PlaceholderImage 
-            type="product" 
-            alt={product.name}
-            className="w-full h-full"
-          />
-        )}
-        
-        {/* Add to Cart Overlay */}
-        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <button
-            onClick={handleAddToCart}
-            className="bg-white text-zinc-900 px-6 py-2 rounded-lg font-medium hover:bg-zinc-200 transition flex items-center gap-2"
-          >
-            <ShoppingCart size={16} />
-            Add to Cart
-          </button>
-        </div>
-      </div>
-      
-      {/* Product Info */}
-      <div className="p-4">
-        <h3 className="font-semibold mb-2 line-clamp-2">{product.name}</h3>
-        <p className="text-zinc-400 text-sm mb-3 line-clamp-2">{product.description}</p>
-        
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xl font-bold">{product.price} lei</span>
-          <div className="flex items-center gap-1 text-sm text-zinc-400">
-            <span>{colors.length} colors</span>
-            <span>•</span>
-            <span>{totalVariants} variants</span>
+    <div 
+      className="fixed inset-0 bg-black/60 flex items-end md:items-center justify-center p-0 md:p-4 z-[9999]" 
+      onClick={handleBackdropClick}
+    >
+      <div 
+        className="bg-zinc-900 rounded-t-xl md:rounded-xl w-full md:max-w-2xl max-h-[95vh] md:max-h-[90vh] overflow-y-auto" 
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-4 md:p-6">
+          <div className="flex justify-between items-start mb-4">
+            <h2 className="text-lg md:text-xl font-bold pr-2 flex-1">{product.name}</h2>
+            <button 
+              onClick={onClose} 
+              className="p-2 hover:bg-zinc-800 rounded mobile-touch-target flex-shrink-0"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          
+          <div className="flex flex-col md:grid md:grid-cols-2 gap-4 md:gap-6">
+            {/* Product Image */}
+            <div className="w-full max-w-[200px] md:max-w-none aspect-[3/4] bg-zinc-800 rounded-lg overflow-hidden mx-auto md:mx-0">
+              {selectedColor?.images?.[0] ? (
+                <Image
+                  src={selectedColor.images[0]}
+                  alt={product.name}
+                  width={200}
+                  height={267}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <PlaceholderImage 
+                  type="product" 
+                  alt={product.name}
+                  className="w-full h-full"
+                />
+              )}
+            </div>
+            
+            {/* Product Details */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl md:text-2xl font-bold">{product.price} lei</span>
+                </div>
+              </div>
+              
+              <p className="text-zinc-300 text-sm md:text-base">{product.description || 'No description available.'}</p>
+              
+              {/* Color Selection */}
+              {colors.length > 1 && (
+                <div className="space-y-3">
+                  <label className="text-sm font-medium block">Color: {selectedColor?.name}</label>
+                  <div className="flex flex-wrap gap-2">
+                    {colors.map((color: any, index: number) => (
+                      <button
+                        key={index}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedColorIndex(index);
+                        }}
+                        className={`px-4 py-3 rounded-lg border text-sm transition mobile-touch-target ${
+                          selectedColorIndex === index
+                            ? 'border-white bg-white text-zinc-900'
+                            : 'border-zinc-600 hover:border-zinc-500'
+                        }`}
+                      >
+                        {color.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Size Selection */}
+              {availableSizes.length > 0 && (
+                <div className="space-y-3 bg-zinc-800/30 p-4 rounded-lg border border-zinc-700">
+                  <label className="text-sm font-medium block text-white">Select Size</label>
+                  <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                    {availableSizes.map((sizeObj: any) => (
+                      <button
+                        key={sizeObj.size}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedSize(sizeObj.size);
+                        }}
+                        disabled={sizeObj.stock === 0}
+                        className={`py-3 px-2 rounded-lg border text-sm font-medium transition mobile-touch-target ${
+                          selectedSize === sizeObj.size
+                            ? 'border-white bg-white text-zinc-900'
+                            : sizeObj.stock === 0
+                            ? 'border-zinc-700 text-zinc-500 cursor-not-allowed bg-zinc-800/50'
+                            : 'border-zinc-600 hover:border-zinc-500 bg-zinc-800/50'
+                        }`}
+                      >
+                        {sizeObj.size}
+                        {sizeObj.stock === 0 && <div className="text-xs mt-1">Out</div>}
+                      </button>
+                    ))}
+                  </div>
+                  {selectedSize && (
+                    <p className="text-xs text-zinc-400 mt-2">Selected: {selectedSize}</p>
+                  )}
+                </div>
+              )}
+              
+              {/* Add to Cart Button */}
+              <div className="pt-4 border-t border-zinc-700 md:border-t-0 md:pt-0">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAddToCart();
+                  }}
+                  disabled={!selectedSize || availableSizes.find((s: any) => s.size === selectedSize)?.stock === 0}
+                  className="w-full bg-white text-zinc-900 py-4 md:py-3 rounded-lg font-medium hover:bg-zinc-200 transition disabled:opacity-50 disabled:cursor-not-allowed mobile-touch-target text-base"
+                >
+                  {!selectedSize ? 'Select Size to Add to Cart' : 'Add to Cart'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
