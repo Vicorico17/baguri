@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Instagram, Globe, Heart, ShoppingCart, User, X } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
+import { TierBadge } from '@/lib/tierUtils';
 import { useCart } from '@/contexts/CartContext';
 import { CartSidebar } from '@/components/CartSidebar';
 import { supabase } from '@/lib/supabase';
@@ -48,7 +49,7 @@ export default function DesignerProfile({ params }: { params: { slug: string } }
         // Query the designers table for all approved designers
         const { data: designersData, error } = await supabase
           .from('designers')
-          .select('*')
+          .select('*, sales_total')
           .eq('status', 'approved')
           .not('brand_name', 'is', null);
 
@@ -117,6 +118,7 @@ export default function DesignerProfile({ params }: { params: { slug: string } }
       location: data.city ? `${data.city}, Romania` : 'Romania',
       yearFounded: data.year_founded || new Date().getFullYear(),
       specialties: data.specialties || ['Fashion Design'],
+      salesTotal: parseFloat(data.sales_total) || 0,
       socialLinks: {
         instagram: data.instagram || '',
         website: data.website || ''
@@ -314,7 +316,10 @@ export default function DesignerProfile({ params }: { params: { slug: string } }
                   />
                 )}
                 <div>
-                  <h1 className="text-4xl font-bold text-white">{designer.name}</h1>
+                  <div className="flex items-center gap-3 mb-2">
+                    <h1 className="text-4xl font-bold text-white">{designer.name}</h1>
+                    <TierBadge salesTotal={designer.salesTotal} size="lg" />
+                  </div>
                   <p className="text-white text-lg">{designer.tagline}</p>
                   {designer.isUpcoming && (
                     <span className="inline-block mt-2 bg-white text-zinc-900 px-3 py-1 rounded-full text-sm font-bold">

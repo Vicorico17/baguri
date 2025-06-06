@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Check, X, Eye, Instagram, Globe, MapPin, Calendar, LogOut, Loader2, RefreshCw } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
+import { TierBadge } from '@/lib/tierUtils';
 import { supabase } from '@/lib/supabase';
 
 // Types for designer applications
@@ -23,6 +24,7 @@ interface DesignerApplication {
   tiktok: string;
   website: string;
   specialties: string[];
+  sales_total: number;
   status: 'draft' | 'submitted' | 'approved' | 'rejected';
   submitted_at: string | null;
   created_at: string;
@@ -131,7 +133,7 @@ export default function AdminDashboard() {
       // Query designers table with proper filtering for applications
       const queryPromise = supabase
         .from('designers')
-        .select('*')
+        .select('*, sales_total')
         .not('brand_name', 'is', null) // Only get designers with brand names (actual applications)
         .order('created_at', { ascending: false });
      
@@ -530,7 +532,12 @@ function DesignerApplicationCard({ designer, onApprove, onReject, onView, isLoad
           />
           )}
           <div>
-            <h3 className="text-xl font-bold">{designer.brand_name}</h3>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-xl font-bold">{designer.brand_name}</h3>
+              {designer.status === 'approved' && (
+                <TierBadge salesTotal={designer.sales_total || 0} size="sm" />
+              )}
+            </div>
             <p className="text-zinc-400">{designer.short_description}</p>
             <div className="flex items-center gap-4 text-sm text-zinc-500 mt-1">
               {designer.city && (

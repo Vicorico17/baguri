@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Instagram, Globe, MapPin, Calendar, User } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
+import { TierBadge } from '@/lib/tierUtils';
 import { useDesignerAuth } from '@/contexts/DesignerAuthContext';
 import { supabase } from '@/lib/supabase';
 
@@ -305,8 +306,9 @@ function DesignerCard({ designer }: { designer: any }) {
               />
             )}
             <div>
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-white mb-2">{designer.brandName}</h3>
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="text-xl font-bold text-white">{designer.brandName}</h3>
+                <TierBadge salesTotal={designer.salesTotal} size="sm" />
               </div>
               <p className="text-gray-400 text-sm">{designer.location}</p>
             </div>

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ShoppingCart, Heart, X, Plus, Minus, User } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { CartSidebar as GlobalCartSidebar } from '@/components/CartSidebar';
+import { TierBadge } from '@/lib/tierUtils';
 import { useDesignerAuth } from '@/contexts/DesignerAuthContext';
 import { supabase } from '@/lib/supabase';
 import { ScarcityNotifications } from '@/components/ui/scarcity-notifications';
@@ -337,6 +338,7 @@ function ShopContent() {
                     />
                   )}
                   <span className="mobile-text-sm">{designer.brand_name}</span>
+                  <TierBadge salesTotal={parseFloat(designer.sales_total) || 0} size="sm" showLabel={false} />
                 </button>
               ))}
             

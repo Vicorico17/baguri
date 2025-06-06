@@ -255,7 +255,12 @@ function ProductManagement() {
           body: JSON.stringify({
             name: product.name,
             description: product.description,
-            images: allImages.length > 0 ? allImages : undefined
+            images: allImages.length > 0 ? allImages : undefined,
+            metadata: {
+              designer_id: designerId,
+              product_id: productId,
+              baguri_product: 'true'
+            }
           }),
         });
 

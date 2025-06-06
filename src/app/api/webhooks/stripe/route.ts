@@ -124,9 +124,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
-        stripe_session_id: session.id,
+        stripe_checkout_session_id: session.id,
         stripe_payment_intent_id: session.payment_intent as string,
         customer_email: session.customer_details?.email,
+        customer_name: session.customer_details?.name || 'Unknown Customer',
         total_amount: session.amount_total ? session.amount_total / 100 : 0,
         currency: session.currency || 'ron',
         status: 'completed'
@@ -182,11 +183,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           order_id: order.id,
           designer_id: designerId,
           product_id: productId,
+          product_name: product.name || 'Unknown Product',
+          product_price: unitPrice,
           quantity,
           unit_price: unitPrice,
           total_price: totalPrice,
           designer_earnings: designerEarnings,
-          platform_fee: platformFee,
+          baguri_fee: platformFee,
           commission_tier: currentTier.name,
           commission_percentage: currentTier.designerEarningsPct
         });

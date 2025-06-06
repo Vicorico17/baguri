@@ -96,22 +96,29 @@ class DesignerService {
     return [
       {
         name: 'Bronze',
-        baguriFeePct: 50,
-        designerEarningsPct: 50,
+        baguriFeePct: 30,
+        designerEarningsPct: 70,
         minSales: 0,
-        maxSales: 999.99
+        maxSales: 99.99
       },
       {
         name: 'Silver', 
-        baguriFeePct: 40,
-        designerEarningsPct: 60,
+        baguriFeePct: 25,
+        designerEarningsPct: 75,
+        minSales: 100,
+        maxSales: 999.99
+      },
+      {
+        name: 'Gold',
+        baguriFeePct: 20,
+        designerEarningsPct: 80,
         minSales: 1000,
         maxSales: 9999.99
       },
       {
-        name: 'Gold',
-        baguriFeePct: 30,
-        designerEarningsPct: 70,
+        name: 'Platinum',
+        baguriFeePct: 17,
+        designerEarningsPct: 83,
         minSales: 10000
       }
     ];

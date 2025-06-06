@@ -8,13 +8,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, description, images } = body;
+    const { name, description, images, metadata } = body;
 
     if (!name) {
       return NextResponse.json({ error: 'Product name is required' }, { status: 400 });
     }
 
-    console.log('🚀 Creating Stripe product:', { name, description, images });
+    console.log('🚀 Creating Stripe product:', { name, description, images, metadata });
 
     // Prepare product data
     const productData: Stripe.ProductCreateParams = {
@@ -22,7 +22,8 @@ export async function POST(request: NextRequest) {
       description: description || '',
       metadata: {
         created_via: 'baguri_automation',
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        ...metadata // Include any additional metadata passed from the request
       }
     };
 
