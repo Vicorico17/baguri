@@ -3,111 +3,71 @@ import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 export async function GET(req: NextRequest) {
   try {
-    console.log('🔍 Testing simple updates...');
+    console.log('🔍 Testing increment_designer_sales procedure...');
     
     const designerId = 'b9deab43-de7b-4adb-a068-967842aa1ce1';
     const testAmount = 1.0;
     
-    // Test 1: Check if we can read designer
-    console.log('📖 Reading designer...');
+    // First verify the designer exists
+    console.log('📖 Verifying designer exists...');
     const { data: designer, error: readError } = await supabase
       .from('designers')
       .select('id, brand_name, sales_total')
       .eq('id', designerId)
       .single();
-      
+    
     if (readError) {
-      console.error('❌ Cannot read designer:', readError);
       return NextResponse.json({ 
         success: false, 
-        error: 'Cannot read designer',
+        error: 'Designer not found',
         details: readError
       });
     }
     
     console.log('✅ Designer found:', designer);
     
-    // Test 2: Try to update sales_total
-    console.log('📝 Updating sales_total...');
-    const newSalesTotal = (designer.sales_total || 0) + testAmount;
+    // Test different parameter combinations for increment_designer_sales
+    const parameterTests = [
+      { name: 'p_designer_id + p_amount', params: { p_designer_id: designerId, p_amount: testAmount } },
+      { name: 'designer_id + amount', params: { designer_id: designerId, amount: testAmount } },
+      { name: 'designer_id_param + amount_param', params: { designer_id_param: designerId, amount_param: testAmount } },
+      { name: 'id + amount', params: { id: designerId, amount: testAmount } },
+    ];
     
-    const { data: updateResult, error: updateError } = await supabase
+    const results: Record<string, any> = {};
+    
+    for (const test of parameterTests) {
+      console.log(`📈 Testing increment_designer_sales with ${test.name}...`);
+      try {
+        const { data: result, error } = await supabase.rpc('increment_designer_sales', test.params);
+        results[test.name] = { result, error };
+        console.log(`${test.name} result:`, result, 'Error:', error);
+        
+        // If successful, break to avoid multiple updates
+        if (!error) {
+          console.log('✅ Found working parameter format!');
+          break;
+        }
+      } catch (err) {
+        results[test.name] = { error: err };
+        console.log(`${test.name} failed:`, err);
+      }
+    }
+    
+    // Check final sales total
+    const { data: finalDesigner } = await supabase
       .from('designers')
-      .update({ 
-        sales_total: newSalesTotal,
-        updated_at: new Date().toISOString()
-      })
+      .select('id, brand_name, sales_total')
       .eq('id', designerId)
-      .select('sales_total');
-      
-    if (updateError) {
-      console.error('❌ Cannot update sales_total:', updateError);
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Cannot update sales_total',
-        details: updateError,
-        designerData: designer
-      });
-    }
-    
-    console.log('✅ Update result:', updateResult);
-    
-    // Test 3: Check wallet access
-    console.log('💰 Checking wallet access...');
-    const { data: wallet, error: walletError } = await supabase
-      .from('designer_wallets')
-      .select('id, balance, designer_id')
-      .eq('designer_id', designerId)
       .single();
-      
-    if (walletError) {
-      console.error('❌ Cannot read wallet:', walletError);
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Cannot read wallet',
-        details: walletError,
-        designerData: designer,
-        salesUpdateResult: updateResult
-      });
-    }
-    
-    console.log('✅ Wallet found:', wallet);
-    
-    // Test 4: Try to update wallet
-    console.log('💸 Updating wallet balance...');
-    const newBalance = parseFloat(wallet.balance) + testAmount;
-    
-    const { data: walletUpdateResult, error: walletUpdateError } = await supabase
-      .from('designer_wallets')
-      .update({ 
-        balance: newBalance,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', wallet.id)
-      .select('balance');
-      
-    if (walletUpdateError) {
-      console.error('❌ Cannot update wallet:', walletUpdateError);
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Cannot update wallet',
-        details: walletUpdateError,
-        designerData: designer,
-        salesUpdateResult: updateResult,
-        walletData: wallet
-      });
-    }
-    
-    console.log('✅ Wallet update result:', walletUpdateResult);
     
     return NextResponse.json({ 
       success: true,
-      message: 'All operations successful',
+      message: 'Parameter tests completed',
       results: {
-        designer: designer,
-        salesUpdate: updateResult,
-        wallet: wallet,
-        walletUpdate: walletUpdateResult
+        initialDesigner: designer,
+        finalDesigner: finalDesigner,
+        parameterTests: results
       }
     });
     
