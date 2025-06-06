@@ -393,8 +393,8 @@ async function updateDesignerSalesTotal(designerId: string, additionalSales: num
     
     // First try to use stored procedure for atomic operation
     const { data: procedureResult, error: procedureError } = await supabase.rpc('increment_designer_sales', {
-      designer_id: designerId,
-      amount: additionalSales
+      p_designer_id: designerId,
+      p_amount: additionalSales
     });
 
     if (procedureError) {
