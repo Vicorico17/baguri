@@ -396,41 +396,51 @@ async function updateDesignerSalesTotal(designerId: string, additionalSales: num
   try {
     console.log(`📈 [SALES UPDATE] Starting update for designer ${designerId}: +${additionalSales} RON`);
     
-    // Get current sales total
-    console.log(`📈 [SALES UPDATE] Fetching current sales total for ${designerId}...`);
-    const { data: currentData, error: fetchError } = await supabase
-      .from('designers')
-      .select('sales_total')
-      .eq('id', designerId)
-      .single();
+    // First, try the stored procedure approach (same as wallet does)
+    const { data: result, error: storedProcError } = await supabase.rpc('increment_designer_sales', {
+      p_designer_id: designerId,
+      p_amount: additionalSales
+    });
 
-    if (fetchError) {
-      console.error(`📈 [SALES UPDATE] Error fetching current sales total for ${designerId}:`, fetchError);
-      return false;
+    if (storedProcError) {
+      console.error(`📈 [SALES UPDATE] Stored procedure failed for ${designerId}:`, storedProcError);
+      console.log(`📈 [SALES UPDATE] Attempting manual update as fallback...`);
+      
+      // Fallback to manual update (same pattern as wallet fallback)
+      const { data: currentData, error: fetchError } = await supabase
+        .from('designers')
+        .select('sales_total')
+        .eq('id', designerId)
+        .single();
+
+      if (fetchError) {
+        console.error(`📈 [SALES UPDATE] Error fetching current sales total for ${designerId}:`, fetchError);
+        return false;
+      }
+
+      const currentTotal = currentData?.sales_total || 0;
+      const newTotal = currentTotal + additionalSales;
+      console.log(`📈 [SALES UPDATE] Current: ${currentTotal}, Adding: ${additionalSales}, New: ${newTotal}`);
+
+      const { error: updateError } = await supabase
+        .from('designers')
+        .update({ 
+          sales_total: newTotal,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', designerId);
+
+      if (updateError) {
+        console.error(`📈 [SALES UPDATE] Manual update failed for ${designerId}:`, updateError);
+        return false;
+      }
+
+      console.log(`📈 [SALES UPDATE] ✅ Manually updated ${designerId} sales total to ${newTotal} RON (fallback method)`);
+    } else {
+      console.log(`📈 [SALES UPDATE] ✅ Successfully updated ${designerId} sales total via stored procedure`);
     }
-
-    const currentTotal = currentData?.sales_total || 0;
-    const newTotal = currentTotal + additionalSales;
-    console.log(`📈 [SALES UPDATE] Current: ${currentTotal}, Adding: ${additionalSales}, New: ${newTotal}`);
-
-    // Simple direct update (same pattern as wallet update)
-    console.log(`📈 [SALES UPDATE] Attempting database update for ${designerId}...`);
-    const { error: updateError } = await supabase
-      .from('designers')
-      .update({ 
-        sales_total: newTotal,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', designerId);
-
-    if (updateError) {
-      console.error(`📈 [SALES UPDATE] Database update failed for ${designerId}:`, updateError);
-      return false;
-    }
-
-    console.log(`📈 [SALES UPDATE] ✅ Successfully updated ${designerId} sales total from ${currentTotal} to ${newTotal} RON`);
     
-    // Verify the update worked
+    // Verify the update worked (same verification as wallet)
     console.log(`📈 [SALES UPDATE] Verifying update for ${designerId}...`);
     const { data: verifyData, error: verifyError } = await supabase
       .from('designers')
@@ -440,11 +450,11 @@ async function updateDesignerSalesTotal(designerId: string, additionalSales: num
     
     if (verifyError) {
       console.error(`📈 [SALES UPDATE] Verification failed for ${designerId}:`, verifyError);
+      return false;
     } else {
       console.log(`📈 [SALES UPDATE] Verified sales total for ${designerId}:`, verifyData.sales_total);
+      return true;
     }
-    
-    return true;
     
   } catch (error) {
     console.error(`📈 [SALES UPDATE] Critical error for ${designerId}:`, error);
