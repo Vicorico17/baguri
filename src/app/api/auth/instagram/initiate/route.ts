@@ -14,10 +14,17 @@ if (supabaseUrl && supabaseServiceKey) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Debug environment variables
+    console.log('Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasServiceKey: !!supabaseServiceKey,
+      supabaseClientCreated: !!supabase
+    });
+
     // Check if Supabase is properly configured
     if (!supabase) {
       return NextResponse.json(
-        { success: false, error: 'Server configuration error' },
+        { success: false, error: 'Server configuration error - Supabase client not created' },
         { status: 500 }
       );
     }
