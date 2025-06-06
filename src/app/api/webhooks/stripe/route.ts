@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 // Create Stripe client with fallback for build time
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -391,19 +391,7 @@ async function updateDesignerSalesTotal(designerId: string, additionalSales: num
   try {
     console.log(`📈 Updating sales total for designer ${designerId}: +${additionalSales} RON`);
     
-    // First try to use stored procedure for atomic operation
-    const { data: procedureResult, error: procedureError } = await supabase.rpc('increment_designer_sales', {
-      p_designer_id: designerId,
-      p_amount: additionalSales
-    });
-
-    if (procedureError) {
-      console.error('Stored procedure failed, using fallback method:', procedureError);
-    } else {
-      const newTotal = procedureResult?.[0]?.sales_total;
-      console.log(`✅ Updated designer ${designerId} sales total to ${newTotal} RON (stored procedure)`);
-      return true;
-    }
+    // Skip stored procedure for now due to bugs - use direct fallback method
     
     // Fallback: Use multiple retries to handle concurrent updates
     let retries = 3;
