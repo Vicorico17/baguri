@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThirdwebProvider } from "thirdweb/react";
 import { AppProviders } from "@/contexts/AppProviders";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import MicrosoftClarity from "@/components/MicrosoftClarity";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -81,6 +82,7 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <GoogleAnalytics />
+        <MicrosoftClarity />
         <ThirdwebProvider>
           <AppProviders>
             {children}
