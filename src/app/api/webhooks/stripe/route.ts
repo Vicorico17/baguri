@@ -233,7 +233,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       await addEarningsToWallet(designerId, designerEarnings, order.id, productId);
 
       // Update designer's sales total using atomic increment
-      await updateDesignerSalesTotal(designerId, totalPrice);
+      console.log(`🔍 About to update sales total for designer ${designerId} with amount ${totalPrice}`);
+      const salesUpdateResult = await updateDesignerSalesTotal(designerId, totalPrice);
+      console.log(`🔍 Sales update result for ${designerId}:`, salesUpdateResult);
     }
 
   } catch (error) {
@@ -392,9 +394,10 @@ async function addEarningsToWallet(designerId: string, earnings: number, orderId
 
 async function updateDesignerSalesTotal(designerId: string, additionalSales: number) {
   try {
-    console.log(`📈 Updating sales total for designer ${designerId}: +${additionalSales} RON`);
+    console.log(`📈 [SALES UPDATE] Starting update for designer ${designerId}: +${additionalSales} RON`);
     
     // Get current sales total
+    console.log(`📈 [SALES UPDATE] Fetching current sales total for ${designerId}...`);
     const { data: currentData, error: fetchError } = await supabase
       .from('designers')
       .select('sales_total')
@@ -402,14 +405,16 @@ async function updateDesignerSalesTotal(designerId: string, additionalSales: num
       .single();
 
     if (fetchError) {
-      console.error('Error fetching current sales total:', fetchError);
+      console.error(`📈 [SALES UPDATE] Error fetching current sales total for ${designerId}:`, fetchError);
       return false;
     }
 
     const currentTotal = currentData?.sales_total || 0;
     const newTotal = currentTotal + additionalSales;
+    console.log(`📈 [SALES UPDATE] Current: ${currentTotal}, Adding: ${additionalSales}, New: ${newTotal}`);
 
     // Simple direct update (same pattern as wallet update)
+    console.log(`📈 [SALES UPDATE] Attempting database update for ${designerId}...`);
     const { error: updateError } = await supabase
       .from('designers')
       .update({ 
@@ -419,15 +424,30 @@ async function updateDesignerSalesTotal(designerId: string, additionalSales: num
       .eq('id', designerId);
 
     if (updateError) {
-      console.error('Error updating designer sales total:', updateError);
+      console.error(`📈 [SALES UPDATE] Database update failed for ${designerId}:`, updateError);
       return false;
     }
 
-    console.log(`✅ Updated designer ${designerId} sales total from ${currentTotal} to ${newTotal} RON`);
+    console.log(`📈 [SALES UPDATE] ✅ Successfully updated ${designerId} sales total from ${currentTotal} to ${newTotal} RON`);
+    
+    // Verify the update worked
+    console.log(`📈 [SALES UPDATE] Verifying update for ${designerId}...`);
+    const { data: verifyData, error: verifyError } = await supabase
+      .from('designers')
+      .select('sales_total')
+      .eq('id', designerId)
+      .single();
+    
+    if (verifyError) {
+      console.error(`📈 [SALES UPDATE] Verification failed for ${designerId}:`, verifyError);
+    } else {
+      console.log(`📈 [SALES UPDATE] Verified sales total for ${designerId}:`, verifyData.sales_total);
+    }
+    
     return true;
     
   } catch (error) {
-    console.error('Critical error updating designer sales total:', error);
+    console.error(`📈 [SALES UPDATE] Critical error for ${designerId}:`, error);
     return false;
   }
 }
