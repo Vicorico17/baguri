@@ -3,6 +3,9 @@ import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 
+// Log which client we're using for debugging
+console.log('🔑 Webhook using Supabase client:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Admin (Service Role)' : 'Anonymous');
+
 // Create Stripe client with fallback for build time
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -391,67 +394,37 @@ async function updateDesignerSalesTotal(designerId: string, additionalSales: num
   try {
     console.log(`📈 Updating sales total for designer ${designerId}: +${additionalSales} RON`);
     
-    // Skip stored procedure for now due to bugs - use direct fallback method
-    
-    // Fallback: Use multiple retries to handle concurrent updates
-    let retries = 3;
-    while (retries > 0) {
-      try {
-        // Get current sales total
-        const { data: currentData, error: fetchError } = await supabase
-          .from('designers')
-          .select('sales_total')
-          .eq('id', designerId)
-          .single();
+    // Get current sales total
+    const { data: currentData, error: fetchError } = await supabase
+      .from('designers')
+      .select('sales_total')
+      .eq('id', designerId)
+      .single();
 
-        if (fetchError) {
-          console.error('Error fetching current sales total:', fetchError);
-          retries--;
-          continue;
-        }
-
-        const currentTotal = currentData?.sales_total || 0;
-        const newTotal = currentTotal + additionalSales;
-
-        // Update with the calculated new total
-        const { data: updateData, error: updateError } = await supabase
-          .from('designers')
-          .update({ 
-            sales_total: newTotal,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', designerId)
-          .eq('sales_total', currentTotal) // Optimistic locking - only update if sales_total hasn't changed
-          .select('sales_total')
-          .single();
-
-        if (updateError) {
-          if (updateError.code === 'PGRST116') {
-            // No rows updated - someone else updated it, retry
-            console.log(`⚠️ Concurrent update detected for designer ${designerId}, retrying...`);
-            retries--;
-            await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms before retry
-            continue;
-          } else {
-            console.error('Error updating designer sales total:', updateError);
-            return false;
-          }
-        }
-
-        console.log(`✅ Updated designer ${designerId} sales total from ${currentTotal} to ${newTotal} RON`);
-        return true;
-
-      } catch (retryError) {
-        console.error('Error in retry attempt:', retryError);
-        retries--;
-        if (retries > 0) {
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
-      }
+    if (fetchError) {
+      console.error('Error fetching current sales total:', fetchError);
+      return false;
     }
 
-    console.error(`❌ Failed to update sales total for designer ${designerId} after all retries`);
-    return false;
+    const currentTotal = currentData?.sales_total || 0;
+    const newTotal = currentTotal + additionalSales;
+
+    // Simple direct update (same pattern as wallet update)
+    const { error: updateError } = await supabase
+      .from('designers')
+      .update({ 
+        sales_total: newTotal,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', designerId);
+
+    if (updateError) {
+      console.error('Error updating designer sales total:', updateError);
+      return false;
+    }
+
+    console.log(`✅ Updated designer ${designerId} sales total from ${currentTotal} to ${newTotal} RON`);
+    return true;
     
   } catch (error) {
     console.error('Critical error updating designer sales total:', error);
