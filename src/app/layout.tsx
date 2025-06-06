@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThirdwebProvider } from "thirdweb/react";
-import Head from "next/head";
 import { AppProviders } from "@/contexts/AppProviders";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -16,10 +16,19 @@ export const metadata: Metadata = {
   authors: [{ name: "Baguri Team" }],
   creator: "Baguri",
   publisher: "Baguri",
+  applicationName: "Baguri",
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
+  },
+  icons: {
+    icon: "/imglogo.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Baguri",
   },
   openGraph: {
     title: "baguri.ro - Romanian Fashion Marketplace",
@@ -66,23 +75,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <Head>
-        <link rel="icon" href="/imglogo.png" />
-        
-        {/* Mobile-specific optimizations */}
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Baguri" />
-        <meta name="application-name" content="Baguri" />
-        <meta name="msapplication-TileColor" content="#09090b" />
-        <meta name="theme-color" content="#09090b" />
-        
-        {/* Preconnect to external domains for performance */}
+      <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      </Head>
+      </head>
       <body className={inter.className}>
+        <GoogleAnalytics />
         <ThirdwebProvider>
           <AppProviders>
             {children}

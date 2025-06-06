@@ -426,25 +426,25 @@ export function CartSidebar() {
                           </div>
                         ) : (
                           /* Stripe Integration Status - Collapsible on mobile */
-                          <div className="mb-2 mobile-collapsible">
-                            {isLoadingStripe ? (
-                              <span className="text-xs px-2 py-1 rounded bg-zinc-500/20 text-zinc-400 mobile-text-xs">
-                                🔄 Verifying stock...
-                              </span>
-                            ) : stripeData.source !== 'none' ? (
-                              <span className={`text-xs px-2 py-1 rounded mobile-text-xs ${
-                                stripeData.source === 'dynamic' 
-                                  ? 'bg-green-500/20 text-green-400' 
-                                  : 'bg-blue-500/20 text-blue-400'
-                              }`}>
-                                {stripeData.source === 'dynamic' ? '✅ In Stock' : '📦 Pre-configured'}
-                              </span>
-                            ) : (
-                              <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400 mobile-text-xs">
-                                ⚠️ No payment setup
-                              </span>
-                            )}
-                          </div>
+                        <div className="mb-2 mobile-collapsible">
+                          {isLoadingStripe ? (
+                            <span className="text-xs px-2 py-1 rounded bg-zinc-500/20 text-zinc-400 mobile-text-xs">
+                              🔄 Verifying stock...
+                            </span>
+                          ) : stripeData.source !== 'none' ? (
+                            <span className={`text-xs px-2 py-1 rounded mobile-text-xs ${
+                              stripeData.source === 'dynamic' 
+                                ? 'bg-green-500/20 text-green-400' 
+                                : 'bg-blue-500/20 text-blue-400'
+                            }`}>
+                              {stripeData.source === 'dynamic' ? '✅ In Stock' : '📦 Pre-configured'}
+                            </span>
+                          ) : (
+                            <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400 mobile-text-xs">
+                              ⚠️ No payment setup
+                            </span>
+                          )}
+                        </div>
                         )}
                         
                         <div className="flex items-center justify-between">
@@ -514,7 +514,7 @@ export function CartSidebar() {
                     disabled={isProcessing || cart.length === 0 || Object.keys(validationErrors).length > 0}
                     className={`w-full py-3 rounded-lg font-medium transition mobile-touch-target mobile-text-base ${
                       isProcessing 
-                        ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed mobile-loading'
+                        ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed mobile-loading' 
                         : Object.keys(validationErrors).length > 0
                         ? 'bg-red-500/20 text-red-400 cursor-not-allowed border border-red-500/30'
                         : 'bg-white text-zinc-900 hover:bg-zinc-200'

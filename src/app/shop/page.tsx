@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingCart, Heart, X, Plus, Minus, User } from 'lucide-react';
+import { ShoppingCart, Heart, X, Plus, Minus, User, Filter } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { CartSidebar as GlobalCartSidebar } from '@/components/CartSidebar';
-import { TierBadge } from '@/lib/tierUtils';
+import { TierBadge, getTierBySalesTotal, COMMISSION_TIERS } from '@/lib/tierUtils';
 import { useDesignerAuth } from '@/contexts/DesignerAuthContext';
 import { supabase } from '@/lib/supabase';
 import { ScarcityNotifications } from '@/components/ui/scarcity-notifications';
@@ -114,6 +114,8 @@ const mockProducts = [
 
 function ShopContent() {
   const [selectedDesigner, setSelectedDesigner] = useState<number | null>(null);
+  const [selectedTier, setSelectedTier] = useState<string | null>(null);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showUpcoming, setShowUpcoming] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [showAllDesigners, setShowAllDesigners] = useState(false);
@@ -129,6 +131,19 @@ function ShopContent() {
   // Use designer auth context
   const { user: authUser, designerProfile, loading: authLoading } = useDesignerAuth();
 
+  // Close filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (showFilterDropdown && !target.closest('.filter-dropdown')) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showFilterDropdown]);
+
   // Load products and designers from database
   useEffect(() => {
     const loadData = async () => {
@@ -141,7 +156,8 @@ function ShopContent() {
             designers (
               id,
               brand_name,
-              logo_url
+              logo_url,
+              sales_total
             )
           `)
           .eq('is_live', true);
@@ -209,12 +225,26 @@ function ShopContent() {
 
   const filteredProducts = products.filter(product => {
     const designerFilter = selectedDesigner === null || product.designers?.id === selectedDesigner;
-    return designerFilter;
+    
+    // Tier filter
+    let tierFilter = true;
+    if (selectedTier !== null && product.designers) {
+      const designerSalesTotal = parseFloat(product.designers.sales_total) || 0;
+      const designerTier = getTierBySalesTotal(designerSalesTotal);
+      tierFilter = designerTier.id === selectedTier;
+    }
+    
+    return designerFilter && tierFilter;
   });
 
   const handleAddToCart = (product: any, size: string, color: string) => {
     addToCart(product, size, color);
     setSelectedProduct(null);
+  };
+
+  const clearAllFilters = () => {
+    setSelectedDesigner(null);
+    setSelectedTier(null);
   };
 
   return (
@@ -297,16 +327,92 @@ function ShopContent() {
       <div className="fixed top-20 left-0 right-0 z-30 border-b border-zinc-800 bg-zinc-900/30 backdrop-blur-sm mobile-header">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center gap-4 overflow-x-auto mobile-gap-3">
-            <button
-              onClick={() => setSelectedDesigner(null)}
-              className={`px-4 py-2 rounded-full whitespace-nowrap transition mobile-touch-target ${
-                selectedDesigner === null
-                  ? 'bg-white text-zinc-900'
-                  : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-              }`}
-            >
-              All Designers
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedDesigner(null)}
+                className={`px-4 py-2 rounded-full whitespace-nowrap transition mobile-touch-target ${
+                  selectedDesigner === null
+                    ? 'bg-white text-zinc-900'
+                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                }`}
+              >
+                All Designers
+              </button>
+              
+              {/* Filter Icon with Dropdown */}
+              <div className="relative filter-dropdown">
+                <button
+                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                  className={`p-2 rounded-full transition mobile-touch-target ${
+                    selectedTier !== null || showFilterDropdown
+                      ? 'bg-white text-zinc-900'
+                      : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                  }`}
+                  title="Filter by tier"
+                >
+                  <Filter size={16} />
+                </button>
+                
+                {/* Filter Dropdown */}
+                {showFilterDropdown && (
+                  <div className="absolute top-full left-0 mt-2 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-50 min-w-[200px]">
+                    <div className="p-3">
+                      <h4 className="text-sm font-medium text-white mb-3">Filter by Tier</h4>
+                      
+                      <button
+                        onClick={() => {
+                          setSelectedTier(null);
+                          setShowFilterDropdown(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition mb-1 ${
+                          selectedTier === null
+                            ? 'bg-white text-zinc-900'
+                            : 'text-zinc-300 hover:bg-zinc-800'
+                        }`}
+                      >
+                        All Tiers
+                      </button>
+                      
+                      {COMMISSION_TIERS.map((tier) => {
+                        const Icon = tier.icon;
+                        return (
+                          <button
+                            key={tier.id}
+                            onClick={() => {
+                              setSelectedTier(tier.id);
+                              setShowFilterDropdown(false);
+                            }}
+                            className={`w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition mb-1 ${
+                              selectedTier === tier.id
+                                ? 'bg-white text-zinc-900'
+                                : `${tier.color} hover:bg-zinc-800`
+                            }`}
+                          >
+                            <Icon size={14} />
+                            <span>{tier.name}</span>
+                            <span className="ml-auto text-xs opacity-75">({tier.designerEarningsPct}%)</span>
+                          </button>
+                        );
+                      })}
+                      
+                      {(selectedDesigner !== null || selectedTier !== null) && (
+                        <div className="border-t border-zinc-700 mt-2 pt-2">
+                          <button
+                            onClick={() => {
+                              clearAllFilters();
+                              setShowFilterDropdown(false);
+                            }}
+                            className="w-full text-left px-3 py-2 text-xs text-zinc-400 hover:text-white transition"
+                          >
+                            Clear all filters
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
             
             {designers
               .slice(0, showAllDesigners ? designers.length : 4)
@@ -354,6 +460,8 @@ function ShopContent() {
         </div>
       </div>
 
+
+
       {/* Products Grid */}
       <main className="max-w-7xl mx-auto px-4 py-8 pt-44 safe-area-bottom">
         {loading ? (
@@ -369,10 +477,23 @@ function ShopContent() {
           <div className="text-center py-12">
             <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-8 max-w-md mx-auto">
               <ShoppingCart size={48} className="mx-auto mb-4 text-zinc-400" />
-              <h3 className="text-xl font-semibold mb-2">No Products Available</h3>
-              <p className="text-zinc-400">
-                No live products found. Check back soon for new arrivals!
+              <h3 className="text-xl font-semibold mb-2">
+                {selectedDesigner !== null || selectedTier !== null ? 'No Products Match Your Filters' : 'No Products Available'}
+              </h3>
+              <p className="text-zinc-400 mb-4">
+                {selectedDesigner !== null || selectedTier !== null 
+                  ? 'Try adjusting your filters to see more products.'
+                  : 'No live products found. Check back soon for new arrivals!'
+                }
               </p>
+              {(selectedDesigner !== null || selectedTier !== null) && (
+                <button
+                  onClick={clearAllFilters}
+                  className="px-4 py-2 bg-white text-zinc-900 rounded-full font-medium hover:bg-zinc-200 transition"
+                >
+                  Clear all filters
+                </button>
+              )}
             </div>
           </div>
         ) : (
@@ -515,8 +636,8 @@ function ShopContent() {
       {/* Scarcity Marketing Notifications */}
       <ScarcityNotifications 
         enabled={true}
-        interval={15} // Show notification every 15 seconds on shop page (more frequent)
-        maxVisible={3}
+        interval={180} // Show notification every 3 minutes (rare)
+        maxVisible={2}
       />
     </div>
   );

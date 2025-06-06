@@ -45,12 +45,13 @@ const FAKE_LOCATIONS = [
 
 export function ScarcityNotifications({
   enabled = true,
-  interval = 15, // Show notification every 15 seconds
-  maxVisible = 3,
+  interval = 120, // Show notification every 2 minutes (much rarer)
+  maxVisible = 2,
   className
 }: ScarcityNotificationsProps) {
   const [notifications, setNotifications] = useState<ScarcityNotification[]>([]);
   const [isEnabled, setIsEnabled] = useState(enabled);
+  const [snoozeUntil, setSnoozeUntil] = useState<number | null>(null);
 
   // Generate fake notification data
   const generateNotification = (): ScarcityNotification => {
@@ -107,11 +108,66 @@ export function ScarcityNotifications({
     };
   };
 
+  // Check localStorage for snooze state on mount
+  useEffect(() => {
+    const storedSnooze = localStorage.getItem('baguri_notifications_snooze');
+    if (storedSnooze) {
+      const snoozeTime = parseInt(storedSnooze);
+      if (Date.now() < snoozeTime) {
+        // Still in snooze period
+        setSnoozeUntil(snoozeTime);
+        setIsEnabled(false);
+      } else {
+        // Snooze period expired, clean up
+        localStorage.removeItem('baguri_notifications_snooze');
+        setSnoozeUntil(null);
+      }
+    }
+  }, []);
+
+  // Check snooze expiration every second
+  useEffect(() => {
+    if (!snoozeUntil) return;
+
+    const checkExpiration = () => {
+      const now = Date.now();
+      if (now >= snoozeUntil) {
+        // Snooze expired
+        setSnoozeUntil(null);
+        localStorage.removeItem('baguri_notifications_snooze');
+        setIsEnabled(true);
+      }
+    };
+
+    checkExpiration(); // Initial call
+    const intervalId = setInterval(checkExpiration, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [snoozeUntil]);
+
+  // Check if notifications are snoozed
+  const isNotificationsSnoozed = () => {
+    if (!snoozeUntil) return false;
+    
+    const now = Date.now();
+    if (now >= snoozeUntil) {
+      // Snooze period expired
+      setSnoozeUntil(null);
+      localStorage.removeItem('baguri_notifications_snooze');
+      setIsEnabled(true);
+      return false;
+    }
+    return true;
+  };
+
   // Show notifications at intervals
   useEffect(() => {
-    if (!isEnabled) return;
+    if (!isEnabled || isNotificationsSnoozed()) return;
 
     const showNotification = () => {
+      // Double-check snooze status before showing
+      if (isNotificationsSnoozed()) return;
+      
       const notification = generateNotification();
       
       setNotifications(prev => {
@@ -126,8 +182,8 @@ export function ScarcityNotifications({
       }, notification.duration);
     };
 
-    // Show first notification after a short delay
-    const initialDelay = setTimeout(showNotification, 3000);
+    // Show first notification after a longer delay (30 seconds)
+    const initialDelay = setTimeout(showNotification, 30000);
     
     // Then show notifications at regular intervals
     const intervalId = setInterval(showNotification, interval * 1000);
@@ -136,11 +192,24 @@ export function ScarcityNotifications({
       clearTimeout(initialDelay);
       clearInterval(intervalId);
     };
-  }, [isEnabled, interval, maxVisible]);
+  }, [isEnabled, interval, maxVisible, snoozeUntil]);
+
+  const snoozeNotifications = () => {
+    const snoozeTime = Date.now() + (51 * 1000); // 51 seconds from now
+    setSnoozeUntil(snoozeTime);
+    setNotifications([]); // Clear all current notifications
+    
+    // Store in localStorage to persist across page reloads
+    localStorage.setItem('baguri_notifications_snooze', snoozeTime.toString());
+  };
 
   const dismissNotification = (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
+    // Snooze for 51 seconds when dismissing individual notifications
+    snoozeNotifications();
   };
+
+
 
   const getIcon = (type: ScarcityNotification["type"]) => {
     switch (type) {
@@ -174,7 +243,10 @@ export function ScarcityNotifications({
     }
   };
 
-  if (!isEnabled) return null;
+  // Only show notifications if enabled and not snoozed
+  const shouldShowNotifications = isEnabled && !isNotificationsSnoozed();
+  
+  if (!shouldShowNotifications) return null;
 
   return (
     <div 
@@ -182,7 +254,7 @@ export function ScarcityNotifications({
       style={{ maxWidth: "400px" }}
     >
       <AnimatePresence mode="popLayout">
-        {notifications.map((notification) => (
+        {shouldShowNotifications && notifications.map((notification) => (
           <motion.div
             key={notification.id}
             initial={{ opacity: 0, x: -100, scale: 0.8 }}
@@ -203,14 +275,18 @@ export function ScarcityNotifications({
               icon={getIcon(notification.type)}
               action={
                 <button
-                  onClick={() => dismissNotification(notification.id)}
-                  className="group -my-1.5 -me-2 size-8 p-0 hover:bg-transparent flex items-center justify-center rounded transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    dismissNotification(notification.id);
+                  }}
+                  className="group -my-1.5 -me-2 size-8 p-1 hover:bg-zinc-800/50 flex items-center justify-center rounded-full transition-all duration-200"
                   aria-label="Close notification"
+                  title="Dismiss notification"
                 >
                   <X
-                    size={16}
-                    strokeWidth={2}
-                    className="opacity-60 transition-opacity group-hover:opacity-100"
+                    size={14}
+                    strokeWidth={2.5}
+                    className="text-zinc-400 transition-all duration-200 group-hover:text-white group-hover:scale-110"
                   />
                 </button>
               }
@@ -236,17 +312,7 @@ export function ScarcityNotifications({
         ))}
       </AnimatePresence>
 
-      {/* Toggle button for testing */}
-      {process.env.NODE_ENV === 'development' && (
-        <motion.button
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          onClick={() => setIsEnabled(!isEnabled)}
-          className="mt-4 px-3 py-1 text-xs bg-zinc-800 text-zinc-300 rounded-md hover:bg-zinc-700 transition-colors"
-        >
-          {isEnabled ? 'Hide' : 'Show'} Notifications
-        </motion.button>
-      )}
+
     </div>
   );
 }

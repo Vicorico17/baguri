@@ -237,8 +237,8 @@ export default function Home() {
       {/* Scarcity Marketing Notifications */}
       <ScarcityNotifications 
         enabled={true}
-        interval={25} // Show notification every 25 seconds on homepage
-        maxVisible={2}
+        interval={240} // Show notification every 4 minutes (very rare)
+        maxVisible={1}
       />
     </main>
   );
