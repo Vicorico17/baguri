@@ -186,10 +186,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       const unitPrice = item.price?.unit_amount ? item.price.unit_amount / 100 : 0;
       const totalPrice = unitPrice * quantity;
 
-      // Get designer's current sales total to determine tier
-      const { data: designer, error: designerError } = await supabase
+      // 🔍 GET INITIAL DESIGNER STATE FOR LOGGING
+      const { data: initialDesigner, error: designerError } = await supabase
         .from('designers')
-        .select('sales_total')
+        .select('sales_total, brand_name')
         .eq('id', designerId)
         .single();
 
@@ -198,13 +198,24 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         continue;
       }
 
+      // Get initial wallet state
+      const { data: initialWallet } = await supabase
+        .from('designer_wallets')
+        .select('balance, total_earnings')
+        .eq('designer_id', designerId)
+        .single();
+
+      console.log(`\n🎯 ===== PROCESSING SALE FOR ${initialDesigner.brand_name} (${designerId}) =====`);
+      console.log(`💰 BEFORE: Wallet Balance: ${initialWallet?.balance || 0} RON, Sales Total: ${initialDesigner.sales_total || 0} RON`);
+      console.log(`🛒 ORDER: ${totalPrice} RON (${quantity}x ${unitPrice} RON)`);
+
       // Calculate commission based on current tier
-      const currentTier = getCommissionTier(designer.sales_total || 0);
+      const currentTier = getCommissionTier(initialDesigner.sales_total || 0);
       const designerEarnings = totalPrice * (currentTier.designerEarningsPct / 100);
       const platformFee = totalPrice * (currentTier.platformFeePct / 100);
 
-      console.log(`Processing sale: Designer ${designerId}, Amount: ${totalPrice} RON`);
-      console.log(`Tier: ${currentTier.name}, Designer gets: ${designerEarnings} RON (${currentTier.designerEarningsPct}%)`);
+      console.log(`📊 TIER: ${currentTier.name} (${currentTier.designerEarningsPct}% commission)`);
+      console.log(`💸 EARNINGS: Designer gets ${designerEarnings} RON, Platform gets ${platformFee} RON`);
 
       // Create order item
       const { error: itemError } = await supabase
@@ -229,14 +240,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         continue;
       }
 
+      console.log(`✅ Created order item for ${product.name || 'Unknown Product'}`);
+
       // Add earnings to designer wallet
+      console.log(`💰 Adding ${designerEarnings} RON to wallet...`);
       await addEarningsToWallet(designerId, designerEarnings, order.id, productId);
 
-      // Update designer's sales total - this may fail due to RLS but shouldn't stop wallet funding
-      console.log(`🔍 About to update sales total for designer ${designerId} with amount ${totalPrice}`);
+      // Update designer's sales total
+      console.log(`📈 Adding ${totalPrice} RON to sales total...`);
       try {
         const salesUpdateResult = await updateDesignerSalesTotal(designerId, totalPrice);
-        console.log(`🔍 Sales update result for ${designerId}:`, salesUpdateResult);
         
         if (!salesUpdateResult) {
           console.warn(`⚠️ Sales total update failed for ${designerId} but continuing with order processing`);
@@ -245,6 +258,24 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         console.error(`❌ Sales total update error for ${designerId}:`, salesError);
         console.warn(`⚠️ Continuing order processing despite sales total update failure`);
       }
+
+      // 🔍 GET FINAL DESIGNER STATE FOR LOGGING
+      const { data: finalDesigner } = await supabase
+        .from('designers')
+        .select('sales_total')
+        .eq('id', designerId)
+        .single();
+
+      const { data: finalWallet } = await supabase
+        .from('designer_wallets')
+        .select('balance, total_earnings')
+        .eq('designer_id', designerId)
+        .single();
+
+      console.log(`\n🎉 FINAL STATE FOR ${initialDesigner.brand_name}:`);
+      console.log(`💰 AFTER: Wallet Balance: ${finalWallet?.balance || 0} RON (+${(finalWallet?.balance || 0) - (initialWallet?.balance || 0)})`);
+      console.log(`📈 AFTER: Sales Total: ${finalDesigner?.sales_total || 0} RON (+${(finalDesigner?.sales_total || 0) - (initialDesigner?.sales_total || 0)})`);
+      console.log(`🎯 ===== COMPLETED PROCESSING FOR ${initialDesigner.brand_name} =====\n`)
     }
 
   } catch (error) {
