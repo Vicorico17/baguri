@@ -175,7 +175,7 @@ export function OrderTracker({ sessionId, className }: OrderTrackerProps) {
             <div>
               <p className="text-yellow-400 font-medium">Payment Received - Processing Order</p>
               <p className="text-yellow-300/80 text-sm mt-1">
-                Your payment was successful! We're currently processing your order and will update the details shortly.
+                                 Your payment was successful! We&apos;re currently processing your order and will update the details shortly.
               </p>
             </div>
           </div>

@@ -1453,28 +1453,36 @@ function ActionCard({ status, canSubmit, onSubmit, completionPercentage, setIsEd
           </div>
           
           <div className="space-y-2">
-            <Link
-              href="/products"
-              className="w-full py-3 bg-white text-black rounded-lg font-medium transition flex items-center justify-center gap-2 hover:bg-zinc-200"
-            >
-              <Plus size={16} />
-              Manage Products
-            </Link>
-            
-            <button
-              onClick={() => {
-                const slug = profile.brandName?.toLowerCase().replace(/\s+/g, '-');
-                if (slug) {
-                  window.open(`/designer/${slug}`, '_blank');
-                } else {
-                  window.open('/designers', '_blank');
-                }
-              }}
-              className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
-            >
-              <Globe size={16} />
-              View Your Store
-            </button>
+                                <Link
+                      href="/products"
+                      className="w-full py-3 bg-white text-black rounded-lg font-medium transition flex items-center justify-center gap-2 hover:bg-zinc-200"
+                    >
+                      <Plus size={16} />
+                      Manage Products
+                    </Link>
+                    
+                    <Link
+                      href="/order-management"
+                      className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+                    >
+                      <Package size={16} />
+                      Order Management
+                    </Link>
+                    
+                    <button
+                      onClick={() => {
+                        const slug = profile.brandName?.toLowerCase().replace(/\s+/g, '-');
+                        if (slug) {
+                          window.open(`/designer/${slug}`, '_blank');
+                        } else {
+                          window.open('/designers', '_blank');
+                        }
+                      }}
+                      className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+                    >
+                      <Globe size={16} />
+                      View Your Store
+                    </button>
           </div>
         </div>
       )}
