@@ -229,20 +229,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       // Add earnings to designer wallet
       await addEarningsToWallet(designerId, designerEarnings, order.id, productId);
 
-      // Update designer's sales total
-      const { error: updateSalesError } = await supabase
-        .from('designers')
-        .update({ 
-          sales_total: (designer.sales_total || 0) + totalPrice,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', designerId);
-
-      if (updateSalesError) {
-        console.error('Error updating designer sales total:', updateSalesError);
-      } else {
-        console.log(`Updated designer ${designerId} sales total: ${(designer.sales_total || 0) + totalPrice} RON`);
-      }
+      // Update designer's sales total using atomic increment
+      await updateDesignerSalesTotal(designerId, totalPrice);
     }
 
   } catch (error) {
@@ -396,6 +384,90 @@ async function addEarningsToWallet(designerId: string, earnings: number, orderId
     } catch (logError) {
       console.error('Failed to log error:', logError);
     }
+  }
+}
+
+async function updateDesignerSalesTotal(designerId: string, additionalSales: number) {
+  try {
+    console.log(`📈 Updating sales total for designer ${designerId}: +${additionalSales} RON`);
+    
+    // First try to use stored procedure for atomic operation
+    const { data: procedureResult, error: procedureError } = await supabase.rpc('increment_designer_sales', {
+      designer_id: designerId,
+      amount: additionalSales
+    });
+
+    if (procedureError) {
+      console.error('Stored procedure failed, using fallback method:', procedureError);
+    } else {
+      const newTotal = procedureResult?.[0]?.sales_total;
+      console.log(`✅ Updated designer ${designerId} sales total to ${newTotal} RON (stored procedure)`);
+      return true;
+    }
+    
+    // Fallback: Use multiple retries to handle concurrent updates
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        // Get current sales total
+        const { data: currentData, error: fetchError } = await supabase
+          .from('designers')
+          .select('sales_total')
+          .eq('id', designerId)
+          .single();
+
+        if (fetchError) {
+          console.error('Error fetching current sales total:', fetchError);
+          retries--;
+          continue;
+        }
+
+        const currentTotal = currentData?.sales_total || 0;
+        const newTotal = currentTotal + additionalSales;
+
+        // Update with the calculated new total
+        const { data: updateData, error: updateError } = await supabase
+          .from('designers')
+          .update({ 
+            sales_total: newTotal,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', designerId)
+          .eq('sales_total', currentTotal) // Optimistic locking - only update if sales_total hasn't changed
+          .select('sales_total')
+          .single();
+
+        if (updateError) {
+          if (updateError.code === 'PGRST116') {
+            // No rows updated - someone else updated it, retry
+            console.log(`⚠️ Concurrent update detected for designer ${designerId}, retrying...`);
+            retries--;
+            await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms before retry
+            continue;
+          } else {
+            console.error('Error updating designer sales total:', updateError);
+            return false;
+          }
+        }
+
+        console.log(`✅ Updated designer ${designerId} sales total from ${currentTotal} to ${newTotal} RON`);
+        return true;
+
+      } catch (retryError) {
+        console.error('Error in retry attempt:', retryError);
+        retries--;
+        if (retries > 0) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      }
+    }
+
+    console.error(`❌ Failed to update sales total for designer ${designerId} after all retries`);
+    return false;
+    
+  } catch (error) {
+    console.error('Critical error updating designer sales total:', error);
+    return false;
   }
 }
 
