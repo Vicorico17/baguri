@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ShoppingCart, Heart, X, Plus, Minus, User, Filter } from 'lucide-react';
@@ -687,13 +687,13 @@ function ProductModal({ product, onClose, onAddToCart }: {
   const [selectedSize, setSelectedSize] = useState('');
   
   const selectedColor = colors[selectedColorIndex];
-  const availableSizes = selectedColor?.sizes || [
+  const availableSizes = useMemo(() => selectedColor?.sizes || [
     { size: 'XS', stock: 10 },
     { size: 'S', stock: 10 },
     { size: 'M', stock: 10 },
     { size: 'L', stock: 10 },
     { size: 'XL', stock: 10 }
-  ];
+  ], [selectedColor?.sizes]);
   
   console.log('Available sizes:', availableSizes);
   

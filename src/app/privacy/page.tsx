@@ -13,7 +13,7 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-2xl font-semibold mb-4 text-white">1. Introduction</h2>
             <p className="text-zinc-300 leading-relaxed">
-              Welcome to Baguri ("we," "our," or "us"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our marketplace platform ("Service") that connects independent designers with customers. We are committed to protecting your privacy and ensuring transparency about our data practices.
+              Welcome to Baguri (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our marketplace platform (&quot;Service&quot;) that connects independent designers with customers. We are committed to protecting your privacy and ensuring transparency about our data practices.
             </p>
           </section>
 
@@ -173,7 +173,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold mb-4 text-white">8. Children's Privacy</h2>
+            <h2 className="text-2xl font-semibold mb-4 text-white">8. Children&apos;s Privacy</h2>
             <p className="text-zinc-300">
               Our platform is not intended for users under 13 years of age. We do not knowingly collect personal information from children under 13. If we become aware that we have collected such information, we will take steps to delete it promptly.
             </p>
