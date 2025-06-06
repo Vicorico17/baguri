@@ -102,11 +102,28 @@ export async function POST(req: NextRequest) {
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   try {
-    console.log('Processing checkout completed:', session.id);
+    console.log('🎯 Processing checkout completed:', session.id);
     
     // Check if Stripe is available
     if (!stripe) {
       console.error('Stripe not configured for webhook processing');
+      return;
+    }
+
+    // Check if this session has already been processed (idempotency)
+    const { data: existingOrder, error: existingOrderError } = await supabase
+      .from('orders')
+      .select('id, status')
+      .eq('stripe_checkout_session_id', session.id)
+      .single();
+
+    if (existingOrderError && existingOrderError.code !== 'PGRST116') {
+      console.error('Error checking existing order:', existingOrderError);
+      return;
+    }
+
+    if (existingOrder) {
+      console.log(`⚠️ Session ${session.id} already processed (Order: ${existingOrder.id}), skipping to prevent duplicate processing`);
       return;
     }
     
@@ -117,6 +134,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
     if (!lineItems.data.length) {
       console.log('No line items found for session:', session.id);
+      return;
+    }
+
+    // Validate session amount matches our calculations
+    const calculatedTotal = lineItems.data.reduce((total, item) => {
+      return total + (item.amount_total || 0);
+    }, 0);
+
+    if (Math.abs(calculatedTotal - (session.amount_total || 0)) > 1) { // Allow 1 cent difference for rounding
+      console.error(`⚠️ Amount mismatch detected! Session: ${session.amount_total}, Calculated: ${calculatedTotal}`);
       return;
     }
 
@@ -140,7 +167,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       return;
     }
 
-    console.log('Created order:', order.id);
+    console.log('✅ Created order:', order.id);
 
     // Process each line item
     for (const item of lineItems.data) {
@@ -225,6 +252,27 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
 async function addEarningsToWallet(designerId: string, earnings: number, orderId: string, productId: string) {
   try {
+    console.log(`💰 Processing earnings for designer ${designerId}: ${earnings} RON from order ${orderId}`);
+    
+    // Check if this order has already been processed for this designer
+    const { data: existingTransaction, error: checkError } = await supabase
+      .from('wallet_transactions')
+      .select('id')
+      .eq('order_id', orderId)
+      .eq('type', 'sale')
+      .eq('status', 'completed')
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('Error checking existing transaction:', checkError);
+      return;
+    }
+
+    if (existingTransaction) {
+      console.log(`⚠️ Order ${orderId} already processed for designer ${designerId}, skipping to prevent duplicate earnings`);
+      return;
+    }
+
     // Get or create wallet
     let { data: wallet, error: walletError } = await supabase
       .from('designer_wallets')
@@ -251,49 +299,103 @@ async function addEarningsToWallet(designerId: string, earnings: number, orderId
         return;
       }
       wallet = newWallet;
+      console.log(`✅ Created new wallet for designer ${designerId}`);
     }
 
-    // Update wallet balance and total earnings
-    const newBalance = parseFloat(wallet.balance) + earnings;
-    const newTotalEarnings = parseFloat(wallet.total_earnings) + earnings;
-
-    const { error: updateError } = await supabase
-      .from('designer_wallets')
-      .update({
-        balance: newBalance,
-        total_earnings: newTotalEarnings,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', wallet.id);
-
-    if (updateError) {
-      console.error('Error updating wallet:', updateError);
-      return;
-    }
-
-    // Create wallet transaction record
-    const { error: transactionError } = await supabase
-      .from('wallet_transactions')
-      .insert({
-        wallet_id: wallet.id,
-        type: 'sale',
-        amount: earnings,
-        status: 'completed',
-        description: `Sale commission from order ${orderId}`,
-        metadata: {
-          order_id: orderId,
-          product_id: productId
-        }
-      });
+    // Use database transaction for atomic operations
+    const { data: result, error: transactionError } = await supabase.rpc('add_designer_earnings', {
+      p_designer_id: designerId,
+      p_amount: earnings,
+      p_order_id: orderId,
+      p_description: `Sale commission from order ${orderId} - Product: ${productId}`
+    });
 
     if (transactionError) {
-      console.error('Error creating wallet transaction:', transactionError);
+      console.error('Error adding earnings via stored procedure:', transactionError);
+      
+      // Fallback to manual transaction if stored procedure fails
+      console.log('Attempting manual wallet update as fallback...');
+      
+      // Update wallet balance and total earnings
+      const newBalance = parseFloat(wallet.balance) + earnings;
+      const newTotalEarnings = parseFloat(wallet.total_earnings) + earnings;
+
+      const { error: updateError } = await supabase
+        .from('designer_wallets')
+        .update({
+          balance: newBalance,
+          total_earnings: newTotalEarnings,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', wallet.id);
+
+      if (updateError) {
+        console.error('Error updating wallet balance:', updateError);
+        return;
+      }
+
+      // Create wallet transaction record
+      const { error: manualTransactionError } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          wallet_id: wallet.id,
+          type: 'sale',
+          amount: earnings,
+          status: 'completed',
+          description: `Sale commission from order ${orderId} - Product: ${productId}`,
+          order_id: orderId,
+          metadata: {
+            order_id: orderId,
+            product_id: productId,
+            processed_via: 'manual_fallback',
+            processed_at: new Date().toISOString()
+          }
+        });
+
+      if (manualTransactionError) {
+        console.error('Error creating wallet transaction (manual):', manualTransactionError);
+        return;
+      }
+
+      console.log(`✅ Manually added ${earnings} RON to designer ${designerId} wallet (fallback method)`);
     } else {
-      console.log(`Added ${earnings} RON to designer ${designerId} wallet`);
+      console.log(`✅ Successfully added ${earnings} RON to designer ${designerId} wallet via stored procedure`);
+    }
+
+    // Verify the transaction was recorded
+    const { data: verification, error: verifyError } = await supabase
+      .from('wallet_transactions')
+      .select('id, amount, status')
+      .eq('order_id', orderId)
+      .eq('type', 'sale')
+      .eq('status', 'completed')
+      .single();
+
+    if (verifyError || !verification) {
+      console.error('⚠️ Failed to verify transaction was recorded properly:', verifyError);
+    } else {
+      console.log(`✅ Transaction verified: ${verification.id} for ${verification.amount} RON`);
     }
 
   } catch (error) {
-    console.error('Error adding earnings to wallet:', error);
+    console.error('❌ Critical error adding earnings to wallet:', error);
+    
+    // Log critical errors for manual review
+    try {
+      await supabase.from('error_logs').insert({
+        error_type: 'wallet_funding_error',
+        designer_id: designerId,
+        order_id: orderId,
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+        metadata: {
+          earnings_amount: earnings,
+          product_id: productId,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log error:', logError);
+    }
   }
 }
 
