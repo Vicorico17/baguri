@@ -232,10 +232,19 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       // Add earnings to designer wallet
       await addEarningsToWallet(designerId, designerEarnings, order.id, productId);
 
-      // Update designer's sales total using atomic increment
+      // Update designer's sales total - this may fail due to RLS but shouldn't stop wallet funding
       console.log(`🔍 About to update sales total for designer ${designerId} with amount ${totalPrice}`);
-      const salesUpdateResult = await updateDesignerSalesTotal(designerId, totalPrice);
-      console.log(`🔍 Sales update result for ${designerId}:`, salesUpdateResult);
+      try {
+        const salesUpdateResult = await updateDesignerSalesTotal(designerId, totalPrice);
+        console.log(`🔍 Sales update result for ${designerId}:`, salesUpdateResult);
+        
+        if (!salesUpdateResult) {
+          console.warn(`⚠️ Sales total update failed for ${designerId} but continuing with order processing`);
+        }
+      } catch (salesError) {
+        console.error(`❌ Sales total update error for ${designerId}:`, salesError);
+        console.warn(`⚠️ Continuing order processing despite sales total update failure`);
+      }
     }
 
   } catch (error) {
