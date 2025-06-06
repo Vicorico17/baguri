@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     console.log('📖 Reading designer...');
     const { data: designer, error: readError } = await supabase
       .from('designers')
-      .select('id, user_name, sales_total')
+      .select('id, brand_name, sales_total')
       .eq('id', designerId)
       .single();
       
