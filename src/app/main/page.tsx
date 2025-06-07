@@ -32,12 +32,12 @@ export default function MainPage() {
           {/* Shop */}
           <Link
             href="/shop"
-            className="group relative bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 rounded-xl md:rounded-2xl p-4 md:p-6 hover:border-white/50 transition-all duration-300 hover:bg-zinc-900 mobile-touch-target mobile-card"
+            className="group relative bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 rounded-xl md:rounded-2xl p-4 md:p-6 hover:border-blue-500/50 transition-all duration-300 hover:bg-zinc-900 mobile-touch-target mobile-card"
           >
             <div className="flex flex-col items-center text-center space-y-2 md:space-y-3">
-              <div className="flex items-center gap-2 px-3 md:px-4 py-2 bg-white/10 rounded-full text-base md:text-lg font-bold text-white group-hover:bg-white/20 group-hover:text-white transition-colors mobile-touch-target">
-                <ShoppingBag size={18} className="text-white md:w-5 md:h-5" />
-                <span>Shop →</span>
+              <div className="flex items-center gap-2 px-3 md:px-4 py-2 bg-blue-600/20 rounded-full text-base md:text-lg font-bold text-white group-hover:bg-blue-500/30 group-hover:text-white transition-all mobile-touch-target">
+                <ShoppingBag size={18} className="text-blue-400 md:w-5 md:h-5" />
+                <span className="text-blue-400 group-hover:text-blue-300">Shop →</span>
               </div>
               <p className="text-zinc-400 group-hover:text-zinc-300 transition-colors text-xs md:text-sm leading-tight mobile-line-clamp-2">
                 Discover unique pieces from independent Romanian designers. Limited drops, exclusive collections.
@@ -48,12 +48,12 @@ export default function MainPage() {
           {/* Designers */}
           <Link
             href="/designers"
-            className="group relative bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 rounded-xl md:rounded-2xl p-4 md:p-6 hover:border-white/50 transition-all duration-300 hover:bg-zinc-900 mobile-touch-target mobile-card"
+            className="group relative bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 rounded-xl md:rounded-2xl p-4 md:p-6 hover:border-yellow-500/50 transition-all duration-300 hover:bg-zinc-900 mobile-touch-target mobile-card"
           >
             <div className="flex flex-col items-center text-center space-y-2 md:space-y-3">
-              <div className="flex items-center gap-2 px-3 md:px-4 py-2 bg-white/10 rounded-full text-base md:text-lg font-bold text-white group-hover:bg-white/20 group-hover:text-white transition-colors mobile-touch-target">
-                <Palette size={18} className="text-white md:w-5 md:h-5" />
-                <span>Designers →</span>
+              <div className="flex items-center gap-2 px-3 md:px-4 py-2 bg-yellow-600/20 rounded-full text-base md:text-lg font-bold text-white group-hover:bg-yellow-500/30 group-hover:text-white transition-all mobile-touch-target">
+                <Palette size={18} className="text-yellow-400 md:w-5 md:h-5" />
+                <span className="text-yellow-400 group-hover:text-yellow-300">Designers →</span>
               </div>
               <p className="text-zinc-400 group-hover:text-zinc-300 transition-colors text-xs md:text-sm leading-tight mobile-line-clamp-2">
                 Meet our talented creators and explore their unique collections from across Romania.
@@ -64,12 +64,12 @@ export default function MainPage() {
           {/* Influencers */}
           <Link
             href="/influencer-auth"
-            className="group relative bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 rounded-xl md:rounded-2xl p-4 md:p-6 hover:border-purple-500/50 transition-all duration-300 hover:bg-zinc-900 mobile-touch-target mobile-card"
+            className="group relative bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 rounded-xl md:rounded-2xl p-4 md:p-6 hover:border-red-500/50 transition-all duration-300 hover:bg-zinc-900 mobile-touch-target mobile-card"
           >
             <div className="flex flex-col items-center text-center space-y-2 md:space-y-3">
-              <div className="flex items-center gap-2 px-3 md:px-4 py-2 bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-full text-base md:text-lg font-bold text-white group-hover:from-purple-500/30 group-hover:to-pink-500/30 transition-all mobile-touch-target">
-                <Users size={18} className="text-purple-400 md:w-5 md:h-5" />
-                <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Influencers →</span>
+              <div className="flex items-center gap-2 px-3 md:px-4 py-2 bg-red-600/20 rounded-full text-base md:text-lg font-bold text-white group-hover:bg-red-500/30 group-hover:text-white transition-all mobile-touch-target">
+                <Users size={18} className="text-red-400 md:w-5 md:h-5" />
+                <span className="text-red-400 group-hover:text-red-300">Influencers →</span>
               </div>
               <p className="text-zinc-400 group-hover:text-zinc-300 transition-colors text-xs md:text-sm leading-tight mobile-line-clamp-2">
                 Promote Romanian fashion and earn commissions. Connect your social media accounts to get started.
