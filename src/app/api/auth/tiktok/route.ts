@@ -10,8 +10,11 @@ export async function GET(request: NextRequest) {
   
   // Debug logging
   console.log('TikTok OAuth Debug:', {
-    clientKey: clientKey ? 'SET' : 'NOT SET',
+    clientKey: clientKey ? `MASKED: ${clientKey.slice(0, 4)}...${clientKey.slice(-4)}` : 'NOT SET',
+    clientKeyLength: clientKey?.length || 0,
     redirectUri,
+    scope,
+    finalUrl: `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&response_type=code`,
     allEnvKeys: Object.keys(process.env).filter(key => key.includes('TIKTOK'))
   });
   
