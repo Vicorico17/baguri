@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, CreditCard, AlertTriangle, RefreshCw } from 'lucide-react';
@@ -39,18 +39,7 @@ export default function WithdrawalsAdmin() {
   const [rejecting, setRejecting] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    // Check if admin is authenticated
-    const adminSession = localStorage.getItem('baguri-admin-session');
-    if (adminSession !== 'authenticated') {
-      router.push('/admin/login');
-      return;
-    }
-
-    loadWithdrawals();
-  }, [router]);
-
-  const loadWithdrawals = async () => {
+  const loadWithdrawals = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -76,7 +65,18 @@ export default function WithdrawalsAdmin() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showAll]);
+
+  useEffect(() => {
+    // Check if admin is authenticated
+    const adminSession = localStorage.getItem('baguri-admin-session');
+    if (adminSession !== 'authenticated') {
+      router.push('/admin/login');
+      return;
+    }
+
+    loadWithdrawals();
+  }, [router, loadWithdrawals]);
 
   const handleApprove = async (withdrawalId: string) => {
     try {
@@ -305,7 +305,7 @@ export default function WithdrawalsAdmin() {
             <h3 className="text-lg font-semibold mb-4">Reject Withdrawal</h3>
             <p className="text-zinc-400 mb-4">
               Are you sure you want to reject this withdrawal request? 
-              The funds will be returned to the designer's balance.
+              The funds will be returned to the designer&apos;s balance.
             </p>
             
             <div className="mb-4">
