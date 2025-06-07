@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Check if profile fetch was actually successful
-    if (profileData.error) {
+    if (profileData.error && profileData.error.code !== 'ok') {
       console.error('TikTok Profile API Error:', profileData.error);
       
       // Handle specific TikTok API errors
@@ -145,6 +145,11 @@ export async function GET(request: NextRequest) {
       }
       
       throw new Error(`TikTok API Error: ${profileData.error.message || 'Unknown error'}`);
+    }
+
+    // Log successful response for debugging
+    if (profileData.error && profileData.error.code === 'ok') {
+      console.log('TikTok Profile Success Response:', profileData.error);
     }
 
     // Check if we have minimal required data
