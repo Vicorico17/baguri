@@ -701,7 +701,7 @@ class DesignerService {
     }
   }
 
-  // Request withdrawal
+  // Request withdrawal with IBAN information
   async requestWithdrawal(designerId: string, amount: number): Promise<{ success: boolean; error?: string }> {
     try {
       const wallet = await this.getDesignerWallet(designerId);
@@ -714,23 +714,54 @@ class DesignerService {
       }
 
       if (amount < 50) {
-        return { success: false, error: 'Minimum withdrawal amount is 50 lei' };
+        return { success: false, error: 'Minimum withdrawal amount is 50 RON' };
       }
 
-      // Create withdrawal transaction
+      // Get designer info for IBAN
+      const { data: designer, error: designerError } = await supabase
+        .from('designers')
+        .select('brand_name, email, iban')
+        .eq('id', designerId)
+        .single();
+
+      if (designerError || !designer) {
+        return { success: false, error: 'Designer information not found' };
+      }
+
+      if (!designer.iban) {
+        return { success: false, error: 'IBAN not found. Please add your IBAN before requesting withdrawal.' };
+      }
+
+      // Create withdrawal transaction with metadata
       const { error } = await supabase
         .from('wallet_transactions')
         .insert({
           wallet_id: wallet.id,
+          designer_id: designerId,
           type: 'withdrawal',
           amount: -amount, // Negative for withdrawal
           status: 'pending',
-          description: `Withdrawal request for ${amount} lei`,
+          description: `Withdrawal request of ${amount} RON to ${designer.iban.slice(-4)}`,
         });
 
       if (error) {
         console.error('Error creating withdrawal request:', error);
         return { success: false, error: error.message };
+      }
+
+      // Update wallet balance - move money from balance to pending_balance
+      const { error: walletUpdateError } = await supabase
+        .from('designer_wallets')
+        .update({
+          balance: (wallet.balance - amount).toFixed(2),
+          pending_balance: (wallet.pendingBalance + amount).toFixed(2),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', wallet.id);
+
+      if (walletUpdateError) {
+        console.error('Error updating wallet for withdrawal:', walletUpdateError);
+        return { success: false, error: 'Failed to update wallet balance' };
       }
 
       return { success: true };

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Check, X, Eye, Instagram, Globe, MapPin, Calendar, LogOut, Loader2, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Check, X, Eye, Instagram, Globe, MapPin, Calendar, LogOut, Loader2, RefreshCw, DollarSign } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { TierBadge } from '@/lib/tierUtils';
 import { supabase } from '@/lib/supabase';
@@ -342,6 +342,14 @@ export default function AdminDashboard() {
             </Link>
             
             <div className="flex items-center gap-4">
+              <Link
+                href="/admin/withdrawals"
+                className="flex items-center gap-2 px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium transition"
+              >
+                <DollarSign size={16} />
+                Withdrawals
+              </Link>
+              
               <button
                 onClick={loadDesignerApplications}
                 disabled={loading}

@@ -231,7 +231,7 @@ export function OrderTracker({ sessionId, className }: OrderTrackerProps) {
                 <h4 className="text-white font-medium">{item.product_name}</h4>
                 <div className="flex items-center gap-4 text-sm text-zinc-400 mt-1">
                   <span>Qty: {item.quantity}</span>
-                  <span>€{item.unit_price.toFixed(2)} each</span>
+                  <span>{item.unit_price.toFixed(2)} {order.currency.toUpperCase()} each</span>
                   {!order.is_pending && item.commission_tier && (
                     <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs">
                       {item.commission_tier}
@@ -240,12 +240,12 @@ export function OrderTracker({ sessionId, className }: OrderTrackerProps) {
                 </div>
                 {!order.is_pending && item.designer_earnings > 0 && (
                   <p className="text-green-400 text-xs mt-1">
-                    Designer earnings: €{item.designer_earnings.toFixed(2)} ({item.commission_percentage}%)
+                    Designer earnings: {item.designer_earnings.toFixed(2)} {order.currency.toUpperCase()} ({item.commission_percentage}%)
                   </p>
                 )}
               </div>
               <div className="text-right">
-                <p className="text-white font-semibold">€{item.total_price.toFixed(2)}</p>
+                <p className="text-white font-semibold">{item.total_price.toFixed(2)} {order.currency.toUpperCase()}</p>
               </div>
             </div>
           ))}

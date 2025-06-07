@@ -289,6 +289,190 @@ class AdminService {
       return { success: false, error: 'Failed to reset designer status' };
     }
   }
+
+  // Withdrawal Management Methods
+  async getPendingWithdrawals(): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    try {
+      const { data: withdrawals, error } = await supabase
+        .from('wallet_transactions')
+        .select(`
+          *,
+          designers!wallet_transactions_designer_id_fkey(brand_name, email, iban),
+          designer_wallets!wallet_transactions_wallet_id_fkey(balance)
+        `)
+        .eq('type', 'withdrawal')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching pending withdrawals:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: withdrawals || [] };
+    } catch (error) {
+      console.error('Error in getPendingWithdrawals:', error);
+      return { success: false, error: 'Failed to fetch pending withdrawals' };
+    }
+  }
+
+  async getAllWithdrawals(): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    try {
+      const { data: withdrawals, error } = await supabase
+        .from('wallet_transactions')
+        .select(`
+          *,
+          designers!wallet_transactions_designer_id_fkey(brand_name, email, iban),
+          designer_wallets!wallet_transactions_wallet_id_fkey(balance)
+        `)
+        .eq('type', 'withdrawal')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) {
+        console.error('Error fetching all withdrawals:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: withdrawals || [] };
+    } catch (error) {
+      console.error('Error in getAllWithdrawals:', error);
+      return { success: false, error: 'Failed to fetch withdrawals' };
+    }
+  }
+
+  async approveWithdrawal(transactionId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // First get the transaction details
+      const { data: transaction, error: fetchError } = await supabase
+        .from('wallet_transactions')
+        .select('*')
+        .eq('id', transactionId)
+        .eq('type', 'withdrawal')
+        .eq('status', 'pending')
+        .single();
+
+      if (fetchError || !transaction) {
+        return { success: false, error: 'Withdrawal transaction not found or already processed' };
+      }
+
+      // Update transaction status to completed
+      const { error: updateError } = await supabase
+        .from('wallet_transactions')
+        .update({
+          status: 'completed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', transactionId);
+
+      if (updateError) {
+        console.error('Error approving withdrawal:', updateError);
+        return { success: false, error: updateError.message };
+      }
+
+      // Update wallet - move from pending to withdrawn
+      const withdrawalAmount = Math.abs(transaction.amount);
+      
+      // First get current wallet values
+      const { data: currentWallet, error: walletFetchError } = await supabase
+        .from('designer_wallets')
+        .select('total_withdrawn, pending_balance')
+        .eq('id', transaction.wallet_id)
+        .single();
+
+      if (walletFetchError) {
+        console.error('Error fetching wallet data:', walletFetchError);
+        return { success: false, error: 'Failed to fetch wallet data' };
+      }
+
+      // Update wallet with calculated values
+      const { error: walletError } = await supabase
+        .from('designer_wallets')
+        .update({
+          total_withdrawn: (parseFloat(currentWallet.total_withdrawn) + withdrawalAmount).toFixed(2),
+          pending_balance: (parseFloat(currentWallet.pending_balance) - withdrawalAmount).toFixed(2),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', transaction.wallet_id);
+
+      if (walletError) {
+        console.error('Error updating wallet after withdrawal approval:', walletError);
+        // Don't fail the approval, but log the error
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error in approveWithdrawal:', error);
+      return { success: false, error: 'Failed to approve withdrawal' };
+    }
+  }
+
+  async rejectWithdrawal(transactionId: string, reason?: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // First get the transaction details
+      const { data: transaction, error: fetchError } = await supabase
+        .from('wallet_transactions')
+        .select('*')
+        .eq('id', transactionId)
+        .eq('type', 'withdrawal')
+        .eq('status', 'pending')
+        .single();
+
+      if (fetchError || !transaction) {
+        return { success: false, error: 'Withdrawal transaction not found or already processed' };
+      }
+
+      // Update transaction status to failed with reason
+      const { error: updateError } = await supabase
+        .from('wallet_transactions')
+        .update({
+          status: 'failed',
+          description: reason ? `${transaction.description} - Rejected: ${reason}` : `${transaction.description} - Rejected`,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', transactionId);
+
+      if (updateError) {
+        console.error('Error rejecting withdrawal:', updateError);
+        return { success: false, error: updateError.message };
+      }
+
+      // Return money to designer's balance
+      const withdrawalAmount = Math.abs(transaction.amount);
+      
+      // First get current wallet values
+      const { data: currentWallet, error: walletFetchError } = await supabase
+        .from('designer_wallets')
+        .select('balance, pending_balance')
+        .eq('id', transaction.wallet_id)
+        .single();
+
+      if (walletFetchError) {
+        console.error('Error fetching wallet data for rejection:', walletFetchError);
+        return { success: false, error: 'Failed to fetch wallet data' };
+      }
+
+      // Update wallet with calculated values
+      const { error: walletError } = await supabase
+        .from('designer_wallets')
+        .update({
+          balance: (parseFloat(currentWallet.balance) + withdrawalAmount).toFixed(2),
+          pending_balance: (parseFloat(currentWallet.pending_balance) - withdrawalAmount).toFixed(2),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', transaction.wallet_id);
+
+      if (walletError) {
+        console.error('Error updating wallet after withdrawal rejection:', walletError);
+        return { success: false, error: 'Failed to return funds to designer balance' };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error in rejectWithdrawal:', error);
+      return { success: false, error: 'Failed to reject withdrawal' };
+    }
+  }
 }
 
 export const adminService = new AdminService(); 

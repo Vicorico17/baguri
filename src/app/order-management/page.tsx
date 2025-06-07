@@ -500,12 +500,12 @@ function OrderManagementContent() {
                     <div key={item.id} className="flex items-center justify-between p-4 bg-zinc-800 rounded-lg">
                       <div>
                         <p className="font-medium">{item.product_name}</p>
-                        <p className="text-sm text-zinc-400">Qty: {item.quantity} × €{item.unit_price.toFixed(2)}</p>
+                        <p className="text-sm text-zinc-400">Qty: {item.quantity} × {item.unit_price.toFixed(2)} RON</p>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium">€{item.total_price.toFixed(2)}</p>
-                        <p className="text-sm text-green-400">+€{item.designer_earnings.toFixed(2)}</p>
-                      </div>
+                                              <div className="text-right">
+                          <p className="font-medium">{item.total_price.toFixed(2)} RON</p>
+                          <p className="text-sm text-green-400">+{item.designer_earnings.toFixed(2)} RON</p>
+                        </div>
                     </div>
                   ))}
                 </div>
@@ -517,15 +517,15 @@ function OrderManagementContent() {
                 <div className="bg-zinc-800 rounded-lg p-4 space-y-2">
                   <div className="flex justify-between">
                     <span className="text-zinc-400">Order Total</span>
-                    <span>€{selectedOrder.total_amount.toFixed(2)}</span>
+                    <span>{selectedOrder.total_amount.toFixed(2)} RON</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-zinc-400">Baguri Fee</span>
-                    <span>-€{selectedOrder.baguri_fee.toFixed(2)}</span>
+                    <span>-{selectedOrder.baguri_fee.toFixed(2)} RON</span>
                   </div>
                   <div className="flex justify-between font-medium text-green-400 border-t border-zinc-700 pt-2">
                     <span>Your Earnings</span>
-                    <span>€{selectedOrder.designer_earnings.toFixed(2)}</span>
+                    <span>{selectedOrder.designer_earnings.toFixed(2)} RON</span>
                   </div>
                 </div>
               </div>

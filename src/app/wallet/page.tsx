@@ -91,7 +91,7 @@ function WalletManagement() {
   const [withdrawing, setWithdrawing] = useState(false);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [filterType, setFilterType] = useState<'all' | 'sale' | 'withdrawal' | 'refund'>('all');
-  const [salesTotal, setSalesTotal] = useState(0);
+  const [salesTotal, setSalesTotal] = useState<number | null>(null);
   const [iban, setIban] = useState('');
   const [isEditingIban, setIsEditingIban] = useState(false);
   const [isUpdatingIban, setIsUpdatingIban] = useState(false);
@@ -146,23 +146,46 @@ function WalletManagement() {
     try {
       setIsUpdatingIban(true);
       
-      // Update IBAN through the designer service
-      const response = await fetch('/api/designer/profile', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          iban: iban.trim()
-        }),
-      });
+      // Get the current designer profile
+      const designerProfile = await designerService.getDesignerByUserId(user.id);
+      if (!designerProfile) {
+        alert('Designer profile not found');
+        return;
+      }
 
-      if (response.ok) {
+      // Create a minimal profile update with just the IBAN
+      const profileData = {
+        brandName: designerProfile.brand_name || '',
+        shortDescription: designerProfile.short_description || '',
+        longDescription: designerProfile.long_description || '',
+        city: designerProfile.city || '',
+        yearFounded: designerProfile.year_founded || new Date().getFullYear(),
+        email: designerProfile.email || '',
+        logoUrl: designerProfile.logo_url || '',
+        secondaryLogoUrl: designerProfile.secondary_logo_url || '',
+        instagramHandle: designerProfile.instagram || '',
+        instagramVerified: designerProfile.instagram_verified || false,
+        instagramUserId: designerProfile.instagram_user_id || '',
+        instagramAccessToken: designerProfile.instagram_access_token || '',
+        tiktokHandle: designerProfile.tiktok || '',
+        website: designerProfile.website || '',
+        specialties: designerProfile.specialties || [],
+        fulfillment: designerProfile.fulfillment || 'designer',
+        sellingAs: designerProfile.selling_as || 'not_registered',
+        iban: iban.trim() || '',
+        ownsRights: designerProfile.owns_rights || false,
+        acceptTerms: designerProfile.accept_terms || false,
+        wantsAiPhotos: designerProfile.wants_ai_photos || false,
+      };
+
+      // Update through designer service
+      const result = await designerService.saveDesignerProfile(user.id, profileData);
+
+      if (result.success) {
         setIsEditingIban(false);
         alert('IBAN updated successfully!');
       } else {
-        const errorData = await response.json();
-        alert(`Error updating IBAN: ${errorData.error || 'Unknown error'}`);
+        alert(`Error updating IBAN: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error updating IBAN:', error);
@@ -199,22 +222,15 @@ function WalletManagement() {
     try {
       setWithdrawing(true);
       
-      // Call withdrawal API
-      const response = await fetch('/api/wallet/withdraw', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: amount,
-          bankDetails: {
-            iban: iban.trim(),
-            method: 'bank_transfer'
-          }
-        }),
-      });
+      // Get designer profile
+      const designerProfile = await designerService.getDesignerByUserId(user.id);
+      if (!designerProfile) {
+        alert('Designer profile not found');
+        return;
+      }
 
-      const result = await response.json();
+      // Use designer service for withdrawal
+      const result = await designerService.requestWithdrawal(designerProfile.id, amount);
       
       if (result.success) {
         alert('Withdrawal request submitted successfully! We will process it within 2-3 business days.');
@@ -227,11 +243,9 @@ function WalletManagement() {
           setWallet(dashboardData.wallet);
         }
         
-        const designerProfile = await designerService.getDesignerByUserId(user.id);
-        if (designerProfile) {
-          const walletTransactions = await designerService.getWalletTransactions(designerProfile.id);
-          setTransactions(walletTransactions);
-        }
+        // Reload transactions
+        const walletTransactions = await designerService.getWalletTransactions(designerProfile.id);
+        setTransactions(walletTransactions);
       } else {
         alert(`Error: ${result.error}`);
       }
@@ -292,8 +306,8 @@ function WalletManagement() {
     return null; // Will redirect
   }
 
-  const currentLevel = getCurrentLevel(salesTotal);
-  const progressToNext = currentLevel.nextAt ? Math.min((salesTotal / currentLevel.nextAt) * 100, 100) : 100;
+  const currentLevel = getCurrentLevel(salesTotal || 0);
+  const progressToNext = currentLevel.nextAt ? Math.min(((salesTotal || 0) / currentLevel.nextAt) * 100, 100) : 100;
 
   return (
     <div className="min-h-screen bg-black text-white relative">
@@ -349,26 +363,20 @@ function WalletManagement() {
                   
                   <div className="mb-6">
                     <div className="text-4xl font-bold text-green-400 mb-2">
-                      {balanceVisible ? `${wallet?.balance?.toFixed(2) || '0.00'} RON` : '••••••'}
+                      {balanceVisible ? (wallet?.balance && wallet.balance > 0 ? `${wallet.balance.toFixed(2)} RON` : '') : '••••••'}
                     </div>
-                    {wallet?.pendingBalance && wallet.pendingBalance > 0 && (
+                    {(wallet?.pendingBalance || 0) > 0 && (
                       <div className="text-sm text-amber-400">
-                        {wallet.pendingBalance.toFixed(2)} RON pending withdrawal
+                        {wallet!.pendingBalance.toFixed(2)} RON pending withdrawal
                       </div>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="bg-black/20 rounded-lg p-4">
-                      <div className="text-sm text-zinc-400 mb-1">Total Earnings</div>
-                      <div className="text-xl font-bold text-white">
-                        {balanceVisible ? `${wallet?.totalEarnings?.toFixed(2) || '0.00'} RON` : '••••••'}
-                      </div>
-                    </div>
+                  <div className="grid grid-cols-1 gap-4 mb-6">
                     <div className="bg-black/20 rounded-lg p-4">
                       <div className="text-sm text-zinc-400 mb-1">Total Withdrawn</div>
                       <div className="text-xl font-bold text-white">
-                        {balanceVisible ? `${wallet?.totalWithdrawn?.toFixed(2) || '0.00'} RON` : '••••••'}
+                        {balanceVisible ? (wallet?.totalWithdrawn ? `${wallet.totalWithdrawn.toFixed(2)} RON` : '-') : '••••••'}
                       </div>
                     </div>
                   </div>
@@ -390,34 +398,46 @@ function WalletManagement() {
                 </div>
 
                 {/* Commission Level Card */}
-                <div className="bg-gradient-to-br from-purple-900/20 to-pink-900/20 rounded-xl p-6 border border-purple-500/20">
-                  <div className="flex items-center gap-3 mb-4">
-                    <currentLevel.icon className={`${currentLevel.color}`} size={24} />
-                    <h2 className="text-xl font-semibold">{currentLevel.name}</h2>
+                <div className={`rounded-xl ${
+                  currentLevel.id === 'platinum' 
+                    ? 'p-4 bg-gradient-to-br from-purple-900/30 via-pink-900/20 to-purple-900/30 border-2 border-purple-400/40 shadow-lg shadow-purple-500/20 relative overflow-hidden' 
+                    : 'p-6'
+                } ${
+                  currentLevel.id === 'gold'
+                    ? 'bg-gradient-to-br from-yellow-900/20 to-orange-900/20 border border-yellow-500/20'
+                    : currentLevel.id === 'silver'
+                    ? 'bg-gradient-to-br from-gray-700/20 to-gray-600/20 border border-gray-500/20'
+                    : currentLevel.id === 'bronze'
+                    ? 'bg-gradient-to-br from-orange-900/20 to-red-900/20 border border-orange-500/20'
+                    : ''
+                }`}>
+                  {currentLevel.id === 'platinum' && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-purple-500/10 animate-pulse"></div>
+                  )}
+                  <div className={`flex items-center gap-3 relative z-10 ${
+                    currentLevel.id === 'platinum' ? 'mb-3' : 'mb-4'
+                  }`}>
+                    <currentLevel.icon className={`${currentLevel.color}`} size={currentLevel.id === 'platinum' ? 20 : 24} />
+                    <h2 className={`font-semibold ${currentLevel.id === 'platinum' ? 'text-lg' : 'text-xl'}`}>{currentLevel.name}</h2>
                     <Link 
                       href="/commission-levels"
-                      className="ml-auto text-purple-400 hover:text-purple-300 transition"
+                      className={`ml-auto transition ${
+                        currentLevel.id === 'platinum' 
+                          ? 'text-purple-300 hover:text-purple-200' 
+                          : 'text-purple-400 hover:text-purple-300'
+                      }`}
                     >
                       <Info size={20} />
                     </Link>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div className="bg-black/20 rounded-lg p-4">
-                      <div className="text-sm text-zinc-400 mb-1">You Keep</div>
-                      <div className="text-2xl font-bold text-green-400">{currentLevel.earnings}%</div>
-                    </div>
-                    <div className="bg-black/20 rounded-lg p-4">
-                      <div className="text-sm text-zinc-400 mb-1">Platform Fee</div>
-                      <div className="text-2xl font-bold text-red-400">{currentLevel.commission}%</div>
-                    </div>
-                  </div>
 
-                  {currentLevel.nextAt && (
-                    <div>
+
+                  {currentLevel.nextAt && salesTotal && salesTotal > 0 && (
+                    <div className="relative z-10">
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-sm text-zinc-400">
-                          {salesTotal} RON / {currentLevel.nextAt} RON to next level
+                          Progress to {COMMISSION_LEVELS.find(l => l.threshold === currentLevel.nextAt)?.name || 'next level'}
                         </span>
                         <span className="text-sm text-zinc-400">
                           {Math.round(progressToNext)}%
@@ -425,19 +445,30 @@ function WalletManagement() {
                       </div>
                       <div className="w-full bg-zinc-700 rounded-full h-2">
                         <div 
-                          className="bg-gradient-to-r from-purple-400 to-pink-400 h-2 rounded-full transition-all duration-500"
+                          className={`h-2 rounded-full transition-all duration-500 ${
+                            currentLevel.id === 'platinum'
+                              ? 'bg-gradient-to-r from-purple-400 via-pink-400 to-purple-500'
+                              : currentLevel.id === 'gold'
+                              ? 'bg-gradient-to-r from-yellow-400 to-orange-400'
+                              : currentLevel.id === 'silver'
+                              ? 'bg-gradient-to-r from-gray-400 to-gray-500'
+                              : 'bg-gradient-to-r from-orange-400 to-red-400'
+                          }`}
                           style={{ width: `${progressToNext}%` }}
                         ></div>
                       </div>
                     </div>
                   )}
+                  
+                  {currentLevel.nextAt && (!salesTotal || salesTotal === 0) && (
+                    <div className="text-center p-4 bg-zinc-800/30 rounded-lg relative z-10">
+                      <p className="text-sm text-zinc-400 mb-1">
+                        Make your first sale to start progressing to {COMMISSION_LEVELS.find(l => l.threshold === currentLevel.nextAt)?.name || 'next level'}!
+                      </p>
+                    </div>
+                  )}
 
-                  <Link
-                    href="/commission-levels"
-                    className="block w-full mt-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-2 px-4 rounded-lg font-medium transition text-center"
-                  >
-                    View All Levels
-                  </Link>
+
                 </div>
 
                 {/* Transactions */}
@@ -508,7 +539,7 @@ function WalletManagement() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="text-zinc-400">Total Sales</span>
-                      <span className="font-bold">{salesTotal.toFixed(2)} RON</span>
+                      <span className="font-bold">{salesTotal && salesTotal > 0 ? `${salesTotal.toFixed(2)} RON` : '-'}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-zinc-400">Commission Rate</span>
