@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     environmentCheck: {
       hasClientKey: !!process.env.TIKTOK_CLIENT_KEY,
       hasClientSecret: !!process.env.TIKTOK_CLIENT_SECRET,
-      redirectUri: process.env.TIKTOK_REDIRECT_URI || `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/tiktok/callback`
+      redirectUri: 'https://baguri.ro/api/auth/tiktok/callback'
     }
   });
 
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
         client_secret: process.env.TIKTOK_CLIENT_SECRET!,
         code: code,
         grant_type: 'authorization_code',
-        redirect_uri: process.env.TIKTOK_REDIRECT_URI || `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/tiktok/callback`,
+        redirect_uri: 'https://baguri.ro/api/auth/tiktok/callback', // Must match TikTok Developer Console exactly
       }),
     });
 
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        fields: ['open_id', 'union_id', 'avatar_url', 'display_name', 'username', 'follower_count', 'following_count', 'likes_count', 'video_count']
+        fields: ['open_id', 'union_id', 'avatar_url', 'display_name', 'username']
       }),
     });
     
@@ -99,8 +99,7 @@ export async function GET(request: NextRequest) {
       openId: open_id,
       username: profileData.data?.user?.username,
       displayName: profileData.data?.user?.display_name,
-      followerCount: profileData.data?.user?.follower_count,
-      videoCount: profileData.data?.user?.video_count,
+      avatarUrl: profileData.data?.user?.avatar_url,
     });
 
     // Redirect to influencer dashboard or onboarding
