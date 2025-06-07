@@ -99,8 +99,8 @@ export async function GET(request: NextRequest) {
 
     console.log('Starting TikTok profile fetch...');
 
-    // Get user profile information - Use correct TikTok API v2 endpoint
-    const profileResponse = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name', {
+    // Get user profile information - Use correct TikTok API v2 endpoint with all available fields
+    const profileResponse = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,username,follower_count,following_count,likes_count,video_count', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${access_token}`,
@@ -166,8 +166,20 @@ export async function GET(request: NextRequest) {
       displayName: profileData.data?.user?.display_name || 'TikTok User',
     });
 
-    // Redirect to influencer dashboard or onboarding
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-dashboard?platform=tiktok&success=true&name=${encodeURIComponent(profileData.data?.user?.display_name || 'TikTok User')}`);
+    // Store user data in session and redirect to verification
+    const userData = profileData.data?.user;
+    const userParams = new URLSearchParams({
+      platform: 'tiktok',
+      success: 'true',
+      name: userData?.display_name || 'TikTok User',
+      username: userData?.username || '',
+      followers: userData?.follower_count?.toString() || '0',
+      likes: userData?.likes_count?.toString() || '0',
+      videos: userData?.video_count?.toString() || '0',
+      open_id: open_id
+    });
+    
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-verification?${userParams.toString()}`);
 
   } catch (error) {
     console.error('TikTok OAuth callback error:', {
