@@ -1,51 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { designerService } from '@/lib/designerService';
 
 // Force dynamic rendering for this route since it uses request.url
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams;
+  const code = searchParams.get('code');
+  const error = searchParams.get('error');
+  const state = searchParams.get('state');
+
+  if (error) {
+    console.error('Instagram OAuth error:', error);
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-auth?error=instagram_denied`);
+  }
+
+  if (!code) {
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-auth?error=no_code`);
+  }
+
   try {
-    const { searchParams } = new URL(request.url);
-    const code = searchParams.get('code');
-    const state = searchParams.get('state');
-    const error = searchParams.get('error');
+    // Exchange code for access token
+    const tokenResponse = await fetch('https://api.instagram.com/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: process.env.INSTAGRAM_CLIENT_ID!,
+        client_secret: process.env.INSTAGRAM_CLIENT_SECRET!,
+        grant_type: 'authorization_code',
+        redirect_uri: process.env.INSTAGRAM_REDIRECT_URI || `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/instagram/callback`,
+        code: code,
+      }),
+    });
 
-    // Handle OAuth errors (user denied access)
-    if (error) {
-      console.log('Instagram OAuth error:', error);
-      return NextResponse.redirect(
-        new URL('/designer-dashboard?instagram_error=access_denied', request.url)
-      );
+    if (!tokenResponse.ok) {
+      throw new Error('Failed to exchange code for token');
     }
 
-    // Validate required parameters
-    if (!code || !state) {
-      console.error('Missing code or state parameter');
-      return NextResponse.redirect(
-        new URL('/designer-dashboard?instagram_error=invalid_request', request.url)
-      );
+    const tokenData = await tokenResponse.json();
+    const { access_token, user_id } = tokenData;
+
+    // Get user profile information
+    const profileResponse = await fetch(`https://graph.instagram.com/me?fields=id,username,account_type,media_count&access_token=${access_token}`);
+    
+    if (!profileResponse.ok) {
+      throw new Error('Failed to fetch user profile');
     }
 
-    // Verify the callback and get Instagram data
-    const result = await designerService.verifyInstagramCallback(code, state);
+    const profileData = await profileResponse.json();
 
-    if (!result.success) {
-      console.error('Instagram verification failed:', result.error);
-      return NextResponse.redirect(
-        new URL(`/designer-dashboard?instagram_error=${encodeURIComponent(result.error || 'verification_failed')}`, request.url)
-      );
-    }
+    // TODO: Store influencer data in database
+    // For now, redirect to influencer dashboard with success
+    console.log('Instagram user authenticated:', {
+      userId: user_id,
+      username: profileData.username,
+      accountType: profileData.account_type,
+      mediaCount: profileData.media_count,
+    });
 
-    // Success - redirect back to dashboard with success message
-    return NextResponse.redirect(
-      new URL('/designer-dashboard?instagram_success=true', request.url)
-    );
+    // Redirect to influencer dashboard or onboarding
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-dashboard?platform=instagram&success=true`);
 
   } catch (error) {
-    console.error('Instagram callback error:', error);
-    return NextResponse.redirect(
-      new URL('/designer-dashboard?instagram_error=server_error', request.url)
-    );
+    console.error('Instagram OAuth callback error:', error);
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-auth?error=callback_failed`);
   }
 } 
