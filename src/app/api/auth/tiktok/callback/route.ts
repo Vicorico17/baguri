@@ -99,16 +99,12 @@ export async function GET(request: NextRequest) {
 
     console.log('Starting TikTok profile fetch...');
 
-    // Get user profile information - Try minimal fields first for privacy compatibility
-    const profileResponse = await fetch('https://open.tiktokapis.com/v2/user/info/', {
-      method: 'POST',
+    // Get user profile information - Use correct TikTok API v2 endpoint
+    const profileResponse = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name', {
+      method: 'GET',
       headers: {
         'Authorization': `Bearer ${access_token}`,
-        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        fields: ['open_id', 'display_name'] // Minimal fields for privacy compatibility
-      }),
     });
     
     console.log('Profile response status:', profileResponse.status, profileResponse.statusText);
