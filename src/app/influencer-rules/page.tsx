@@ -105,7 +105,7 @@ export default function InfluencerRules() {
                 <h3 className="text-lg font-semibold text-yellow-400 mb-2">Important Notice</h3>
                 <p className="text-yellow-100/90">
                   We will verify these requirements after you connect your TikTok account. 
-                  Accounts that don't meet the minimum criteria will not be approved for the influencer program.
+                  Accounts that don&apos;t meet the minimum criteria will not be approved for the influencer program.
                 </p>
               </div>
             </div>

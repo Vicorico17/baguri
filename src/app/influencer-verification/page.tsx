@@ -123,7 +123,7 @@ function InfluencerVerificationContent() {
               <p className="text-zinc-400 mb-4">@{userData.username}</p>
             )}
             <p className="text-zinc-400 text-lg">
-              Let's check if your TikTok account meets our influencer requirements
+              Let&apos;s check if your TikTok account meets our influencer requirements
             </p>
           </div>
 
@@ -277,7 +277,7 @@ function InfluencerVerificationContent() {
                   Requirements Not Met
                 </h2>
                 <p className="text-yellow-100/90 mb-6">
-                  Unfortunately, your TikTok account doesn't meet all the requirements to become a Baguri influencer at this time. 
+                  Unfortunately, your TikTok account doesn&apos;t meet all the requirements to become a Baguri influencer at this time. 
                   Keep growing your account and try again when you meet the minimum requirements!
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
