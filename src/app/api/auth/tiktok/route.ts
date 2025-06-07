@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
     }, { status: 500 });
   }
 
-  // Build TikTok OAuth URL
-  const tiktokAuthUrl = new URL('https://www.tiktok.com/v2/auth/authorize/');
+  // Build TikTok OAuth URL - Use sandbox for development
+  const tiktokAuthUrl = new URL('https://sandbox-www.tiktok.com/v2/auth/authorize/');
   tiktokAuthUrl.searchParams.set('client_key', clientKey);
   tiktokAuthUrl.searchParams.set('redirect_uri', redirectUri);
   tiktokAuthUrl.searchParams.set('scope', scope);
