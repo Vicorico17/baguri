@@ -7,7 +7,7 @@ import { BackgroundPaths } from "@/components/ui/background-paths";
 
 export default function MainPage() {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-zinc-950">
+    <div className="min-h-screen bg-black text-white relative">
       <BackgroundPaths />
       
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 safe-area-inset">
@@ -107,6 +107,6 @@ export default function MainPage() {
           </Link>
         </div>
       </div>
-    </main>
+    </div>
   );
 } 

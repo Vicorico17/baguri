@@ -42,6 +42,12 @@ export default function InfluencerAuthContent() {
         case 'profile_error':
           setError('Unable to fetch your TikTok profile. Please ensure your account privacy settings allow app access.');
           break;
+        case 'network_error':
+          setError('Network connection failed. Please check your internet connection and try again.');
+          break;
+        case 'privacy_restricted':
+          setError('Unable to access your TikTok profile due to privacy settings. Please ensure your TikTok account is set to public or allows third-party app access, then try again.');
+          break;
         default:
           setError('An unexpected error occurred. Please try again or contact support.');
       }

@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
 
     console.log('Starting TikTok profile fetch...');
 
-    // Get user profile information - Sandbox credentials work with production API
+    // Get user profile information - Try minimal fields first for privacy compatibility
     const profileResponse = await fetch('https://open.tiktokapis.com/v2/user/info/', {
       method: 'POST',
       headers: {
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        fields: ['open_id', 'union_id', 'avatar_url', 'display_name', 'username']
+        fields: ['open_id', 'display_name'] // Minimal fields for privacy compatibility
       }),
     });
     
@@ -121,6 +121,12 @@ export async function GET(request: NextRequest) {
         responseBody: errorText,
         headers: Object.fromEntries(profileResponse.headers.entries())
       });
+      
+      // Handle specific privacy/permission errors
+      if (profileResponse.status === 403) {
+        return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-auth?error=privacy_restricted&message=${encodeURIComponent('Unable to fetch your TikTok profile. Please ensure your account privacy settings allow app access.')}`);
+      }
+      
       throw new Error(`Failed to fetch user profile: ${profileResponse.status} - ${errorText}`);
     }
 
@@ -136,20 +142,31 @@ export async function GET(request: NextRequest) {
     // Check if profile fetch was actually successful
     if (profileData.error) {
       console.error('TikTok Profile API Error:', profileData.error);
+      
+      // Handle specific TikTok API errors
+      if (profileData.error.code === 'access_denied' || profileData.error.message?.includes('privacy')) {
+        return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-auth?error=privacy_restricted&message=${encodeURIComponent('Unable to fetch your TikTok profile. Please ensure your account privacy settings allow app access.')}`);
+      }
+      
       throw new Error(`TikTok API Error: ${profileData.error.message || 'Unknown error'}`);
+    }
+
+    // Check if we have minimal required data
+    if (!profileData.data?.user?.open_id) {
+      console.error('TikTok Profile: Missing required user data');
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-auth?error=privacy_restricted&message=${encodeURIComponent('Unable to fetch your TikTok profile. Please ensure your account privacy settings allow app access.')}`);
     }
 
     // TODO: Store influencer data in database
     // For now, redirect to influencer dashboard with success
     console.log('TikTok user authenticated successfully:', {
       openId: open_id,
-      username: profileData.data?.user?.username,
-      displayName: profileData.data?.user?.display_name,
-      avatarUrl: profileData.data?.user?.avatar_url,
+      profileOpenId: profileData.data?.user?.open_id,
+      displayName: profileData.data?.user?.display_name || 'TikTok User',
     });
 
     // Redirect to influencer dashboard or onboarding
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-dashboard?platform=tiktok&success=true`);
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-dashboard?platform=tiktok&success=true&name=${encodeURIComponent(profileData.data?.user?.display_name || 'TikTok User')}`);
 
   } catch (error) {
     console.error('TikTok OAuth callback error:', {
