@@ -113,7 +113,7 @@ export default function InfluencerRules() {
 
           {/* Benefits Section */}
           <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-500/20 rounded-xl p-8 mb-8">
-            <h2 className="text-2xl font-semibold mb-6 text-center">What You'll Get</h2>
+            <h2 className="text-2xl font-semibold mb-6 text-center">What You&apos;ll Get</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="text-center">
                 <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
