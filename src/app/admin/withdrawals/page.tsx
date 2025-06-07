@@ -392,10 +392,7 @@ function WithdrawalCard({
     });
   };
 
-  const maskIban = (iban: string) => {
-    if (!iban || iban.length < 8) return iban;
-    return `${iban.slice(0, 4)}****${iban.slice(-4)}`;
-  };
+
 
   return (
     <div className={`border rounded-lg p-6 ${getStatusColor(withdrawal.status)}`}>
@@ -422,7 +419,7 @@ function WithdrawalCard({
         
         <div>
           <div className="text-sm opacity-75">IBAN</div>
-          <div className="font-mono text-sm">{maskIban(withdrawal.designers.iban)}</div>
+          <div className="font-mono text-sm">{withdrawal.designers.iban}</div>
         </div>
         
         <div>

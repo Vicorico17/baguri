@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Instagram, Music, Users, DollarSign, TrendingUp, Eye, Share2, CheckCircle } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 
-export default function InfluencerDashboard() {
+function InfluencerDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [platform, setPlatform] = useState<'instagram' | 'tiktok' | null>(null);
@@ -95,7 +95,7 @@ export default function InfluencerDashboard() {
           <div className="mb-8">
             <h2 className="text-2xl font-bold mb-2">Welcome to Baguri Influencer Program!</h2>
             <p className="text-zinc-400">
-              You're now part of our exclusive network promoting Romanian fashion designers.
+              You&apos;re now part of our exclusive network promoting Romanian fashion designers.
             </p>
           </div>
 
@@ -244,4 +244,20 @@ export default function InfluencerDashboard() {
       </div>
     </div>
   );
-} 
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+    </div>
+  );
+}
+
+export default function InfluencerDashboard() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <InfluencerDashboardContent />
+    </Suspense>
+  );
+}
