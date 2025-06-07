@@ -92,6 +92,9 @@ function WalletManagement() {
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [filterType, setFilterType] = useState<'all' | 'sale' | 'withdrawal' | 'refund'>('all');
   const [salesTotal, setSalesTotal] = useState(0);
+  const [iban, setIban] = useState('');
+  const [isEditingIban, setIsEditingIban] = useState(false);
+  const [isUpdatingIban, setIsUpdatingIban] = useState(false);
   const router = useRouter();
   
   const { loading, user, initialized } = useDesignerAuth();
@@ -118,9 +121,10 @@ function WalletManagement() {
           setWallet(dashboardData.wallet);
           setSalesTotal(dashboardData.salesTotal || 0);
           
-          // Get designer profile to get designer ID
+          // Get designer profile to get designer ID and IBAN
           const designerProfile = await designerService.getDesignerByUserId(user.id);
           if (designerProfile) {
+            setIban(designerProfile.iban || '');
             const walletTransactions = await designerService.getWalletTransactions(designerProfile.id);
             setTransactions(walletTransactions);
           }
@@ -135,6 +139,38 @@ function WalletManagement() {
 
     loadWalletData();
   }, [user?.id]);
+
+  const handleUpdateIban = async () => {
+    if (!user?.id) return;
+    
+    try {
+      setIsUpdatingIban(true);
+      
+      // Update IBAN through the designer service
+      const response = await fetch('/api/designer/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          iban: iban.trim()
+        }),
+      });
+
+      if (response.ok) {
+        setIsEditingIban(false);
+        alert('IBAN updated successfully!');
+      } else {
+        const errorData = await response.json();
+        alert(`Error updating IBAN: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating IBAN:', error);
+      alert('Failed to update IBAN');
+    } finally {
+      setIsUpdatingIban(false);
+    }
+  };
 
   const handleWithdrawal = async () => {
     if (!user?.id || !wallet) return;
@@ -155,6 +191,11 @@ function WalletManagement() {
       return;
     }
 
+    if (!iban || iban.trim() === '') {
+      alert('Please add your IBAN before requesting a withdrawal');
+      return;
+    }
+
     try {
       setWithdrawing(true);
       
@@ -167,7 +208,7 @@ function WalletManagement() {
         body: JSON.stringify({
           amount: amount,
           bankDetails: {
-            // Add bank details form later
+            iban: iban.trim(),
             method: 'bank_transfer'
           }
         }),
@@ -537,15 +578,68 @@ function WalletManagement() {
             </div>
 
             <div className="mb-6">
-              <div className="bg-zinc-800/50 rounded-lg p-4 border border-zinc-600">
-                <div className="flex items-center gap-2 mb-2">
-                  <CreditCard size={16} className="text-blue-400" />
-                  <span className="text-sm font-medium">Bank Transfer</span>
+              <label className="block text-sm font-medium mb-2">
+                Bank Account (IBAN)
+              </label>
+              
+              {!isEditingIban ? (
+                <div className="bg-zinc-800/50 rounded-lg p-4 border border-zinc-600">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CreditCard size={16} className="text-blue-400" />
+                      <span className="text-sm font-medium">
+                        {iban ? `${iban.substring(0, 4)}****${iban.substring(iban.length - 4)}` : 'No IBAN set'}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setIsEditingIban(true)}
+                      className="text-blue-400 hover:text-blue-300 text-sm underline"
+                    >
+                      {iban ? 'Edit' : 'Add IBAN'}
+                    </button>
+                  </div>
+                  {iban && (
+                    <p className="text-xs text-zinc-400 mt-2">
+                      Funds will be transferred to this account within 2-3 business days.
+                    </p>
+                  )}
                 </div>
-                <p className="text-xs text-zinc-400">
-                  Funds will be transferred to your registered bank account within 2-3 business days.
-                </p>
-              </div>
+              ) : (
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={iban}
+                    onChange={(e) => setIban(e.target.value.toUpperCase())}
+                    placeholder="RO49AAAA1B31007593840000"
+                    className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-3 text-white placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleUpdateIban}
+                      disabled={isUpdatingIban}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-600 text-white py-2 px-4 rounded-lg font-medium transition flex items-center justify-center gap-2"
+                    >
+                      {isUpdatingIban ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Saving...
+                        </>
+                      ) : (
+                        'Save IBAN'
+                      )}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsEditingIban(false);
+                        // Reset to original value if canceling
+                      }}
+                      className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-white py-2 px-4 rounded-lg font-medium transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3">
@@ -557,7 +651,7 @@ function WalletManagement() {
               </button>
               <button
                 onClick={handleWithdrawal}
-                disabled={withdrawing || !withdrawalAmount || parseFloat(withdrawalAmount) < 50}
+                disabled={withdrawing || !withdrawalAmount || parseFloat(withdrawalAmount) < 50 || !iban || iban.trim() === ''}
                 className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white py-3 px-6 rounded-lg font-medium transition flex items-center justify-center gap-2"
               >
                 {withdrawing ? (
@@ -573,6 +667,12 @@ function WalletManagement() {
                 )}
               </button>
             </div>
+            
+            {(!iban || iban.trim() === '') && (
+              <p className="text-sm text-amber-400 text-center mt-2">
+                ⚠️ Please add your IBAN to enable withdrawals
+              </p>
+            )}
           </div>
         </div>
       )}

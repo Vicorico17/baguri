@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Alert } from "@/components/ui/alert";
 import { X, ShoppingBag, Eye, Clock, Users, TrendingUp } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 interface ScarcityNotification {
   id: string;
@@ -15,6 +16,15 @@ interface ScarcityNotification {
   urgent?: boolean;
 }
 
+interface LiveProduct {
+  id: string;
+  name: string;
+  price: string;
+  designer: {
+    brand_name: string;
+  };
+}
+
 interface ScarcityNotificationsProps {
   enabled?: boolean;
   interval?: number; // seconds between notifications
@@ -22,7 +32,7 @@ interface ScarcityNotificationsProps {
   className?: string;
 }
 
-// Fake data for scarcity notifications
+// Customer and location data for notifications (kept as mock data for variety)
 const FAKE_CUSTOMERS = [
   "Alexandra M.", "Mihai C.", "Ioana P.", "Adrian S.", "Elena R.",
   "Cristian B.", "Maria D.", "Andrei T.", "Raluca N.", "Vlad F.",
@@ -30,6 +40,7 @@ const FAKE_CUSTOMERS = [
   "Florin R.", "Diana S.", "Bogdan P.", "Roxana I.", "Catalin E."
 ];
 
+// Fallback products (used only if no live products are available)
 const FAKE_PRODUCTS = [
   "Elegant Evening Dress", "Casual Summer Top", "Designer Jeans",
   "Luxury Handbag", "Stylish Sneakers", "Vintage Jacket",
@@ -52,13 +63,79 @@ export function ScarcityNotifications({
   const [notifications, setNotifications] = useState<ScarcityNotification[]>([]);
   const [isEnabled, setIsEnabled] = useState(enabled);
   const [snoozeUntil, setSnoozeUntil] = useState<number | null>(null);
+  const [liveProducts, setLiveProducts] = useState<LiveProduct[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
 
-  // Generate fake notification data
+  // Load live products from database
+  useEffect(() => {
+    const loadLiveProducts = async () => {
+      try {
+        const { data: products, error } = await supabase
+          .from('designer_products')
+          .select(`
+            id,
+            name,
+            price,
+            designer_id,
+            designers!designer_id (
+              brand_name
+            )
+          `)
+          .eq('is_live', true)
+          .eq('designers.status', 'approved')
+          .limit(20); // Limit to prevent too many products
+
+        if (error) {
+          console.error('Error loading live products for notifications:', error);
+          // Fall back to fake products if real ones fail to load
+          setLiveProducts([]);
+        } else {
+          // Transform the data to match our interface
+          const transformedProducts = (products || []).map(product => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            designer: {
+              brand_name: (product.designers as any)?.brand_name || 'Unknown Designer'
+            }
+          }));
+          setLiveProducts(transformedProducts);
+          console.log(`📢 Loaded ${transformedProducts.length} live products for notifications`);
+        }
+      } catch (error) {
+        console.error('Error loading live products:', error);
+        setLiveProducts([]);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+
+    loadLiveProducts();
+  }, []);
+
+  // Generate notification data using real products
   const generateNotification = (): ScarcityNotification => {
+    // Don't show notifications if we're still loading products or have no products
+    if (loadingProducts || (!liveProducts.length && FAKE_PRODUCTS.length === 0)) {
+      return null as any; // This will be filtered out
+    }
+
     const types: ScarcityNotification["type"][] = ["purchase", "viewing", "stock", "trending"];
     const type = types[Math.floor(Math.random() * types.length)];
     const customer = FAKE_CUSTOMERS[Math.floor(Math.random() * FAKE_CUSTOMERS.length)];
-    const product = FAKE_PRODUCTS[Math.floor(Math.random() * FAKE_PRODUCTS.length)];
+    
+    // Use real products if available, otherwise fall back to fake ones
+    let productName: string;
+    let designerName: string = "Unknown Designer";
+    
+    if (liveProducts.length > 0) {
+      const randomProduct = liveProducts[Math.floor(Math.random() * liveProducts.length)];
+      productName = randomProduct.name;
+      designerName = randomProduct.designer.brand_name;
+    } else {
+      productName = FAKE_PRODUCTS[Math.floor(Math.random() * FAKE_PRODUCTS.length)];
+    }
+    
     const location = FAKE_LOCATIONS[Math.floor(Math.random() * FAKE_LOCATIONS.length)];
     const viewCount = Math.floor(Math.random() * 28) + 3; // 3-30 viewers
     const stockCount = Math.floor(Math.random() * 8) + 1; // 1-8 items left
@@ -72,27 +149,27 @@ export function ScarcityNotifications({
     switch (type) {
       case "purchase":
         title = "Recent Purchase";
-        message = `${customer} from ${location} just bought "${product}"`;
+        message = `${customer} from ${location} just bought "${productName}"${liveProducts.length > 0 ? ` by ${designerName}` : ''}`;
         duration = 6000;
         break;
       
       case "viewing":
         title = "High Interest";
-        message = `${viewCount} people are currently viewing "${product}"`;
+        message = `${viewCount} people are currently viewing "${productName}"${liveProducts.length > 0 ? ` by ${designerName}` : ''}`;
         urgent = viewCount > 20;
         duration = 7000;
         break;
       
       case "stock":
         title = "Low Stock Alert";
-        message = `Only ${stockCount} left of "${product}" - hurry!`;
+        message = `Only ${stockCount} left of "${productName}"${liveProducts.length > 0 ? ` by ${designerName}` : ''} - hurry!`;
         urgent = stockCount <= 3;
         duration = 10000; // Longer for urgency
         break;
       
       case "trending":
         title = "Trending Now";
-        message = `"${product}" is popular - ${Math.floor(Math.random() * 15) + 5} sold today`;
+        message = `"${productName}"${liveProducts.length > 0 ? ` by ${designerName}` : ''} is popular - ${Math.floor(Math.random() * 15) + 5} sold today`;
         duration = 8000;
         break;
     }
@@ -162,13 +239,16 @@ export function ScarcityNotifications({
 
   // Show notifications at intervals
   useEffect(() => {
-    if (!isEnabled || isNotificationsSnoozed()) return;
+    if (!isEnabled || isNotificationsSnoozed() || loadingProducts) return;
 
     const showNotification = () => {
       // Double-check snooze status before showing
-      if (isNotificationsSnoozed()) return;
+      if (isNotificationsSnoozed() || loadingProducts) return;
       
       const notification = generateNotification();
+      
+      // Don't add notification if it's null (no products available)
+      if (!notification) return;
       
       setNotifications(prev => {
         const updated = [notification, ...prev];
@@ -192,7 +272,7 @@ export function ScarcityNotifications({
       clearTimeout(initialDelay);
       clearInterval(intervalId);
     };
-  }, [isEnabled, interval, maxVisible, snoozeUntil]);
+  }, [isEnabled, interval, maxVisible, snoozeUntil, loadingProducts, liveProducts]);
 
   const snoozeNotifications = () => {
     const snoozeTime = Date.now() + (51 * 1000); // 51 seconds from now
