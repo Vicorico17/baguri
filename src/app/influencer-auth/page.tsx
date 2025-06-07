@@ -1,22 +1,77 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Music } from 'lucide-react';
+import { ArrowLeft, Music, AlertTriangle, RefreshCw } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
+import { useSearchParams } from 'next/navigation';
 
 export default function InfluencerAuth() {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const errorParam = searchParams?.get('error');
+    
+    if (errorParam) {
+      switch (errorParam) {
+        case 'callback_failed':
+          setError('TikTok connection failed. This could be due to a temporary issue with TikTok servers or your account permissions. Please try again.');
+          break;
+        case 'tiktok_denied':
+          setError('TikTok authorization was denied. You need to authorize Baguri to access your TikTok profile to become an influencer.');
+          break;
+        case 'no_code':
+          setError('TikTok authorization incomplete. Please try connecting again.');
+          break;
+        case 'config_error':
+          setError('TikTok integration is temporarily unavailable. Please contact support.');
+          break;
+        case 'url_generation_failed':
+          setError('Unable to connect to TikTok. Please check your internet connection and try again.');
+          break;
+        case 'auth_invalid':
+          setError('TikTok authentication failed. Your session may have expired. Please try again.');
+          break;
+        case 'auth_forbidden':
+          setError('TikTok denied access. Please ensure your TikTok account is in good standing and try again.');
+          break;
+        case 'token_error':
+          setError('TikTok token exchange failed. This may be a temporary issue with TikTok servers. Please try again in a few minutes.');
+          break;
+        case 'profile_error':
+          setError('Unable to fetch your TikTok profile. Please ensure your account privacy settings allow app access.');
+          break;
+        default:
+          setError('An unexpected error occurred. Please try again or contact support.');
+      }
+    }
+  }, [searchParams]);
 
   const handleTikTokLogin = async () => {
     setLoading(true);
+    setError(null);
     try {
+      // Clear any previous errors from URL
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.delete('error');
+      window.history.replaceState({}, '', currentUrl.toString());
+      
       // Redirect to TikTok OAuth endpoint
       window.location.href = '/api/auth/tiktok';
     } catch (error) {
       console.error('TikTok login error:', error);
+      setError('Failed to initiate TikTok connection. Please try again.');
       setLoading(false);
     }
+  };
+
+  const clearError = () => {
+    setError(null);
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete('error');
+    window.history.replaceState({}, '', currentUrl.toString());
   };
 
   return (
@@ -54,6 +109,35 @@ export default function InfluencerAuth() {
               Earn up to 15% commission on every sale you generate
             </p>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-900/30 border border-red-700/50 rounded-lg">
+              <div className="flex items-start gap-3">
+                <AlertTriangle size={20} className="text-red-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-red-200 text-sm">{error}</p>
+                </div>
+                <button 
+                  onClick={clearError}
+                  className="text-red-400 hover:text-red-300 transition ml-2"
+                  title="Dismiss"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={handleTikTokLogin}
+                  disabled={loading}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-700/50 hover:bg-red-700/70 rounded text-sm font-medium transition disabled:opacity-50"
+                >
+                  <RefreshCw size={14} />
+                  Try Again
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* TikTok Login */}
           <button
