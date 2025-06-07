@@ -16,8 +16,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Exchange code for access token - Use sandbox API
-    const tokenResponse = await fetch('https://sandbox-open.tiktokapis.com/v2/oauth/token/', {
+    // Exchange code for access token - Sandbox credentials work with production API
+    const tokenResponse = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -38,8 +38,8 @@ export async function GET(request: NextRequest) {
     const tokenData = await tokenResponse.json();
     const { access_token, open_id } = tokenData;
 
-    // Get user profile information - Use sandbox API
-    const profileResponse = await fetch('https://sandbox-open.tiktokapis.com/v2/user/info/', {
+    // Get user profile information - Sandbox credentials work with production API
+    const profileResponse = await fetch('https://open.tiktokapis.com/v2/user/info/', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${access_token}`,
