@@ -19,28 +19,28 @@ export async function GET(request: NextRequest) {
   });
   
   if (!clientKey) {
-    return NextResponse.json({ 
-      error: 'TikTok client key not configured',
-      debug: {
-        availableEnvKeys: Object.keys(process.env).filter(key => key.includes('TIKTOK')),
-        nodeEnv: process.env.NODE_ENV
-      }
-    }, { status: 500 });
+    console.error('TikTok OAuth: Client key not configured');
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-auth?error=config_error`);
   }
 
-  // Build TikTok OAuth URL - Sandbox credentials work with production OAuth endpoint
-  const tiktokAuthUrl = new URL('https://www.tiktok.com/v2/auth/authorize/');
-  tiktokAuthUrl.searchParams.set('client_key', clientKey);
-  tiktokAuthUrl.searchParams.set('redirect_uri', redirectUri);
-  tiktokAuthUrl.searchParams.set('scope', scope);
-  tiktokAuthUrl.searchParams.set('response_type', 'code');
-  
-  // Add state parameter for security
-  const state = crypto.randomUUID();
-  tiktokAuthUrl.searchParams.set('state', state);
-  
-  // Store state in session or database for verification in callback
-  // For now, we'll redirect directly
-  
-  return NextResponse.redirect(tiktokAuthUrl.toString());
+  try {
+    // Build TikTok OAuth URL - Sandbox credentials work with production OAuth endpoint
+    const tiktokAuthUrl = new URL('https://www.tiktok.com/v2/auth/authorize/');
+    tiktokAuthUrl.searchParams.set('client_key', clientKey);
+    tiktokAuthUrl.searchParams.set('redirect_uri', redirectUri);
+    tiktokAuthUrl.searchParams.set('scope', scope);
+    tiktokAuthUrl.searchParams.set('response_type', 'code');
+    
+    // Add state parameter for security
+    const state = crypto.randomUUID();
+    tiktokAuthUrl.searchParams.set('state', state);
+    
+    console.log('Redirecting to TikTok OAuth:', tiktokAuthUrl.toString());
+    
+    return NextResponse.redirect(tiktokAuthUrl.toString());
+    
+  } catch (error) {
+    console.error('TikTok OAuth URL generation error:', error);
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-auth?error=url_generation_failed`);
+  }
 } 
