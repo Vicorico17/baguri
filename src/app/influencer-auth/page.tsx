@@ -2,31 +2,20 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Instagram, Music } from 'lucide-react';
+import { ArrowLeft, Music } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 
 export default function InfluencerAuth() {
-  const [loading, setLoading] = useState<'instagram' | 'tiktok' | null>(null);
-
-  const handleInstagramLogin = async () => {
-    setLoading('instagram');
-    try {
-      // Redirect to Instagram OAuth endpoint
-      window.location.href = '/api/auth/instagram';
-    } catch (error) {
-      console.error('Instagram login error:', error);
-      setLoading(null);
-    }
-  };
+  const [loading, setLoading] = useState(false);
 
   const handleTikTokLogin = async () => {
-    setLoading('tiktok');
+    setLoading(true);
     try {
       // Redirect to TikTok OAuth endpoint
       window.location.href = '/api/auth/tiktok';
     } catch (error) {
       console.error('TikTok login error:', error);
-      setLoading(null);
+      setLoading(false);
     }
   };
 
@@ -55,52 +44,33 @@ export default function InfluencerAuth() {
         {/* Main Content */}
         <div className="max-w-md mx-auto px-4 py-16">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-4 bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
-              Join as Influencer
+            <h1 className="text-3xl font-bold mb-4 bg-gradient-to-r from-red-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
+              Join as TikTok Influencer
             </h1>
             <p className="text-zinc-400 text-lg">
-              Connect your social media and start promoting Romanian designers
+              Connect your TikTok and start promoting Romanian designers
             </p>
             <p className="text-zinc-500 text-sm mt-2">
-              Earn commissions on every sale you generate
+              Earn up to 15% commission on every sale you generate
             </p>
           </div>
 
-          <div className="space-y-4">
-            {/* Instagram Login */}
-            <button
-              onClick={handleInstagramLogin}
-              disabled={loading !== null}
-              className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-pink-600/20 group-hover:from-purple-500/30 group-hover:to-pink-500/30 transition-all duration-300"></div>
-              <div className="relative flex items-center gap-3">
-                {loading === 'instagram' ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                ) : (
-                  <Instagram size={20} />
-                )}
-                <span className="text-lg">Continue with Instagram</span>
-              </div>
-            </button>
-
-            {/* TikTok Login */}
-            <button
-              onClick={handleTikTokLogin}
-              disabled={loading !== null}
-              className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-zinc-900 border-2 border-zinc-700 hover:border-zinc-600 hover:bg-zinc-800 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative flex items-center gap-3">
-                {loading === 'tiktok' ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                ) : (
-                  <Music size={20} />
-                )}
-                <span className="text-lg">Continue with TikTok</span>
-              </div>
-            </button>
-          </div>
+          {/* TikTok Login */}
+          <button
+            onClick={handleTikTokLogin}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-red-600 to-blue-600 hover:from-red-700 hover:to-blue-700 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group shadow-lg"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-blue-500/20 group-hover:from-red-500/30 group-hover:to-blue-500/30 transition-all duration-300"></div>
+            <div className="relative flex items-center gap-3">
+              {loading ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              ) : (
+                <Music size={20} />
+              )}
+              <span className="text-lg font-semibold">Continue with TikTok</span>
+            </div>
+          </button>
 
           {/* Additional Info */}
           <div className="mt-8 text-center">
