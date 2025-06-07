@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Instagram, Music, Users, DollarSign, TrendingUp, Eye, Share2, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Instagram, Music, Users, DollarSign, TrendingUp, Eye, Share2, CheckCircle, Heart, Video } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 
 function InfluencerDashboardContent() {
@@ -11,6 +11,13 @@ function InfluencerDashboardContent() {
   const searchParams = useSearchParams();
   const [platform, setPlatform] = useState<'instagram' | 'tiktok' | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [tiktokData, setTiktokData] = useState<{
+    name: string;
+    username: string;
+    followers: number;
+    likes: number;
+    videos: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!searchParams) return;
@@ -20,6 +27,23 @@ function InfluencerDashboardContent() {
     
     if (platformParam && (platformParam === 'instagram' || platformParam === 'tiktok')) {
       setPlatform(platformParam);
+    }
+
+    // Get TikTok data from URL parameters
+    if (platformParam === 'tiktok') {
+      const name = searchParams.get('name') || 'TikTok User';
+      const username = searchParams.get('username') || '';
+      const followers = parseInt(searchParams.get('followers') || '0');
+      const likes = parseInt(searchParams.get('likes') || '0');
+      const videos = parseInt(searchParams.get('videos') || '0');
+
+      setTiktokData({
+        name,
+        username,
+        followers,
+        likes,
+        videos
+      });
     }
     
     if (success === 'true') {
@@ -118,6 +142,80 @@ function InfluencerDashboardContent() {
                   <div className="flex items-center gap-1">
                     <CheckCircle size={16} />
                     <span>Commission Tracking Active</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TikTok Account Information */}
+          {platform === 'tiktok' && tiktokData && (
+            <div className="mb-8">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                <h3 className="text-xl font-semibold mb-6 flex items-center gap-3">
+                  <Music size={24} className="text-red-400" />
+                  TikTok Account Data
+                </h3>
+                
+                <div className="bg-zinc-800/50 rounded-lg p-4 mb-6">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Users size={20} className="text-blue-400" />
+                    <span className="font-medium">{tiktokData.name}</span>
+                  </div>
+                  {tiktokData.username && (
+                    <p className="text-zinc-400 text-sm">@{tiktokData.username}</p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Followers */}
+                  <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 text-center">
+                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Users size={20} className="text-white" />
+                    </div>
+                    <div className="text-2xl font-bold text-blue-400 mb-1">
+                      {tiktokData.followers.toLocaleString()}
+                    </div>
+                    <div className="text-zinc-400 text-sm">Followers</div>
+                    <div className="text-xs text-zinc-500 mt-1">
+                      {tiktokData.followers >= 10000 ? '✅ Meets requirement' : '❌ Need 10,000+'}
+                    </div>
+                  </div>
+
+                  {/* Likes */}
+                  <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 text-center">
+                    <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Heart size={20} className="text-white" />
+                    </div>
+                    <div className="text-2xl font-bold text-red-400 mb-1">
+                      {tiktokData.likes.toLocaleString()}
+                    </div>
+                    <div className="text-zinc-400 text-sm">Total Likes</div>
+                    <div className="text-xs text-zinc-500 mt-1">
+                      {tiktokData.likes >= 100000 ? '✅ Meets requirement' : '❌ Need 100,000+'}
+                    </div>
+                  </div>
+
+                  {/* Videos */}
+                  <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4 text-center">
+                    <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Video size={20} className="text-white" />
+                    </div>
+                    <div className="text-2xl font-bold text-purple-400 mb-1">
+                      {tiktokData.videos.toLocaleString()}
+                    </div>
+                    <div className="text-zinc-400 text-sm">Videos Posted</div>
+                    <div className="text-xs text-zinc-500 mt-1">
+                      {tiktokData.videos >= 5 ? '✅ Meets requirement' : '❌ Need 5+'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle size={16} className="text-green-400" />
+                    <span className="text-green-400 font-medium">Account Verified</span>
+                    <span className="text-green-100">- All requirements met for Baguri influencer program</span>
                   </div>
                 </div>
               </div>
