@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   // TikTok OAuth configuration
   const clientKey = process.env.TIKTOK_CLIENT_KEY;
   const redirectUri = 'https://baguri.ro/api/auth/tiktok/callback'; // Must match TikTok Developer Console exactly
-  const scope = 'user.info.basic'; // Only basic scope to start
+  const scope = 'user.info.basic,user.info.stats'; // Basic info + statistical data
   
   // Debug logging
   console.log('TikTok OAuth Debug:', {

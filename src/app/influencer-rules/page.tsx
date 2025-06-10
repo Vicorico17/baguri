@@ -12,12 +12,22 @@ function InfluencerRulesContent() {
   const [platform, setPlatform] = useState<'instagram' | 'tiktok' | null>(null);
   const [userName, setUserName] = useState<string>('');
   const [hasAccepted, setHasAccepted] = useState(false);
+  const [userStats, setUserStats] = useState({
+    followers: 0,
+    likes: 0,
+    videos: 0,
+    username: ''
+  });
 
   useEffect(() => {
     if (!searchParams) return;
     
     const platformParam = searchParams.get('platform') as 'instagram' | 'tiktok' | null;
     const nameParam = searchParams.get('name');
+    const usernameParam = searchParams.get('username');
+    const followersParam = searchParams.get('followers');
+    const likesParam = searchParams.get('likes');
+    const videosParam = searchParams.get('videos');
     
     if (platformParam && (platformParam === 'instagram' || platformParam === 'tiktok')) {
       setPlatform(platformParam);
@@ -26,6 +36,14 @@ function InfluencerRulesContent() {
     if (nameParam) {
       setUserName(decodeURIComponent(nameParam));
     }
+    
+    // Set user stats if available
+    setUserStats({
+      followers: parseInt(followersParam || '0'),
+      likes: parseInt(likesParam || '0'),
+      videos: parseInt(videosParam || '0'),
+      username: usernameParam || ''
+    });
   }, [searchParams]);
 
   const handleContinueToDashboard = () => {
@@ -111,6 +129,56 @@ function InfluencerRulesContent() {
               Platform: <span className="capitalize text-white font-medium">{platform}</span>
             </p>
           </div>
+
+          {/* User Stats Section (if available) */}
+          {userStats.followers > 0 && (
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                <TrendingUp size={24} className="text-blue-400" />
+                Your Account Stats
+              </h3>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-400 mb-1">
+                      {userStats.followers.toLocaleString()}
+                    </div>
+                    <div className="text-sm text-zinc-400">Followers</div>
+                    <div className={`text-xs mt-1 ${userStats.followers >= 10000 ? 'text-green-400' : 'text-red-400'}`}>
+                      {userStats.followers >= 10000 ? '✓ Meets requirement' : 'Need 10K+ followers'}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-400 mb-1">
+                      {userStats.likes.toLocaleString()}
+                    </div>
+                    <div className="text-sm text-zinc-400">Total Likes</div>
+                    <div className="text-xs mt-1 text-blue-300">
+                      Great engagement!
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-400 mb-1">
+                      {userStats.videos.toLocaleString()}
+                    </div>
+                    <div className="text-sm text-zinc-400">Videos Posted</div>
+                    <div className="text-xs mt-1 text-blue-300">
+                      Active creator
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-blue-400 mb-1">
+                      @{userStats.username}
+                    </div>
+                    <div className="text-sm text-zinc-400">Username</div>
+                    <div className="text-xs mt-1 text-green-400">
+                      Account verified
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Requirements Section */}
           <div className="mb-8">
