@@ -27,6 +27,9 @@ type CartContextType = {
   // Callback for when items are added (used by ToastProvider)
   onCartAdd?: (productName: string, size: string, color: string, isNewItem: boolean) => void;
   setOnCartAdd: (callback: (productName: string, size: string, color: string, isNewItem: boolean) => void) => void;
+  // Cart shake animation state
+  isCartShaking: boolean;
+  triggerCartShake: () => void;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -35,6 +38,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [onCartAdd, setOnCartAdd] = useState<((productName: string, size: string, color: string, isNewItem: boolean) => void) | undefined>();
+  const [isCartShaking, setIsCartShaking] = useState(false);
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -56,6 +60,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localStorage.setItem('baguri-cart', JSON.stringify(cart));
   }, [cart]);
+
+  const triggerCartShake = () => {
+    console.log('🛒 Triggering cart shake animation');
+    setIsCartShaking(true);
+    setTimeout(() => {
+      console.log('🛒 Cart shake animation complete');
+      setIsCartShaking(false);
+    }, 600); // Duration matches CSS animation
+  };
 
   const addToCart = (product: any, size: string, color: string) => {
     const existingItem = cart.find(item => 
@@ -85,10 +98,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setCart([...cart, newItem]);
     }
 
+    // Trigger cart shake animation
+    triggerCartShake();
+
     // Trigger toast notification
     if (onCartAdd) {
       onCartAdd(product.name, size, color, isNewItem);
     }
+    
+    console.log('🛒 Added to cart:', product.name, 'Cart state should be shaking:', true);
   };
 
   const updateCartItemQuantity = (id: string | number, size: string, color: string, quantity: number) => {
@@ -126,6 +144,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setIsCartOpen,
     onCartAdd,
     setOnCartAdd,
+    isCartShaking,
+    triggerCartShake,
   };
 
   return (

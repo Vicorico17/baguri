@@ -126,7 +126,12 @@ function ShopContent() {
   const [loading, setLoading] = useState(true);
   
   // Use global cart
-  const { cartItemCount, setIsCartOpen, addToCart } = useCart();
+  const { cartItemCount, setIsCartOpen, addToCart, isCartShaking } = useCart();
+  
+  // Debug: Log when cart shake state changes
+  useEffect(() => {
+    console.log('🛒 Cart shake state changed:', isCartShaking);
+  }, [isCartShaking]);
   
   // Use designer auth context
   const { user: authUser, designerProfile, loading: authLoading } = useDesignerAuth();
@@ -308,8 +313,11 @@ function ShopContent() {
               )}
               
               <button
-                onClick={() => setIsCartOpen(true)}
-                className="relative p-3 hover:bg-zinc-800 rounded-full transition mobile-touch-target bg-zinc-800/50 md:bg-transparent md:p-2"
+                onClick={() => {
+                  console.log('🛒 Cart button clicked, isCartShaking:', isCartShaking);
+                  setIsCartOpen(true);
+                }}
+                className={`relative p-3 hover:bg-zinc-800 rounded-full transition mobile-touch-target bg-zinc-800/50 md:bg-transparent md:p-2 ${isCartShaking ? 'animate-cart-shake' : ''}`}
               >
                 <ShoppingCart size={24} className="md:w-5 md:h-5" />
                 {cartItemCount > 0 && (
@@ -622,7 +630,7 @@ function ShopContent() {
       <div className="md:hidden fixed bottom-6 right-4 z-40 safe-area-bottom mobile-floating-cart">
         <button
           onClick={() => setIsCartOpen(true)}
-          className="bg-white text-zinc-900 p-4 rounded-full shadow-lg hover:bg-zinc-200 transition mobile-enhanced-touch flex items-center gap-2"
+          className={`bg-white text-zinc-900 p-4 rounded-full shadow-lg hover:bg-zinc-200 transition mobile-enhanced-touch flex items-center gap-2 ${isCartShaking ? 'animate-cart-shake' : ''}`}
         >
           <ShoppingCart size={20} />
           {cartItemCount > 0 && (
