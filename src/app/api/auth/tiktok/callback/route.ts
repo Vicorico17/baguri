@@ -166,20 +166,8 @@ export async function GET(request: NextRequest) {
       displayName: profileData.data?.user?.display_name || 'TikTok User',
     });
 
-    // Store user data in session and redirect to verification
-    const userData = profileData.data?.user;
-    const userParams = new URLSearchParams({
-      platform: 'tiktok',
-      success: 'true',
-      name: userData?.display_name || 'TikTok User',
-      username: userData?.username || '',
-      followers: userData?.follower_count?.toString() || '0',
-      likes: userData?.likes_count?.toString() || '0',
-      videos: userData?.video_count?.toString() || '0',
-      open_id: open_id
-    });
-    
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-verification?${userParams.toString()}`);
+    // Redirect to influencer rules page first
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-rules?platform=tiktok&name=${encodeURIComponent(profileData.data?.user?.display_name || 'TikTok User')}`);
 
   } catch (error) {
     console.error('TikTok OAuth callback error:', {

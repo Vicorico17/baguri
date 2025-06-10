@@ -37,7 +37,7 @@ export default function DesignerProfile({ params }: { params: { slug: string } }
   const [error, setError] = useState<string | null>(null);
   
   // Use global cart
-  const { cartItemCount, addToCart, setIsCartOpen } = useCart();
+  const { cartItemCount, addToCart, setIsCartOpen, isCartShaking } = useCart();
 
   // Load designer data from database
   useEffect(() => {
@@ -158,7 +158,7 @@ export default function DesignerProfile({ params }: { params: { slug: string } }
               <div className="flex items-center gap-4">
                 <button 
                   onClick={() => setIsCartOpen(true)}
-                  className="relative p-2 hover:bg-zinc-800 rounded-full transition"
+                  className={`relative p-2 hover:bg-zinc-800 rounded-full transition ${isCartShaking ? 'animate-cart-shake' : ''}`}
                 >
                   <ShoppingCart size={24} />
                   {cartItemCount > 0 && (
@@ -211,24 +211,24 @@ export default function DesignerProfile({ params }: { params: { slug: string } }
                 />
               </Link>
               
-              <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setIsCartOpen(true)}
-                  className="relative p-2 hover:bg-zinc-800 rounded-full transition"
-                >
-                  <ShoppingCart size={24} />
-                  {cartItemCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-white text-zinc-900 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                      {cartItemCount}
-                    </span>
-                  )}
-                </button>
-              </div>
+                          <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setIsCartOpen(true)}
+                className={`relative p-2 hover:bg-zinc-800 rounded-full transition ${isCartShaking ? 'animate-cart-shake' : ''}`}
+              >
+                <ShoppingCart size={24} />
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-white text-zinc-900 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {cartItemCount}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* Error Content */}
+      {/* Error Content */}
         <div className="relative z-10 flex items-center justify-center min-h-screen px-4">
           <div className="text-center">
             <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-8 max-w-md mx-auto">
@@ -277,7 +277,7 @@ export default function DesignerProfile({ params }: { params: { slug: string } }
             <div className="flex items-center gap-4">
               <button 
                 onClick={() => setIsCartOpen(true)}
-                className="relative p-2 hover:bg-zinc-800 rounded-full transition"
+                className={`relative p-2 hover:bg-zinc-800 rounded-full transition ${isCartShaking ? 'animate-cart-shake' : ''}`}
               >
                 <ShoppingCart size={24} />
                 {cartItemCount > 0 && (

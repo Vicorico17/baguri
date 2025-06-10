@@ -1,10 +1,76 @@
 "use client";
 
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Users, Heart, Video, CheckCircle, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Users, Calendar, TrendingUp, Shield, AlertCircle } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 
-export default function InfluencerRules() {
+function InfluencerRulesContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [platform, setPlatform] = useState<'instagram' | 'tiktok' | null>(null);
+  const [userName, setUserName] = useState<string>('');
+  const [hasAccepted, setHasAccepted] = useState(false);
+
+  useEffect(() => {
+    if (!searchParams) return;
+    
+    const platformParam = searchParams.get('platform') as 'instagram' | 'tiktok' | null;
+    const nameParam = searchParams.get('name');
+    
+    if (platformParam && (platformParam === 'instagram' || platformParam === 'tiktok')) {
+      setPlatform(platformParam);
+    }
+    
+    if (nameParam) {
+      setUserName(decodeURIComponent(nameParam));
+    }
+  }, [searchParams]);
+
+  const handleContinueToDashboard = () => {
+    if (!hasAccepted) return;
+    
+    // Continue to dashboard with the original parameters
+    router.push(`/influencer-dashboard?platform=${platform}&success=true&name=${encodeURIComponent(userName)}`);
+  };
+
+  const requirements = [
+    {
+      icon: <Calendar size={20} className="text-blue-400" />,
+      title: "Account Age",
+      description: "Your account must be at least 6 months old",
+      details: "We require established accounts to ensure authenticity and trust"
+    },
+    {
+      icon: <Users size={20} className="text-purple-400" />,
+      title: "Minimum Followers",
+      description: "At least 10,000 followers on your platform",
+      details: "This ensures you have an engaged audience for promoting our designers"
+    },
+    {
+      icon: <TrendingUp size={20} className="text-green-400" />,
+      title: "Engagement Rate",
+      description: "Minimum 3% engagement rate on recent posts",
+      details: "Active, engaged audiences are key to successful promotions"
+    },
+    {
+      icon: <Shield size={20} className="text-yellow-400" />,
+      title: "Account Standing",
+      description: "Your account must be in good standing",
+      details: "No recent violations, suspensions, or policy infractions"
+    }
+  ];
+
+  const rules = [
+    "Promote only authentic Romanian fashion brands available on Baguri",
+    "Clearly disclose sponsored content and affiliate links as required by law",
+    "Maintain the quality and aesthetic standards of the brands you promote",
+    "Respect the intellectual property and brand guidelines of designers",
+    "Provide honest reviews and authentic engagement with promoted products",
+    "Follow all platform-specific guidelines and local advertising regulations"
+  ];
+
   return (
     <div className="min-h-screen bg-black text-white relative">
       <BackgroundPaths />
@@ -12,154 +78,159 @@ export default function InfluencerRules() {
       <div className="relative z-10">
         {/* Header */}
         <div className="border-b border-zinc-800">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
-              <Link 
-                href="/main"
-                className="flex items-center gap-2 text-zinc-400 hover:text-white transition"
-              >
-                <ArrowLeft size={20} />
-                <span>Back to Main</span>
-              </Link>
+              <div className="flex items-center gap-4">
+                <Link 
+                  href="/influencer-auth"
+                  className="flex items-center gap-2 text-zinc-400 hover:text-white transition"
+                >
+                  <ArrowLeft size={20} />
+                  <span>Back to Auth</span>
+                </Link>
+                <div className="h-6 w-px bg-zinc-700" />
+                <div className="flex items-center gap-2">
+                  <Users size={24} />
+                  <h1 className="text-xl font-bold">Influencer Requirements</h1>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Header Section */}
-          <div className="text-center mb-12">
-            <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-purple-600 rounded-full flex items-center justify-center">
-                <Users size={28} className="text-white" />
-              </div>
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">
-              Influencer Program Requirements
-            </h1>
-            <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
-              Join our exclusive network of TikTok creators promoting authentic Romanian fashion. 
-              Make sure you meet our requirements before applying.
+          {/* Welcome Section */}
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-red-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
+              Welcome{userName ? `, ${userName}` : ''}!
+            </h2>
+            <p className="text-zinc-400 text-lg">
+              Before you can access your influencer dashboard, please review our requirements and rules.
+            </p>
+            <p className="text-zinc-500 text-sm mt-2">
+              Platform: <span className="capitalize text-white font-medium">{platform}</span>
             </p>
           </div>
 
-          {/* Requirements Card */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 mb-8">
-            <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3">
+          {/* Requirements Section */}
+          <div className="mb-8">
+            <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
               <CheckCircle size={24} className="text-green-400" />
-              Minimum Requirements
-            </h2>
-            
-            <div className="space-y-6">
-              {/* Followers Requirement */}
-              <div className="flex items-start gap-4 p-4 bg-zinc-800/50 rounded-lg">
-                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Users size={20} className="text-white" />
+              Influencer Requirements
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {requirements.map((req, index) => (
+                <div key={index} className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0">
+                      {req.icon}
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-2">{req.title}</h4>
+                      <p className="text-zinc-300 mb-2">{req.description}</p>
+                      <p className="text-zinc-500 text-sm">{req.details}</p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-blue-400 mb-1">
-                    10,000+ Followers
-                  </h3>
-                  <p className="text-zinc-400">
-                    You must have at least <strong className="text-white">10,000 followers</strong> on your TikTok account to ensure adequate reach for our partner brands.
-                  </p>
-                </div>
-              </div>
+              ))}
+            </div>
+          </div>
 
-              {/* Likes Requirement */}
-              <div className="flex items-start gap-4 p-4 bg-zinc-800/50 rounded-lg">
-                <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Heart size={20} className="text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-red-400 mb-1">
-                    100,000+ Total Likes
-                  </h3>
-                  <p className="text-zinc-400">
-                    Your account should have accumulated at least <strong className="text-white">100,000 total likes</strong> across all your videos, demonstrating strong engagement.
-                  </p>
-                </div>
-              </div>
-
-              {/* Videos Requirement */}
-              <div className="flex items-start gap-4 p-4 bg-zinc-800/50 rounded-lg">
-                <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Video size={20} className="text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-purple-400 mb-1">
-                    5+ Videos Posted
-                  </h3>
-                  <p className="text-zinc-400">
-                    You must have posted at least <strong className="text-white">5 videos</strong> on your TikTok account to show content creation consistency.
-                  </p>
-                </div>
-              </div>
+          {/* Rules Section */}
+          <div className="mb-8">
+            <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
+              <AlertCircle size={24} className="text-orange-400" />
+              Community Guidelines & Rules
+            </h3>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+              <p className="text-zinc-400 mb-4">
+                As a Baguri influencer, you agree to follow these guidelines:
+              </p>
+              <ul className="space-y-3">
+                {rules.map((rule, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <div className="w-1.5 h-1.5 bg-purple-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-zinc-300">{rule}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
 
           {/* Important Notice */}
-          <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-6 mb-8">
-            <div className="flex items-start gap-3">
-              <AlertTriangle size={24} className="text-yellow-400 flex-shrink-0 mt-1" />
-              <div>
-                <h3 className="text-lg font-semibold text-yellow-400 mb-2">Important Notice</h3>
-                <p className="text-yellow-100/90">
-                  We will verify these requirements after you connect your TikTok account. 
-                  Accounts that don&apos;t meet the minimum criteria will not be approved for the influencer program.
-                </p>
+          <div className="mb-8">
+            <div className="bg-yellow-900/30 border border-yellow-700/50 rounded-lg p-6">
+              <div className="flex items-start gap-3">
+                <AlertCircle size={20} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-yellow-200 mb-2">Important Notice</h4>
+                  <p className="text-yellow-100 text-sm mb-3">
+                    We will verify that your account meets our requirements during the approval process. 
+                    Accounts that don&apos;t meet these criteria may be suspended from the program.
+                  </p>
+                  <p className="text-yellow-100 text-sm">
+                    Commission rates range from 5% to 15% based on performance and account quality.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Benefits Section */}
-          <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-500/20 rounded-xl p-8 mb-8">
-            <h2 className="text-2xl font-semibold mb-6 text-center">What You&apos;ll Get</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="text-center">
-                <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <span className="text-xl font-bold">15%</span>
-                </div>
-                <h3 className="font-semibold mb-2">High Commission Rate</h3>
-                <p className="text-zinc-400 text-sm">Earn up to 15% commission on every sale you generate</p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Users size={20} />
-                </div>
-                <h3 className="font-semibold mb-2">Exclusive Access</h3>
-                <p className="text-zinc-400 text-sm">Early access to new collections and designer partnerships</p>
-              </div>
+          {/* Acceptance Checkbox and Continue Button */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+            <div className="flex items-start gap-3 mb-6">
+              <input
+                type="checkbox"
+                id="accept-rules"
+                checked={hasAccepted}
+                onChange={(e) => setHasAccepted(e.target.checked)}
+                className="mt-1 w-4 h-4 bg-zinc-800 border border-zinc-600 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              />
+              <label htmlFor="accept-rules" className="text-zinc-300">
+                I confirm that my account meets the minimum requirements and I agree to follow all 
+                community guidelines and rules outlined above. I understand that failure to comply 
+                may result in suspension from the Baguri Influencer Program.
+              </label>
             </div>
-          </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/influencer-auth"
-              className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-lg font-medium transition text-center"
-            >
-              <Users size={20} />
-              I Meet the Requirements - Connect TikTok
-            </Link>
-            <Link
-              href="/main"
-              className="flex items-center justify-center gap-2 bg-zinc-700 hover:bg-zinc-600 text-white px-8 py-3 rounded-lg font-medium transition text-center"
-            >
-              Back to Main Page
-            </Link>
-          </div>
-
-          {/* Additional Info */}
-          <div className="text-center mt-8 text-zinc-500">
-            <p className="text-sm">
-              Questions about the influencer program? Contact us at{' '}
-              <a href="mailto:influencers@baguri.ro" className="text-purple-400 hover:text-purple-300 transition">
-                influencers@baguri.ro
-              </a>
-            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={handleContinueToDashboard}
+                disabled={!hasAccepted}
+                className={`flex-1 px-6 py-3 rounded-lg font-medium transition ${
+                  hasAccepted
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white'
+                    : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                }`}
+              >
+                Continue to Dashboard
+              </button>
+              <Link
+                href="/influencer-auth"
+                className="px-6 py-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg font-medium transition text-center"
+              >
+                Go Back
+              </Link>
+            </div>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-black text-white relative flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+    </div>
+  );
+}
+
+export default function InfluencerRules() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <InfluencerRulesContent />
+    </Suspense>
   );
 } 
