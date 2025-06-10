@@ -99,13 +99,25 @@ export async function GET(request: NextRequest) {
 
     console.log('Starting TikTok profile fetch...');
 
-    // Get user profile information - Use correct TikTok API v2 endpoint with stats
-    const profileResponse = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,username,follower_count,following_count,likes_count,video_count', {
+    // Get user profile information - Try with stats first, fallback if needed
+    console.log('🔍 Attempting profile fetch with full stats...');
+    let profileResponse = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,username,follower_count,following_count,likes_count,video_count', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${access_token}`,
       },
     });
+    
+    // If stats request fails, try with basic fields only
+    if (!profileResponse.ok) {
+      console.log('⚠️ Full stats request failed, trying basic fields...');
+      profileResponse = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+        },
+      });
+    }
     
     console.log('Profile response status:', profileResponse.status, profileResponse.statusText);
     
