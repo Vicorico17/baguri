@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle, Users, Calendar, TrendingUp, Shield, AlertCircle, Heart } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Users, TrendingUp, AlertCircle, Heart } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 
 function InfluencerRulesContent() {
@@ -11,7 +11,7 @@ function InfluencerRulesContent() {
   const searchParams = useSearchParams();
   const [platform, setPlatform] = useState<'instagram' | 'tiktok' | null>(null);
   const [userName, setUserName] = useState<string>('');
-  const [hasAccepted, setHasAccepted] = useState(false);
+
   const [userStats, setUserStats] = useState({
     followers: 0,
     likes: 0,
@@ -49,59 +49,13 @@ function InfluencerRulesContent() {
   const meetsRequirements = userStats.followers >= 10000 && userStats.likes >= 1000 && userStats.videos >= 100;
 
   const handleContinueToDashboard = () => {
-    if (!hasAccepted || !meetsRequirements) return;
+    if (!meetsRequirements) return;
     
     // Continue to dashboard with the original parameters
     router.push(`/influencer-dashboard?platform=${platform}&success=true&name=${encodeURIComponent(userName)}`);
   };
 
-  const requirements = [
-    {
-      icon: <Calendar size={20} className="text-blue-400" />,
-      title: "Account Age",
-      description: "Your account must be at least 6 months old",
-      details: "We require established accounts to ensure authenticity and trust"
-    },
-    {
-      icon: <Users size={20} className="text-purple-400" />,
-      title: "Minimum Followers", 
-      description: "At least 10,000 followers on your platform",
-      details: "This ensures you have an engaged audience for promoting our designers"
-    },
-    {
-      icon: <TrendingUp size={20} className="text-green-400" />,
-      title: "Content Activity",
-      description: "Minimum 100 videos posted on your account",
-      details: "Active content creators show consistent engagement with their audience"
-    },
-    {
-      icon: <Heart size={20} className="text-red-400" />,
-      title: "Engagement Metrics",
-      description: "At least 1,000 total likes across your content",
-      details: "Demonstrates your content resonates well with your audience"
-    },
-    {
-      icon: <TrendingUp size={20} className="text-green-400" />,
-      title: "Engagement Rate",
-      description: "Minimum 3% engagement rate on recent posts",
-      details: "Active, engaged audiences are key to successful promotions"
-    },
-    {
-      icon: <Shield size={20} className="text-yellow-400" />,
-      title: "Account Standing",
-      description: "Your account must be in good standing",
-      details: "No recent violations, suspensions, or policy infractions"
-    }
-  ];
 
-  const rules = [
-    "Promote only authentic Romanian fashion brands available on Baguri",
-    "Clearly disclose sponsored content and affiliate links as required by law",
-    "Maintain the quality and aesthetic standards of the brands you promote",
-    "Respect the intellectual property and brand guidelines of designers",
-    "Provide honest reviews and authentic engagement with promoted products",
-    "Follow all platform-specific guidelines and local advertising regulations"
-  ];
 
   return (
     <div className="min-h-screen bg-black text-white relative">
@@ -144,185 +98,163 @@ function InfluencerRulesContent() {
             </p>
           </div>
 
-          {/* User Stats Section (if available) */}
-          {userStats.followers > 0 && (
+          {/* Enhanced Account Stats Section */}
+          {userStats.followers > 0 ? (
             <div className="mb-8">
-              <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                <TrendingUp size={24} className="text-blue-400" />
-                Your Account Stats
-              </h3>
-              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-400 mb-1">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8">
+                <div className="text-center mb-8">
+                  <h2 className="text-2xl font-bold mb-2 flex items-center justify-center gap-2">
+                    <TrendingUp size={28} className="text-blue-400" />
+                    Account Eligibility Check
+                  </h2>
+                  <p className="text-zinc-400">
+                    Platform: <span className="capitalize text-white font-medium">{platform}</span> • 
+                    User: <span className="text-blue-400 font-medium">@{userStats.username}</span>
+                  </p>
+                </div>
+
+                {/* Overall Status */}
+                <div className={`rounded-lg p-6 mb-8 text-center ${meetsRequirements ? 'bg-green-900/40 border border-green-700/50' : 'bg-red-900/40 border border-red-700/50'}`}>
+                  <div className="flex items-center justify-center gap-3 mb-3">
+                    {meetsRequirements ? (
+                      <CheckCircle size={32} className="text-green-400" />
+                    ) : (
+                      <AlertCircle size={32} className="text-red-400" />
+                    )}
+                    <h3 className={`text-2xl font-bold ${meetsRequirements ? 'text-green-200' : 'text-red-200'}`}>
+                      {meetsRequirements ? 'Eligible for Influencer Program!' : 'Not Eligible Yet'}
+                    </h3>
+                  </div>
+                  <p className={`text-lg ${meetsRequirements ? 'text-green-100' : 'text-red-100'}`}>
+                    {meetsRequirements 
+                      ? 'Congratulations! Your account meets all requirements. You can proceed to the dashboard.'
+                      : 'Your account needs to grow more to meet our minimum requirements.'
+                    }
+                  </p>
+                </div>
+
+                {/* Detailed Requirements Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  {/* Followers */}
+                  <div className="bg-zinc-800 rounded-lg p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Users size={24} className="text-purple-400" />
+                      <h4 className="font-semibold text-lg">Followers</h4>
+                    </div>
+                    <div className="text-3xl font-bold text-purple-400 mb-2">
                       {userStats.followers.toLocaleString()}
                     </div>
-                    <div className="text-sm text-zinc-400">Followers</div>
-                    <div className={`text-xs mt-1 ${userStats.followers >= 10000 ? 'text-green-400' : 'text-red-400'}`}>
-                      {userStats.followers >= 10000 ? '✓ Meets requirement (10K+)' : `Need ${(10000 - userStats.followers).toLocaleString()} more`}
+                    <div className="text-sm text-zinc-400 mb-3">Required: 10,000</div>
+                    
+                    {/* Progress Bar */}
+                    <div className="w-full bg-zinc-700 rounded-full h-2 mb-3">
+                      <div 
+                        className={`h-2 rounded-full ${userStats.followers >= 10000 ? 'bg-green-400' : 'bg-purple-400'}`}
+                        style={{width: `${Math.min((userStats.followers / 10000) * 100, 100)}%`}}
+                      ></div>
+                    </div>
+                    
+                    <div className={`text-sm font-medium ${userStats.followers >= 10000 ? 'text-green-400' : 'text-red-400'}`}>
+                      {userStats.followers >= 10000 
+                        ? '✓ Requirement met!' 
+                        : `${(10000 - userStats.followers).toLocaleString()} more needed`
+                      }
                     </div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-red-400 mb-1">
+
+                  {/* Likes */}
+                  <div className="bg-zinc-800 rounded-lg p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Heart size={24} className="text-red-400" />
+                      <h4 className="font-semibold text-lg">Total Likes</h4>
+                    </div>
+                    <div className="text-3xl font-bold text-red-400 mb-2">
                       {userStats.likes.toLocaleString()}
                     </div>
-                    <div className="text-sm text-zinc-400">Total Likes</div>
-                    <div className={`text-xs mt-1 ${userStats.likes >= 1000 ? 'text-green-400' : 'text-red-400'}`}>
-                      {userStats.likes >= 1000 ? '✓ Meets requirement (1K+)' : `Need ${(1000 - userStats.likes).toLocaleString()} more`}
+                    <div className="text-sm text-zinc-400 mb-3">Required: 1,000</div>
+                    
+                    {/* Progress Bar */}
+                    <div className="w-full bg-zinc-700 rounded-full h-2 mb-3">
+                      <div 
+                        className={`h-2 rounded-full ${userStats.likes >= 1000 ? 'bg-green-400' : 'bg-red-400'}`}
+                        style={{width: `${Math.min((userStats.likes / 1000) * 100, 100)}%`}}
+                      ></div>
+                    </div>
+                    
+                    <div className={`text-sm font-medium ${userStats.likes >= 1000 ? 'text-green-400' : 'text-red-400'}`}>
+                      {userStats.likes >= 1000 
+                        ? '✓ Requirement met!' 
+                        : `${(1000 - userStats.likes).toLocaleString()} more needed`
+                      }
                     </div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-400 mb-1">
+
+                  {/* Videos */}
+                  <div className="bg-zinc-800 rounded-lg p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <TrendingUp size={24} className="text-green-400" />
+                      <h4 className="font-semibold text-lg">Videos Posted</h4>
+                    </div>
+                    <div className="text-3xl font-bold text-green-400 mb-2">
                       {userStats.videos.toLocaleString()}
                     </div>
-                    <div className="text-sm text-zinc-400">Videos Posted</div>
-                    <div className={`text-xs mt-1 ${userStats.videos >= 100 ? 'text-green-400' : 'text-red-400'}`}>
-                      {userStats.videos >= 100 ? '✓ Meets requirement (100+)' : `Need ${(100 - userStats.videos)} more`}
+                    <div className="text-sm text-zinc-400 mb-3">Required: 100</div>
+                    
+                    {/* Progress Bar */}
+                    <div className="w-full bg-zinc-700 rounded-full h-2 mb-3">
+                      <div 
+                        className={`h-2 rounded-full ${userStats.videos >= 100 ? 'bg-green-400' : 'bg-green-400'}`}
+                        style={{width: `${Math.min((userStats.videos / 100) * 100, 100)}%`}}
+                      ></div>
+                    </div>
+                    
+                    <div className={`text-sm font-medium ${userStats.videos >= 100 ? 'text-green-400' : 'text-red-400'}`}>
+                      {userStats.videos >= 100 
+                        ? '✓ Requirement met!' 
+                        : `${(100 - userStats.videos)} more needed`
+                      }
                     </div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-blue-400 mb-1">
-                      @{userStats.username}
-                    </div>
-                    <div className="text-sm text-zinc-400">Username</div>
-                    <div className="text-xs mt-1 text-green-400">
-                      Account verified
-                    </div>
+                </div>
+
+                {/* Action Button */}
+                <div className="text-center">
+                  <button
+                    onClick={handleContinueToDashboard}
+                    disabled={!meetsRequirements}
+                    className={`px-12 py-4 rounded-xl font-bold text-lg transition transform ${
+                      meetsRequirements
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl hover:scale-105'
+                        : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                    }`}
+                  >
+                    {meetsRequirements ? 'Continue to Dashboard' : 'Requirements Not Met'}
+                  </button>
+                  
+                  <div className="mt-4">
+                    <Link
+                      href="/influencer-auth"
+                      className="text-zinc-400 hover:text-white transition underline"
+                    >
+                      ← Back to Authentication
+                    </Link>
                   </div>
                 </div>
               </div>
             </div>
-          )}
-
-          {/* Requirements Section */}
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
-              <CheckCircle size={24} className="text-green-400" />
-              Influencer Requirements
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {requirements.map((req, index) => (
-                <div key={index} className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0">
-                      {req.icon}
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">{req.title}</h4>
-                      <p className="text-zinc-300 mb-2">{req.description}</p>
-                      <p className="text-zinc-500 text-sm">{req.details}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Rules Section */}
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
-              <AlertCircle size={24} className="text-orange-400" />
-              Community Guidelines & Rules
-            </h3>
-            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-              <p className="text-zinc-400 mb-4">
-                As a Baguri influencer, you agree to follow these guidelines:
-              </p>
-              <ul className="space-y-3">
-                {rules.map((rule, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <div className="w-1.5 h-1.5 bg-purple-400 rounded-full mt-2 flex-shrink-0"></div>
-                    <span className="text-zinc-300">{rule}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* Important Notice */}
-          <div className="mb-8">
-            <div className="bg-yellow-900/30 border border-yellow-700/50 rounded-lg p-6">
-              <div className="flex items-start gap-3">
-                <AlertCircle size={20} className="text-yellow-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-semibold text-yellow-200 mb-2">Important Notice</h4>
-                  <p className="text-yellow-100 text-sm mb-3">
-                    We will verify that your account meets our requirements during the approval process. 
-                    Accounts that don&apos;t meet these criteria may be suspended from the program.
-                  </p>
-                  <p className="text-yellow-100 text-sm">
-                    Commission rates range from 5% to 15% based on performance and account quality.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Requirements Status */}
-          {userStats.followers > 0 && (
-            <div className="mb-6">
-              <div className={`border rounded-lg p-4 ${meetsRequirements ? 'bg-green-900/30 border-green-700/50' : 'bg-red-900/30 border-red-700/50'}`}>
-                <div className="flex items-center gap-2 mb-2">
-                  {meetsRequirements ? (
-                    <CheckCircle size={20} className="text-green-400" />
-                  ) : (
-                    <AlertCircle size={20} className="text-red-400" />
-                  )}
-                  <h4 className={`font-semibold ${meetsRequirements ? 'text-green-200' : 'text-red-200'}`}>
-                    {meetsRequirements ? 'Requirements Met!' : 'Requirements Not Met'}
-                  </h4>
-                </div>
-                <p className={`text-sm ${meetsRequirements ? 'text-green-100' : 'text-red-100'}`}>
-                  {meetsRequirements 
-                    ? 'Your account meets all our minimum requirements. You can proceed to the dashboard after accepting our rules.'
-                    : 'Your account does not meet the minimum requirements yet. Please grow your account and try again.'
-                  }
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Acceptance Checkbox and Continue Button */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-            <div className="flex items-start gap-3 mb-6">
-              <input
-                type="checkbox"
-                id="accept-rules"
-                checked={hasAccepted}
-                onChange={(e) => setHasAccepted(e.target.checked)}
-                disabled={userStats.followers > 0 && !meetsRequirements}
-                className="mt-1 w-4 h-4 bg-zinc-800 border border-zinc-600 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-              <label htmlFor="accept-rules" className={`${userStats.followers > 0 && !meetsRequirements ? 'text-zinc-500' : 'text-zinc-300'}`}>
-                I confirm that my account meets the minimum requirements and I agree to follow all 
-                community guidelines and rules outlined above. I understand that failure to comply 
-                may result in suspension from the Baguri Influencer Program.
-              </label>
-            </div>
-
-            <div className="flex gap-4">
-              <button
-                onClick={handleContinueToDashboard}
-                disabled={!hasAccepted || (userStats.followers > 0 && !meetsRequirements)}
-                className={`flex-1 px-6 py-3 rounded-lg font-medium transition ${
-                  hasAccepted && (userStats.followers === 0 || meetsRequirements)
-                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white'
-                    : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                }`}
-              >
-                {userStats.followers > 0 && !meetsRequirements 
-                  ? 'Requirements Not Met' 
-                  : 'Continue to Dashboard'
-                }
-              </button>
+          ) : (
+            <div className="text-center py-12">
+              <Users size={48} className="mx-auto text-zinc-600 mb-4" />
+              <h2 className="text-2xl font-bold text-zinc-400 mb-2">No Account Data Available</h2>
+              <p className="text-zinc-500 mb-6">Please authenticate with your social media account first.</p>
               <Link
                 href="/influencer-auth"
-                className="px-6 py-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg font-medium transition text-center"
+                className="px-8 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium transition"
               >
-                Go Back
+                Go to Authentication
               </Link>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
