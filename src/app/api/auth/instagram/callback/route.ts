@@ -59,8 +59,8 @@ export async function GET(request: NextRequest) {
       mediaCount: profileData.media_count,
     });
 
-    // Redirect to influencer dashboard or onboarding
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-dashboard?platform=instagram&success=true`);
+    // Redirect to influencer rules page first
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-rules?platform=instagram&name=${encodeURIComponent(profileData.username || 'Instagram User')}`);
 
   } catch (error) {
     console.error('Instagram OAuth callback error:', error);

@@ -166,8 +166,8 @@ export async function GET(request: NextRequest) {
       displayName: profileData.data?.user?.display_name || 'TikTok User',
     });
 
-    // Redirect to influencer dashboard or onboarding
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-dashboard?platform=tiktok&success=true&name=${encodeURIComponent(profileData.data?.user?.display_name || 'TikTok User')}`);
+    // Redirect to influencer rules page first
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-rules?platform=tiktok&name=${encodeURIComponent(profileData.data?.user?.display_name || 'TikTok User')}`);
 
   } catch (error) {
     console.error('TikTok OAuth callback error:', {
