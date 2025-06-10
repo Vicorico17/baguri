@@ -99,73 +99,130 @@ export async function GET(request: NextRequest) {
 
     console.log('Starting TikTok profile fetch...');
 
-    // Get user profile information - Try with stats first, fallback if needed
+    // Get user profile information - Try multiple approaches for stats
     console.log('🔍 Attempting profile fetch with full stats...');
-    let profileResponse = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,username,follower_count,following_count,likes_count,video_count', {
+    console.log('📊 Available scopes from token:', tokenData.scope);
+    
+    let profileResponse;
+    let profileData;
+    let statsData = null;
+    
+    // First try: Basic profile information (always works)
+    profileResponse = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,username', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${access_token}`,
       },
     });
     
-    // If stats request fails, try with basic fields only
-    if (!profileResponse.ok) {
-      console.log('⚠️ Full stats request failed, trying basic fields...');
-      profileResponse = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${access_token}`,
-        },
-      });
-    }
-    
-    console.log('Profile response status:', profileResponse.status, profileResponse.statusText);
+    console.log('📋 Basic profile response:', profileResponse.status);
     
     if (!profileResponse.ok) {
       const errorText = await profileResponse.text();
-      console.error('TikTok Profile Fetch Failed:', {
-        status: profileResponse.status,
-        statusText: profileResponse.statusText,
-        responseBody: errorText,
-        headers: Object.fromEntries(profileResponse.headers.entries())
-      });
-      
-      // Handle specific privacy/permission errors
-      if (profileResponse.status === 403) {
-        return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-auth?error=privacy_restricted&message=${encodeURIComponent('Unable to fetch your TikTok profile. Please ensure your account privacy settings allow app access.')}`);
-      }
-      
-      throw new Error(`Failed to fetch user profile: ${profileResponse.status} - ${errorText}`);
+      console.error('❌ Even basic profile failed:', profileResponse.status, errorText);
+      throw new Error(`Basic profile fetch failed: ${profileResponse.status} - ${errorText}`);
     }
-
-    const profileData = await profileResponse.json();
+    
+    profileData = await profileResponse.json();
+    console.log('✅ Basic profile data:', JSON.stringify(profileData, null, 2));
+    
+    // Second try: Stats-only fields (if user.info.stats scope is available)
+    if (tokenData.scope && tokenData.scope.includes('user.info.stats')) {
+      console.log('📊 Scope includes user.info.stats, attempting stats fetch...');
+      
+      // Try different combinations of stats fields
+      const statsFieldCombinations = [
+        // All stats fields
+        'follower_count,following_count,likes_count,video_count',
+        // Just follower count (most important)
+        'follower_count',
+        // Just likes and videos
+        'likes_count,video_count',
+        // Just social stats
+        'follower_count,following_count'
+      ];
+      
+      for (const fields of statsFieldCombinations) {
+        console.log(`🔍 Trying stats fields: ${fields}`);
+        
+        try {
+          const statsResponse = await fetch(`https://open.tiktokapis.com/v2/user/info/?fields=open_id,${fields}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${access_token}`,
+            },
+          });
+          
+          console.log(`📊 Stats response for ${fields}:`, statsResponse.status);
+          
+          if (statsResponse.ok) {
+            const statsResult = await statsResponse.json();
+            console.log(`✅ Stats data for ${fields}:`, JSON.stringify(statsResult, null, 2));
+            
+            // Merge stats data with basic profile
+            if (statsResult.data?.user) {
+              statsData = statsResult.data.user;
+              break; // Success! Use this data
+            }
+          } else {
+            const statsError = await statsResponse.text();
+            console.log(`⚠️ Stats failed for ${fields}:`, statsResponse.status, statsError);
+          }
+        } catch (statsError) {
+          console.log(`❌ Stats exception for ${fields}:`, statsError);
+        }
+      }
+    } else {
+      console.log('⚠️ user.info.stats scope not found in token scope:', tokenData.scope);
+    }
+    
+    // Continue processing the profile response
+    console.log('📋 Processing profile data...');
+    
+    // Merge basic profile with stats if available
+    const finalUserData = { ...profileData.data?.user };
+    if (statsData) {
+      Object.assign(finalUserData, statsData);
+      console.log('✅ Merged profile + stats data:', JSON.stringify(finalUserData, null, 2));
+    } else {
+      console.log('⚠️ Using basic profile data only (no stats available)');
+    }
+    
+    // Create a combined profile response structure
+    const combinedProfileData = {
+      data: {
+        user: finalUserData
+      },
+      error: profileData.error || { code: 'ok', message: '' }
+    };
     console.log('TikTok Profile Fetch Success:', {
-      hasData: !!profileData.data,
-      hasUser: !!profileData.data?.user,
-      userFields: profileData.data?.user ? Object.keys(profileData.data.user) : [],
-      errorMessage: profileData.error?.message,
-      errorCode: profileData.error?.code
+      hasData: !!combinedProfileData.data,
+      hasUser: !!combinedProfileData.data?.user,
+      userFields: combinedProfileData.data?.user ? Object.keys(combinedProfileData.data.user) : [],
+      errorMessage: combinedProfileData.error?.message,
+      errorCode: combinedProfileData.error?.code,
+      hasStats: !!(statsData && Object.keys(statsData).length > 0)
     });
 
     // Check if profile fetch was actually successful
-    if (profileData.error && profileData.error.code !== 'ok') {
-      console.error('TikTok Profile API Error:', profileData.error);
+    if (combinedProfileData.error && combinedProfileData.error.code !== 'ok') {
+      console.error('TikTok Profile API Error:', combinedProfileData.error);
       
       // Handle specific TikTok API errors
-      if (profileData.error.code === 'access_denied' || profileData.error.message?.includes('privacy')) {
+      if (combinedProfileData.error.code === 'access_denied' || combinedProfileData.error.message?.includes('privacy')) {
         return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-auth?error=privacy_restricted&message=${encodeURIComponent('Unable to fetch your TikTok profile. Please ensure your account privacy settings allow app access.')}`);
       }
       
-      throw new Error(`TikTok API Error: ${profileData.error.message || 'Unknown error'}`);
+      throw new Error(`TikTok API Error: ${combinedProfileData.error.message || 'Unknown error'}`);
     }
 
     // Log successful response for debugging
-    if (profileData.error && profileData.error.code === 'ok') {
-      console.log('TikTok Profile Success Response:', profileData.error);
+    if (combinedProfileData.error && combinedProfileData.error.code === 'ok') {
+      console.log('TikTok Profile Success Response:', combinedProfileData.error);
     }
 
     // Check if we have minimal required data
-    if (!profileData.data?.user?.open_id) {
+    if (!combinedProfileData.data?.user?.open_id) {
       console.error('TikTok Profile: Missing required user data');
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-auth?error=privacy_restricted&message=${encodeURIComponent('Unable to fetch your TikTok profile. Please ensure your account privacy settings allow app access.')}`);
     }
@@ -174,12 +231,14 @@ export async function GET(request: NextRequest) {
     // For now, redirect to influencer dashboard with success
     console.log('TikTok user authenticated successfully:', {
       openId: open_id,
-      profileOpenId: profileData.data?.user?.open_id,
-      displayName: profileData.data?.user?.display_name || 'TikTok User',
+      profileOpenId: combinedProfileData.data?.user?.open_id,
+      displayName: combinedProfileData.data?.user?.display_name || 'TikTok User',
+      hasStatsData: !!(statsData && Object.keys(statsData).length > 0),
+      statsFields: statsData ? Object.keys(statsData) : []
     });
 
     // Get user data for the rules page
-    const userData = profileData.data?.user;
+    const userData = combinedProfileData.data?.user;
     const userParams = new URLSearchParams({
       platform: 'tiktok',
       name: userData?.display_name || 'TikTok User',
