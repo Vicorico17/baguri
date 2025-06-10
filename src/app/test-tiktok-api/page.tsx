@@ -123,7 +123,7 @@ export default function TestTikTokAPI() {
               </h3>
               
               {testData.statsProfile && (
-                                 <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                    <div className="text-center">
                      <div className="text-2xl font-bold text-purple-400 mb-1">
                        {testData.statsProfile.follower_count?.toLocaleString() || 'N/A'}
@@ -155,15 +155,6 @@ export default function TestTikTokAPI() {
                      <div className="text-sm text-zinc-400 flex items-center justify-center gap-1">
                        <Video size={16} />
                        Videos
-                     </div>
-                   </div>
-                   <div className="text-center">
-                     <div className="text-2xl font-bold text-orange-400 mb-1">
-                       {testData.statsProfile.profile_view_count?.toLocaleString() || 'N/A'}
-                     </div>
-                     <div className="text-sm text-zinc-400 flex items-center justify-center gap-1">
-                       <TrendingUp size={16} />
-                       Profile Views
                      </div>
                    </div>
                  </div>

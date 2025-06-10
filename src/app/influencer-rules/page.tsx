@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle, Users, Calendar, TrendingUp, Shield, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Users, Calendar, TrendingUp, Shield, AlertCircle, Heart } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 
 function InfluencerRulesContent() {
@@ -16,7 +16,6 @@ function InfluencerRulesContent() {
     followers: 0,
     likes: 0,
     videos: 0,
-    views: 0,
     username: ''
   });
 
@@ -39,18 +38,18 @@ function InfluencerRulesContent() {
     }
     
     // Set user stats if available
-    const viewsParam = searchParams.get('views');
     setUserStats({
       followers: parseInt(followersParam || '0'),
       likes: parseInt(likesParam || '0'),
       videos: parseInt(videosParam || '0'),
-      views: parseInt(viewsParam || '0'),
       username: usernameParam || ''
     });
   }, [searchParams]);
 
+  const meetsRequirements = userStats.followers >= 10000 && userStats.likes >= 1000 && userStats.videos >= 100;
+
   const handleContinueToDashboard = () => {
-    if (!hasAccepted) return;
+    if (!hasAccepted || !meetsRequirements) return;
     
     // Continue to dashboard with the original parameters
     router.push(`/influencer-dashboard?platform=${platform}&success=true&name=${encodeURIComponent(userName)}`);
@@ -65,9 +64,21 @@ function InfluencerRulesContent() {
     },
     {
       icon: <Users size={20} className="text-purple-400" />,
-      title: "Minimum Followers",
+      title: "Minimum Followers", 
       description: "At least 10,000 followers on your platform",
       details: "This ensures you have an engaged audience for promoting our designers"
+    },
+    {
+      icon: <TrendingUp size={20} className="text-green-400" />,
+      title: "Content Activity",
+      description: "Minimum 100 videos posted on your account",
+      details: "Active content creators show consistent engagement with their audience"
+    },
+    {
+      icon: <Heart size={20} className="text-red-400" />,
+      title: "Engagement Metrics",
+      description: "At least 1,000 total likes across your content",
+      details: "Demonstrates your content resonates well with your audience"
     },
     {
       icon: <TrendingUp size={20} className="text-green-400" />,
@@ -141,14 +152,14 @@ function InfluencerRulesContent() {
                 Your Account Stats
               </h3>
               <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-purple-400 mb-1">
                       {userStats.followers.toLocaleString()}
                     </div>
                     <div className="text-sm text-zinc-400">Followers</div>
                     <div className={`text-xs mt-1 ${userStats.followers >= 10000 ? 'text-green-400' : 'text-red-400'}`}>
-                      {userStats.followers >= 10000 ? '✓ Meets requirement' : 'Need 10K+ followers'}
+                      {userStats.followers >= 10000 ? '✓ Meets requirement (10K+)' : `Need ${(10000 - userStats.followers).toLocaleString()} more`}
                     </div>
                   </div>
                   <div className="text-center">
@@ -156,8 +167,8 @@ function InfluencerRulesContent() {
                       {userStats.likes.toLocaleString()}
                     </div>
                     <div className="text-sm text-zinc-400">Total Likes</div>
-                    <div className="text-xs mt-1 text-blue-300">
-                      Great engagement!
+                    <div className={`text-xs mt-1 ${userStats.likes >= 1000 ? 'text-green-400' : 'text-red-400'}`}>
+                      {userStats.likes >= 1000 ? '✓ Meets requirement (1K+)' : `Need ${(1000 - userStats.likes).toLocaleString()} more`}
                     </div>
                   </div>
                   <div className="text-center">
@@ -165,17 +176,8 @@ function InfluencerRulesContent() {
                       {userStats.videos.toLocaleString()}
                     </div>
                     <div className="text-sm text-zinc-400">Videos Posted</div>
-                    <div className="text-xs mt-1 text-blue-300">
-                      Active creator
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-400 mb-1">
-                      {userStats.views > 0 ? userStats.views.toLocaleString() : 'N/A'}
-                    </div>
-                    <div className="text-sm text-zinc-400">Profile Views</div>
-                    <div className="text-xs mt-1 text-orange-300">
-                      {userStats.views > 0 ? 'High visibility!' : 'Data not available'}
+                    <div className={`text-xs mt-1 ${userStats.videos >= 100 ? 'text-green-400' : 'text-red-400'}`}>
+                      {userStats.videos >= 100 ? '✓ Meets requirement (100+)' : `Need ${(100 - userStats.videos)} more`}
                     </div>
                   </div>
                   <div className="text-center">
@@ -256,6 +258,30 @@ function InfluencerRulesContent() {
             </div>
           </div>
 
+          {/* Requirements Status */}
+          {userStats.followers > 0 && (
+            <div className="mb-6">
+              <div className={`border rounded-lg p-4 ${meetsRequirements ? 'bg-green-900/30 border-green-700/50' : 'bg-red-900/30 border-red-700/50'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  {meetsRequirements ? (
+                    <CheckCircle size={20} className="text-green-400" />
+                  ) : (
+                    <AlertCircle size={20} className="text-red-400" />
+                  )}
+                  <h4 className={`font-semibold ${meetsRequirements ? 'text-green-200' : 'text-red-200'}`}>
+                    {meetsRequirements ? 'Requirements Met!' : 'Requirements Not Met'}
+                  </h4>
+                </div>
+                <p className={`text-sm ${meetsRequirements ? 'text-green-100' : 'text-red-100'}`}>
+                  {meetsRequirements 
+                    ? 'Your account meets all our minimum requirements. You can proceed to the dashboard after accepting our rules.'
+                    : 'Your account does not meet the minimum requirements yet. Please grow your account and try again.'
+                  }
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Acceptance Checkbox and Continue Button */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
             <div className="flex items-start gap-3 mb-6">
@@ -264,9 +290,10 @@ function InfluencerRulesContent() {
                 id="accept-rules"
                 checked={hasAccepted}
                 onChange={(e) => setHasAccepted(e.target.checked)}
-                className="mt-1 w-4 h-4 bg-zinc-800 border border-zinc-600 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                disabled={userStats.followers > 0 && !meetsRequirements}
+                className="mt-1 w-4 h-4 bg-zinc-800 border border-zinc-600 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
               />
-              <label htmlFor="accept-rules" className="text-zinc-300">
+              <label htmlFor="accept-rules" className={`${userStats.followers > 0 && !meetsRequirements ? 'text-zinc-500' : 'text-zinc-300'}`}>
                 I confirm that my account meets the minimum requirements and I agree to follow all 
                 community guidelines and rules outlined above. I understand that failure to comply 
                 may result in suspension from the Baguri Influencer Program.
@@ -276,14 +303,17 @@ function InfluencerRulesContent() {
             <div className="flex gap-4">
               <button
                 onClick={handleContinueToDashboard}
-                disabled={!hasAccepted}
+                disabled={!hasAccepted || (userStats.followers > 0 && !meetsRequirements)}
                 className={`flex-1 px-6 py-3 rounded-lg font-medium transition ${
-                  hasAccepted
+                  hasAccepted && (userStats.followers === 0 || meetsRequirements)
                     ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white'
                     : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
                 }`}
               >
-                Continue to Dashboard
+                {userStats.followers > 0 && !meetsRequirements 
+                  ? 'Requirements Not Met' 
+                  : 'Continue to Dashboard'
+                }
               </button>
               <Link
                 href="/influencer-auth"

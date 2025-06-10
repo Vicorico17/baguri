@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     });
     
     try {
-      const statsResponse = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,username,follower_count,following_count,likes_count,video_count,profile_view_count', {
+      const statsResponse = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,username,follower_count,following_count,likes_count,video_count', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${mockAccessToken}`,
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
         },
         expectedFields: {
           basic: ['open_id', 'display_name', 'username'],
-          stats: ['follower_count', 'following_count', 'likes_count', 'video_count', 'profile_view_count']
+          stats: ['follower_count', 'following_count', 'likes_count', 'video_count']
         },
         actualFields: {
           basic: basicProfile ? Object.keys(basicProfile) : [],
