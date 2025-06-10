@@ -46,7 +46,7 @@ function InfluencerRulesContent() {
     });
   }, [searchParams]);
 
-  const meetsRequirements = userStats.followers >= 10000 && userStats.likes >= 1000 && userStats.videos >= 100;
+  const meetsRequirements = userStats.followers >= 1 && userStats.likes >= 1 && userStats.videos >= 1;
 
   const handleContinueToDashboard = () => {
     if (!meetsRequirements) return;
@@ -144,20 +144,20 @@ function InfluencerRulesContent() {
                     <div className="text-3xl font-bold text-purple-400 mb-2">
                       {userStats.followers.toLocaleString()}
                     </div>
-                    <div className="text-sm text-zinc-400 mb-3">Required: 10,000</div>
+                    <div className="text-sm text-zinc-400 mb-3">Required: 1</div>
                     
                     {/* Progress Bar */}
                     <div className="w-full bg-zinc-700 rounded-full h-2 mb-3">
                       <div 
-                        className={`h-2 rounded-full ${userStats.followers >= 10000 ? 'bg-green-400' : 'bg-purple-400'}`}
-                        style={{width: `${Math.min((userStats.followers / 10000) * 100, 100)}%`}}
+                        className={`h-2 rounded-full ${userStats.followers >= 1 ? 'bg-green-400' : 'bg-purple-400'}`}
+                        style={{width: `${Math.min((userStats.followers / 1) * 100, 100)}%`}}
                       ></div>
                     </div>
                     
-                    <div className={`text-sm font-medium ${userStats.followers >= 10000 ? 'text-green-400' : 'text-red-400'}`}>
-                      {userStats.followers >= 10000 
+                    <div className={`text-sm font-medium ${userStats.followers >= 1 ? 'text-green-400' : 'text-red-400'}`}>
+                      {userStats.followers >= 1 
                         ? '✓ Requirement met!' 
-                        : `${(10000 - userStats.followers).toLocaleString()} more needed`
+                        : `${(1 - userStats.followers)} more needed`
                       }
                     </div>
                   </div>
@@ -171,20 +171,20 @@ function InfluencerRulesContent() {
                     <div className="text-3xl font-bold text-red-400 mb-2">
                       {userStats.likes.toLocaleString()}
                     </div>
-                    <div className="text-sm text-zinc-400 mb-3">Required: 1,000</div>
+                    <div className="text-sm text-zinc-400 mb-3">Required: 1</div>
                     
                     {/* Progress Bar */}
                     <div className="w-full bg-zinc-700 rounded-full h-2 mb-3">
                       <div 
-                        className={`h-2 rounded-full ${userStats.likes >= 1000 ? 'bg-green-400' : 'bg-red-400'}`}
-                        style={{width: `${Math.min((userStats.likes / 1000) * 100, 100)}%`}}
+                        className={`h-2 rounded-full ${userStats.likes >= 1 ? 'bg-green-400' : 'bg-red-400'}`}
+                        style={{width: `${Math.min((userStats.likes / 1) * 100, 100)}%`}}
                       ></div>
                     </div>
                     
-                    <div className={`text-sm font-medium ${userStats.likes >= 1000 ? 'text-green-400' : 'text-red-400'}`}>
-                      {userStats.likes >= 1000 
+                    <div className={`text-sm font-medium ${userStats.likes >= 1 ? 'text-green-400' : 'text-red-400'}`}>
+                      {userStats.likes >= 1 
                         ? '✓ Requirement met!' 
-                        : `${(1000 - userStats.likes).toLocaleString()} more needed`
+                        : `${(1 - userStats.likes)} more needed`
                       }
                     </div>
                   </div>
@@ -198,20 +198,20 @@ function InfluencerRulesContent() {
                     <div className="text-3xl font-bold text-green-400 mb-2">
                       {userStats.videos.toLocaleString()}
                     </div>
-                    <div className="text-sm text-zinc-400 mb-3">Required: 100</div>
+                    <div className="text-sm text-zinc-400 mb-3">Required: 1</div>
                     
                     {/* Progress Bar */}
                     <div className="w-full bg-zinc-700 rounded-full h-2 mb-3">
                       <div 
-                        className={`h-2 rounded-full ${userStats.videos >= 100 ? 'bg-green-400' : 'bg-green-400'}`}
-                        style={{width: `${Math.min((userStats.videos / 100) * 100, 100)}%`}}
+                        className={`h-2 rounded-full ${userStats.videos >= 1 ? 'bg-green-400' : 'bg-green-400'}`}
+                        style={{width: `${Math.min((userStats.videos / 1) * 100, 100)}%`}}
                       ></div>
                     </div>
                     
-                    <div className={`text-sm font-medium ${userStats.videos >= 100 ? 'text-green-400' : 'text-red-400'}`}>
-                      {userStats.videos >= 100 
+                    <div className={`text-sm font-medium ${userStats.videos >= 1 ? 'text-green-400' : 'text-red-400'}`}>
+                      {userStats.videos >= 1 
                         ? '✓ Requirement met!' 
-                        : `${(100 - userStats.videos)} more needed`
+                        : `${(1 - userStats.videos)} more needed`
                       }
                     </div>
                   </div>
