@@ -16,6 +16,7 @@ function InfluencerRulesContent() {
     followers: 0,
     likes: 0,
     videos: 0,
+    views: 0,
     username: ''
   });
 
@@ -38,10 +39,12 @@ function InfluencerRulesContent() {
     }
     
     // Set user stats if available
+    const viewsParam = searchParams.get('views');
     setUserStats({
       followers: parseInt(followersParam || '0'),
       likes: parseInt(likesParam || '0'),
       videos: parseInt(videosParam || '0'),
+      views: parseInt(viewsParam || '0'),
       username: usernameParam || ''
     });
   }, [searchParams]);
@@ -138,7 +141,7 @@ function InfluencerRulesContent() {
                 Your Account Stats
               </h3>
               <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-purple-400 mb-1">
                       {userStats.followers.toLocaleString()}
@@ -164,6 +167,15 @@ function InfluencerRulesContent() {
                     <div className="text-sm text-zinc-400">Videos Posted</div>
                     <div className="text-xs mt-1 text-blue-300">
                       Active creator
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-orange-400 mb-1">
+                      {userStats.views > 0 ? userStats.views.toLocaleString() : 'N/A'}
+                    </div>
+                    <div className="text-sm text-zinc-400">Profile Views</div>
+                    <div className="text-xs mt-1 text-orange-300">
+                      {userStats.views > 0 ? 'High visibility!' : 'Data not available'}
                     </div>
                   </div>
                   <div className="text-center">

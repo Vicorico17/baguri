@@ -173,17 +173,23 @@ export async function GET(request: NextRequest) {
     if (tokenData.scope && tokenData.scope.includes('user.info.stats')) {
       console.log('📊 Scope includes user.info.stats, attempting stats fetch...');
       
-      // Try different combinations of stats fields
-      const statsFieldCombinations = [
-        // All stats fields
-        'follower_count,following_count,likes_count,video_count',
-        // Just follower count (most important)
-        'follower_count',
-        // Just likes and videos
-        'likes_count,video_count',
-        // Just social stats
-        'follower_count,following_count'
-      ];
+             // Try different combinations of stats fields
+       const statsFieldCombinations = [
+         // All stats fields including views
+         'follower_count,following_count,likes_count,video_count,profile_view_count',
+         // All stats without profile views (in case that field isn't available)
+         'follower_count,following_count,likes_count,video_count',
+         // Core stats with profile views
+         'follower_count,likes_count,profile_view_count',
+         // Just follower count and views (most important)
+         'follower_count,profile_view_count',
+         // Just follower count (fallback)
+         'follower_count',
+         // Just likes and videos
+         'likes_count,video_count',
+         // Just social stats
+         'follower_count,following_count'
+       ];
       
       for (const fields of statsFieldCombinations) {
         console.log(`🔍 Trying stats fields: ${fields}`);
@@ -288,7 +294,8 @@ export async function GET(request: NextRequest) {
       username: userData?.username || '',
       followers: userData?.follower_count?.toString() || '0',
       likes: userData?.likes_count?.toString() || '0',
-      videos: userData?.video_count?.toString() || '0'
+      videos: userData?.video_count?.toString() || '0',
+      views: userData?.profile_view_count?.toString() || '0'
     });
     
     // Redirect to influencer rules page with user stats
