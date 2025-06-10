@@ -107,8 +107,9 @@ export async function GET(request: NextRequest) {
     let profileData;
     let statsData = null;
     
-    // First try: Basic profile information (always works)
-    profileResponse = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,username', {
+    // First try: Minimal basic profile (just what's guaranteed in user.info.basic)
+    console.log('🔍 Trying minimal basic fields: open_id,display_name');
+    profileResponse = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${access_token}`,
@@ -119,12 +120,54 @@ export async function GET(request: NextRequest) {
     
     if (!profileResponse.ok) {
       const errorText = await profileResponse.text();
-      console.error('❌ Even basic profile failed:', profileResponse.status, errorText);
-      throw new Error(`Basic profile fetch failed: ${profileResponse.status} - ${errorText}`);
+      console.log('⚠️ Basic profile with display_name failed, trying just open_id...');
+      
+      // Fallback: Try with just open_id (absolute minimum)
+      const minimalResponse = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+        },
+      });
+      
+      console.log('📋 Minimal profile response (open_id only):', minimalResponse.status);
+      
+      if (!minimalResponse.ok) {
+        const minimalErrorText = await minimalResponse.text();
+        console.error('❌ Even minimal profile (open_id only) failed:', minimalResponse.status, minimalErrorText);
+        throw new Error(`All profile fetch attempts failed. Last error: ${minimalResponse.status} - ${minimalErrorText}`);
+      }
+      
+      profileResponse = minimalResponse;
     }
     
     profileData = await profileResponse.json();
     console.log('✅ Basic profile data:', JSON.stringify(profileData, null, 2));
+    
+    // Try to get username separately (might not be in basic scope)
+    console.log('🔍 Attempting to fetch username separately...');
+    try {
+      const usernameResponse = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,username', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+        },
+      });
+      
+      if (usernameResponse.ok) {
+        const usernameData = await usernameResponse.json();
+        console.log('✅ Username data:', JSON.stringify(usernameData, null, 2));
+        
+        // Merge username into basic profile if available
+        if (usernameData.data?.user?.username) {
+          profileData.data.user.username = usernameData.data.user.username;
+        }
+      } else {
+        console.log('⚠️ Username fetch failed:', usernameResponse.status);
+      }
+    } catch (usernameError) {
+      console.log('⚠️ Username fetch exception:', usernameError);
+    }
     
     // Second try: Stats-only fields (if user.info.stats scope is available)
     if (tokenData.scope && tokenData.scope.includes('user.info.stats')) {
