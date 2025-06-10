@@ -11,8 +11,10 @@
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.2",
     "@supabase/supabase-js": "^2.49.8",
+    "@types/howler": "^2.2.12",
     "class-variance-authority": "^0.7.1",
     "framer-motion": "^12.10.5",
+    "howler": "^2.2.4",
     "lucide-react": "^0.511.0",
     "next": "14.1.0",
     "react": "^18.3",
