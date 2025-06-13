@@ -307,7 +307,7 @@ function InfluencerDashboardContent() {
                         <button
                           className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition"
                           onClick={() => {
-                            const link = `${window.location.origin}/product/${product.id}?ref=${platform === 'tiktok' && tiktokData ? encodeURIComponent(tiktokData.username || tiktokData.name) : 'influencer'}`;
+                            const link = `${window.location.origin}/shop?product=${product.id}&ref=${platform === 'tiktok' && tiktokData ? encodeURIComponent(tiktokData.username || tiktokData.name) : 'influencer'}`;
                             navigator.clipboard.writeText(link);
                             alert('Referral link copied to clipboard!');
                           }}
