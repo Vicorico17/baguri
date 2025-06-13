@@ -297,69 +297,50 @@ export async function GET(request: NextRequest) {
     const tiktokLikes = userData?.likes_count || null;
     const tiktokVideos = userData?.video_count || null;
 
-    console.log('[INFLUENCER DEBUG] TikTok Username:', tiktokUsername, '(used open_id as fallback if missing)');
-    console.log('[INFLUENCER DEBUG] TikTok OpenId:', tiktokOpenId);
+    console.log('[INFLUENCER DEBUG] Username:', tiktokUsername, '| OpenId:', tiktokOpenId);
     if (tiktokOpenId) {
-      console.log('[INFLUENCER DEBUG] Attempting to find existing influencer...');
       // Try to find existing influencer by tiktok_username
       const { data: existingInfluencer, error: findError } = await supabase
         .from('influencers')
         .select('*')
         .eq('tiktok_username', tiktokUsername)
         .single();
-      console.log('[INFLUENCER DEBUG] Find result:', existingInfluencer, 'Find error:', findError);
-      if (
-        findError &&
-        typeof findError === 'object' &&
-        (findError as any)?.code !== 'PGRST116'
-      ) {
+      if (findError && typeof findError === 'object' && (findError as any)?.code !== 'PGRST116') {
         console.error('Error looking up influencer:', findError);
       }
-      // Determine if influencer passes the rules
       const passesRules = (tiktokFollowers >= 10000) && (tiktokLikes >= 100000) && (tiktokVideos >= 5);
+      const influencerPayload = {
+        user_id: tiktokOpenId,
+        tiktok_username: tiktokUsername,
+        tiktok_open_id: tiktokOpenId,
+        tiktok_display_name: tiktokDisplayName,
+        tiktok_avatar_url: tiktokAvatarUrl,
+        tiktok_followers: tiktokFollowers,
+        tiktok_likes: tiktokLikes,
+        tiktok_videos: tiktokVideos,
+        is_verified: passesRules
+      };
+      console.log('[INFLUENCER DEBUG] Data to be added/updated in influencers table:', influencerPayload);
       if (!existingInfluencer) {
-        console.log('[INFLUENCER DEBUG] No existing influencer found, inserting new influencer...');
-        // Create new influencer
         const { data: newInfluencer, error: createError } = await supabase
           .from('influencers')
-          .insert({
-            tiktok_username: tiktokUsername,
-            tiktok_open_id: tiktokOpenId,
-            tiktok_display_name: tiktokDisplayName,
-            tiktok_avatar_url: tiktokAvatarUrl,
-            tiktok_followers: tiktokFollowers,
-            tiktok_likes: tiktokLikes,
-            tiktok_videos: tiktokVideos,
-            is_verified: passesRules
-          })
+          .insert(influencerPayload)
           .select()
           .single();
-        console.log('[INFLUENCER DEBUG] Insert result:', newInfluencer, 'Insert error:', createError);
         if (createError) {
           console.error('Error creating influencer:', createError);
         } else {
-          console.log('Created new influencer:', newInfluencer);
+          console.log('[INFLUENCER DEBUG] TikTok data successfully ADDED to influencers table:', newInfluencer?.id || newInfluencer);
         }
       } else {
-        console.log('[INFLUENCER DEBUG] Existing influencer found, updating influencer...');
-        // Optionally update influencer info if needed
         const { error: updateError } = await supabase
           .from('influencers')
-          .update({
-            tiktok_open_id: tiktokOpenId,
-            tiktok_display_name: tiktokDisplayName,
-            tiktok_avatar_url: tiktokAvatarUrl,
-            tiktok_followers: tiktokFollowers,
-            tiktok_likes: tiktokLikes,
-            tiktok_videos: tiktokVideos,
-            is_verified: passesRules
-          })
+          .update(influencerPayload)
           .eq('id', existingInfluencer.id);
-        console.log('[INFLUENCER DEBUG] Update error:', updateError);
         if (updateError) {
           console.error('Error updating influencer:', updateError);
         } else {
-          console.log('Updated existing influencer:', existingInfluencer.id);
+          console.log('[INFLUENCER DEBUG] TikTok data successfully UPDATED in influencers table:', existingInfluencer.id);
         }
       }
     } else {
