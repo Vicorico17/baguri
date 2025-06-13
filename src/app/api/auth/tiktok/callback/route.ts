@@ -296,13 +296,17 @@ export async function GET(request: NextRequest) {
     const tiktokLikes = userData?.likes_count || null;
     const tiktokVideos = userData?.video_count || null;
 
+    console.log('[INFLUENCER DEBUG] TikTok Username:', tiktokUsername);
+    console.log('[INFLUENCER DEBUG] TikTok OpenId:', tiktokOpenId);
     if (tiktokUsername && tiktokOpenId) {
+      console.log('[INFLUENCER DEBUG] Attempting to find existing influencer...');
       // Try to find existing influencer by tiktok_username
       const { data: existingInfluencer, error: findError } = await supabase
         .from('influencers')
         .select('*')
         .eq('tiktok_username', tiktokUsername)
         .single();
+      console.log('[INFLUENCER DEBUG] Find result:', existingInfluencer, 'Find error:', findError);
       if (
         findError &&
         typeof findError === 'object' &&
@@ -313,6 +317,7 @@ export async function GET(request: NextRequest) {
       // Determine if influencer passes the rules
       const passesRules = (tiktokFollowers >= 10000) && (tiktokLikes >= 100000) && (tiktokVideos >= 5);
       if (!existingInfluencer) {
+        console.log('[INFLUENCER DEBUG] No existing influencer found, inserting new influencer...');
         // Create new influencer
         const { data: newInfluencer, error: createError } = await supabase
           .from('influencers')
@@ -328,14 +333,16 @@ export async function GET(request: NextRequest) {
           })
           .select()
           .single();
+        console.log('[INFLUENCER DEBUG] Insert result:', newInfluencer, 'Insert error:', createError);
         if (createError) {
           console.error('Error creating influencer:', createError);
         } else {
           console.log('Created new influencer:', newInfluencer);
         }
       } else {
+        console.log('[INFLUENCER DEBUG] Existing influencer found, updating influencer...');
         // Optionally update influencer info if needed
-        await supabase
+        const { error: updateError } = await supabase
           .from('influencers')
           .update({
             tiktok_open_id: tiktokOpenId,
@@ -347,8 +354,15 @@ export async function GET(request: NextRequest) {
             is_verified: passesRules
           })
           .eq('id', existingInfluencer.id);
-        console.log('Updated existing influencer:', existingInfluencer.id);
+        console.log('[INFLUENCER DEBUG] Update error:', updateError);
+        if (updateError) {
+          console.error('Error updating influencer:', updateError);
+        } else {
+          console.log('Updated existing influencer:', existingInfluencer.id);
+        }
       }
+    } else {
+      console.log('[INFLUENCER DEBUG] Skipping insert/update: missing tiktokUsername or tiktokOpenId');
     }
 
     // Redirect to influencer rules page with user stats
