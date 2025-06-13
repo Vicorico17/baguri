@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const { data: influencer, error: influencerError } = await supabase
       .from('influencers')
       .select('id')
-      .eq('username', referral_code)
+      .eq('tiktok_username', referral_code)
       .single();
     if (!influencerError && influencer) {
       influencerId = influencer.id;
