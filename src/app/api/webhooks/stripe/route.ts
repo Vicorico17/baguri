@@ -117,7 +117,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       const { data: foundInfluencer, error: influencerError } = await supabase
         .from('influencers')
         .select('*')
-        .eq('username', referralCode)
+        .eq('tiktok_username', referralCode)
         .single();
       if (influencerError) {
         console.error('Error looking up influencer by referral code:', influencerError);
