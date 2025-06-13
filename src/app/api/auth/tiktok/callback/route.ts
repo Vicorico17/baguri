@@ -288,7 +288,8 @@ export async function GET(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const tiktokUsername = userData?.username || null;
+    // Use open_id as username fallback if username is missing
+    const tiktokUsername = userData?.username || userData?.open_id || null;
     const tiktokOpenId = userData?.open_id || null;
     const tiktokDisplayName = userData?.display_name || null;
     const tiktokAvatarUrl = userData?.avatar_url || null;
@@ -296,9 +297,9 @@ export async function GET(request: NextRequest) {
     const tiktokLikes = userData?.likes_count || null;
     const tiktokVideos = userData?.video_count || null;
 
-    console.log('[INFLUENCER DEBUG] TikTok Username:', tiktokUsername);
+    console.log('[INFLUENCER DEBUG] TikTok Username:', tiktokUsername, '(used open_id as fallback if missing)');
     console.log('[INFLUENCER DEBUG] TikTok OpenId:', tiktokOpenId);
-    if (tiktokUsername && tiktokOpenId) {
+    if (tiktokOpenId) {
       console.log('[INFLUENCER DEBUG] Attempting to find existing influencer...');
       // Try to find existing influencer by tiktok_username
       const { data: existingInfluencer, error: findError } = await supabase
@@ -362,7 +363,7 @@ export async function GET(request: NextRequest) {
         }
       }
     } else {
-      console.log('[INFLUENCER DEBUG] Skipping insert/update: missing tiktokUsername or tiktokOpenId');
+      console.log('[INFLUENCER DEBUG] Skipping insert/update: missing tiktokOpenId');
     }
 
     // Redirect to influencer rules page with user stats
