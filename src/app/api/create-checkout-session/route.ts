@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid JSON in request body' }, { status: 400 });
     }
     
-    const { items } = parsedBody;
+    const { items, referralCode } = parsedBody;
     console.log('Parsed items:', items);
 
     if (!items || items.length === 0) {
@@ -111,7 +111,8 @@ export async function POST(request: NextRequest) {
         created_via: 'baguri_cart_checkout',
         created_at: new Date().toISOString(),
         product_count: items.length.toString(),
-        product_names: items.map((item: any) => item.productName).join(', ')
+        product_names: items.map((item: any) => item.productName).join(', '),
+        ...(referralCode ? { referral_code: referralCode } : {})
       },
       billing_address_collection: 'auto',
       shipping_address_collection: {

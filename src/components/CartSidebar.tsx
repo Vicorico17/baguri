@@ -302,7 +302,8 @@ export function CartSidebar() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          items: checkoutItems
+          items: checkoutItems,
+          referralCode: typeof window !== 'undefined' ? localStorage.getItem('referral_code') : undefined
         }),
       });
 
