@@ -43,7 +43,8 @@ export function useCheckout() {
           },
           body: JSON.stringify({
             priceId: item.priceId,
-            quantity: item.quantity
+            quantity: item.quantity,
+            referralCode: typeof window !== 'undefined' ? localStorage.getItem('referral_code') : undefined
           }),
         });
 

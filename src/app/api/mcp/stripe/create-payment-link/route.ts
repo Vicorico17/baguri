@@ -8,7 +8,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { price, quantity } = body;
+    const { price, quantity, referralCode } = body;
 
     if (!price || !quantity) {
       return NextResponse.json({ 
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    console.log('🚀 Creating Stripe payment link:', { price, quantity });
+    console.log('🚀 Creating Stripe payment link:', { price, quantity, referralCode });
 
     // Create Stripe payment link using official SDK
     const paymentLink = await stripe.paymentLinks.create({
@@ -28,7 +28,8 @@ export async function POST(request: NextRequest) {
       ],
       metadata: {
         created_via: 'baguri_automation',
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        ...(referralCode ? { referral_code: referralCode } : {})
       }
     });
 

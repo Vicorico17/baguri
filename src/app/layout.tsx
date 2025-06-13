@@ -5,6 +5,7 @@ import { ThirdwebProvider } from "thirdweb/react";
 import { AppProviders } from "@/contexts/AppProviders";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import MicrosoftClarity from "@/components/MicrosoftClarity";
+import ReferralTracker from "./ReferralTracker";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -81,6 +82,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body className={inter.className}>
+        <ReferralTracker />
         <GoogleAnalytics />
         <MicrosoftClarity />
         <ThirdwebProvider>

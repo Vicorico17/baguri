@@ -228,6 +228,20 @@ function ShopContent() {
     }
   }, [authLoading]);
 
+  // Auto-open product modal if 'product' param exists in URL
+  useEffect(() => {
+    if (!loading && products.length > 0 && typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      const productIdParam = url.searchParams.get('product');
+      if (productIdParam) {
+        const foundProduct = products.find(p => String(p.id) === productIdParam);
+        if (foundProduct) {
+          setSelectedProduct(foundProduct);
+        }
+      }
+    }
+  }, [loading, products]);
+
   const filteredProducts = products.filter(product => {
     const designerFilter = selectedDesigner === null || product.designers?.id === selectedDesigner;
     
@@ -467,8 +481,6 @@ function ShopContent() {
           </div>
         </div>
       </div>
-
-
 
       {/* Products Grid */}
       <main className="max-w-7xl mx-auto px-4 py-8 pt-44 safe-area-bottom">

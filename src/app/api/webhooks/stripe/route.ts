@@ -107,6 +107,88 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   try {
     console.log('🎯 Processing checkout completed:', session.id);
     
+    // Extract referral code from metadata if present
+    const referralCode = session.metadata?.referral_code;
+    let influencer = null;
+    let influencerCommission = 0;
+    if (referralCode) {
+      console.log('🔗 Referral code detected in checkout session:', referralCode);
+      // Look up influencer by username (referralCode)
+      const { data: foundInfluencer, error: influencerError } = await supabase
+        .from('influencers')
+        .select('*')
+        .eq('username', referralCode)
+        .single();
+      if (influencerError) {
+        console.error('Error looking up influencer by referral code:', influencerError);
+      } else if (foundInfluencer) {
+        influencer = foundInfluencer;
+        // Calculate commission (15% of total order amount)
+        influencerCommission = (session.amount_total ? session.amount_total / 100 : 0) * 0.15;
+        // Get or create influencer wallet
+        let { data: wallet, error: walletError } = await supabase
+          .from('influencer_wallets')
+          .select('*')
+          .eq('influencer_id', influencer.id)
+          .single();
+        if (walletError && walletError.code === 'PGRST116') {
+          // Create wallet if it doesn't exist
+          const { data: newWallet, error: createError } = await supabase
+            .from('influencer_wallets')
+            .insert({
+              influencer_id: influencer.id,
+              balance: 0,
+              total_earnings: 0,
+              total_withdrawn: 0,
+              pending_balance: 0
+            })
+            .select()
+            .single();
+          if (createError) {
+            console.error('Error creating influencer wallet:', createError);
+          } else {
+            wallet = newWallet;
+          }
+        }
+        if (wallet) {
+          // Update wallet balance and total earnings
+          const newBalance = parseFloat(wallet.balance) + influencerCommission;
+          const newTotalEarnings = parseFloat(wallet.total_earnings) + influencerCommission;
+          const { error: updateError } = await supabase
+            .from('influencer_wallets')
+            .update({
+              balance: newBalance,
+              total_earnings: newTotalEarnings,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', wallet.id);
+          if (updateError) {
+            console.error('Error updating influencer wallet:', updateError);
+          } else {
+            // Create transaction record
+            const { error: transactionError } = await supabase
+              .from('influencer_wallet_transactions')
+              .insert({
+                wallet_id: wallet.id,
+                influencer_id: influencer.id,
+                type: 'commission',
+                amount: influencerCommission,
+                status: 'completed',
+                description: `15% commission for order ${session.id}`,
+                order_id: session.id
+              });
+            if (transactionError) {
+              console.error('Error creating influencer wallet transaction:', transactionError);
+            } else {
+              console.log(`✅ Added ${influencerCommission} RON commission to influencer ${influencer.username} (wallet: ${wallet.id})`);
+            }
+          }
+        }
+      } else {
+        console.warn('No influencer found for referral code:', referralCode);
+      }
+    }
+
     // Check if Stripe is available
     if (!stripe) {
       console.error('Stripe not configured for webhook processing');
