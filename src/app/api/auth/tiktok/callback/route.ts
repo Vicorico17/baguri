@@ -270,16 +270,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-auth?error=privacy_restricted&message=${encodeURIComponent('Unable to fetch your TikTok profile. Please ensure your account privacy settings allow app access.')}`);
     }
 
-    // TODO: Store influencer data in database
-    // For now, redirect to influencer dashboard with success
-    console.log('TikTok user authenticated successfully:', {
-      openId: open_id,
-      profileOpenId: combinedProfileData.data?.user?.open_id,
-      displayName: combinedProfileData.data?.user?.display_name || 'TikTok User',
-      hasStatsData: !!(statsData && Object.keys(statsData).length > 0),
-      statsFields: statsData ? Object.keys(statsData) : []
-    });
-
     // Get user data for the rules page
     const userData = combinedProfileData.data?.user;
     const userParams = new URLSearchParams({
@@ -290,9 +280,6 @@ export async function GET(request: NextRequest) {
       likes: userData?.likes_count?.toString() || '0',
       videos: userData?.video_count?.toString() || '0'
     });
-    
-    // Redirect to influencer rules page with user stats
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-rules?${userParams.toString()}`);
 
     // === Store influencer data in database ===
     const { createClient } = await import('@supabase/supabase-js');
@@ -363,6 +350,9 @@ export async function GET(request: NextRequest) {
         console.log('Updated existing influencer:', existingInfluencer.id);
       }
     }
+
+    // Redirect to influencer rules page with user stats
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-rules?${userParams.toString()}`);
 
   } catch (error) {
     console.error('TikTok OAuth callback error:', {

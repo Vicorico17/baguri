@@ -212,7 +212,7 @@ function InfluencerDashboardContent() {
             <div className="mb-6 flex items-center gap-3">
               <span className="text-lg font-semibold">Connected TikTok:</span>
               <span className="bg-zinc-800 px-3 py-1 rounded-lg text-white font-mono">{tiktokData.name}</span>
-              {tiktokData.username && (
+                  {tiktokData.username && (
                 <span className="text-zinc-400 text-sm">@{tiktokData.username}</span>
               )}
             </div>
@@ -300,7 +300,7 @@ function InfluencerDashboardContent() {
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-zinc-700 text-zinc-400 text-xs font-bold">IMG</div>
                           )}
-                        </div>
+                </div>
                         <div className="font-bold text-white text-base text-center line-clamp-2">{product.name}</div>
                         <div className="text-zinc-400 text-sm mb-2">{product.price} RON</div>
                         <div className="text-green-400 text-xs font-semibold mb-1">Earn {commission} RON per sale</div>
@@ -314,7 +314,7 @@ function InfluencerDashboardContent() {
                         >
                           Generate & Copy Link
                         </button>
-                      </div>
+              </div>
                     );
                   })
                 )}
@@ -327,8 +327,8 @@ function InfluencerDashboardContent() {
 
           {/* Connect Additional Platforms */}
           {/* Removed Connect Instagram and Connect TikTok buttons */}
-        </div>
-      </div>
+            </div>
+          </div>
       {/* Wallet and Transaction History at the bottom, in the same container */}
       <div className="mt-12 max-w-3xl mx-auto">
         <div className="bg-zinc-950 border-2 border-green-700/40 rounded-lg p-6 mb-8 shadow-lg shadow-green-900/20">
