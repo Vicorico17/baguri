@@ -294,6 +294,76 @@ export async function GET(request: NextRequest) {
     // Redirect to influencer rules page with user stats
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-rules?${userParams.toString()}`);
 
+    // === Store influencer data in database ===
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const tiktokUsername = userData?.username || null;
+    const tiktokOpenId = userData?.open_id || null;
+    const tiktokDisplayName = userData?.display_name || null;
+    const tiktokAvatarUrl = userData?.avatar_url || null;
+    const tiktokFollowers = userData?.follower_count || null;
+    const tiktokLikes = userData?.likes_count || null;
+    const tiktokVideos = userData?.video_count || null;
+
+    if (tiktokUsername && tiktokOpenId) {
+      // Try to find existing influencer by tiktok_username
+      const { data: existingInfluencer, error: findError } = await supabase
+        .from('influencers')
+        .select('*')
+        .eq('tiktok_username', tiktokUsername)
+        .single();
+      if (
+        findError &&
+        typeof findError === 'object' &&
+        (findError as any)?.code !== 'PGRST116'
+      ) {
+        console.error('Error looking up influencer:', findError);
+      }
+      // Determine if influencer passes the rules
+      const passesRules = (tiktokFollowers >= 10000) && (tiktokLikes >= 100000) && (tiktokVideos >= 5);
+      if (!existingInfluencer) {
+        // Create new influencer
+        const { data: newInfluencer, error: createError } = await supabase
+          .from('influencers')
+          .insert({
+            tiktok_username: tiktokUsername,
+            tiktok_open_id: tiktokOpenId,
+            tiktok_display_name: tiktokDisplayName,
+            tiktok_avatar_url: tiktokAvatarUrl,
+            tiktok_followers: tiktokFollowers,
+            tiktok_likes: tiktokLikes,
+            tiktok_videos: tiktokVideos,
+            is_verified: passesRules
+          })
+          .select()
+          .single();
+        if (createError) {
+          console.error('Error creating influencer:', createError);
+        } else {
+          console.log('Created new influencer:', newInfluencer);
+        }
+      } else {
+        // Optionally update influencer info if needed
+        await supabase
+          .from('influencers')
+          .update({
+            tiktok_open_id: tiktokOpenId,
+            tiktok_display_name: tiktokDisplayName,
+            tiktok_avatar_url: tiktokAvatarUrl,
+            tiktok_followers: tiktokFollowers,
+            tiktok_likes: tiktokLikes,
+            tiktok_videos: tiktokVideos,
+            is_verified: passesRules
+          })
+          .eq('id', existingInfluencer.id);
+        console.log('Updated existing influencer:', existingInfluencer.id);
+      }
+    }
+
   } catch (error) {
     console.error('TikTok OAuth callback error:', {
       message: error instanceof Error ? error.message : 'Unknown error',
