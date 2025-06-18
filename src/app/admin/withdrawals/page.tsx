@@ -26,21 +26,14 @@ interface WithdrawalRequest {
 
 // Influencer withdrawal type
 interface InfluencerWithdrawalRequest {
-  transaction_id: string;
+  id: string;
+  tiktok_open_id: string;
+  tiktok_display_name: string;
+  iban: string;
   amount: number;
   status: 'pending' | 'completed' | 'failed';
-  description: string;
   created_at: string;
   updated_at: string;
-  tiktok_open_id: string;
-  influencers: {
-    tiktok_display_name: string;
-    email?: string;
-  };
-  influencers_wallets: {
-    balance: number;
-  };
-  iban?: string;
 }
 
 export default function WithdrawalsAdmin() {
@@ -431,11 +424,11 @@ export default function WithdrawalsAdmin() {
               <div className="grid gap-4">
                 {influencerWithdrawals.map((withdrawal) => (
                   <InfluencerWithdrawalCard
-                    key={withdrawal.transaction_id}
+                    key={withdrawal.id}
                     withdrawal={withdrawal}
-                    onApprove={() => handleApproveInfluencer(withdrawal.transaction_id)}
+                    onApprove={() => handleApproveInfluencer(withdrawal.id)}
                     onReject={() => setInfluencerRejectionModal({ withdrawal, isOpen: true })}
-                    isLoading={influencerActionLoading === withdrawal.transaction_id}
+                    isLoading={influencerActionLoading === withdrawal.id}
                     readOnly={withdrawal.status !== 'pending'}
                   />
                 ))}
@@ -525,7 +518,7 @@ export default function WithdrawalsAdmin() {
                 Cancel
               </button>
               <button
-                onClick={() => handleRejectInfluencer(influencerRejectionModal.withdrawal.transaction_id, influencerRejectionReason)}
+                onClick={() => handleRejectInfluencer(influencerRejectionModal.withdrawal.id, influencerRejectionReason)}
                 className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition flex items-center justify-center gap-2"
                 disabled={influencerRejecting}
               >
@@ -709,8 +702,8 @@ function InfluencerWithdrawalCard({
         <div className="flex items-center gap-3">
           <User size={20} />
           <div>
-            <h3 className="font-semibold">{withdrawal.influencers?.tiktok_display_name || withdrawal.tiktok_open_id}</h3>
-            {withdrawal.influencers?.email && <p className="text-sm opacity-75">{withdrawal.influencers.email}</p>}
+            <h3 className="font-semibold">{withdrawal.tiktok_display_name || withdrawal.tiktok_open_id}</h3>
+            <p className="text-xs opacity-75">{withdrawal.tiktok_open_id}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -718,7 +711,7 @@ function InfluencerWithdrawalCard({
           <span className="text-sm font-medium capitalize">{withdrawal.status}</span>
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div>
           <div className="text-sm opacity-75">Amount</div>
           <div className="text-xl font-bold">{Math.abs(withdrawal.amount).toFixed(2)} RON</div>
@@ -728,15 +721,10 @@ function InfluencerWithdrawalCard({
           <div className="font-mono text-sm">{withdrawal.iban ? `${withdrawal.iban.substring(0, 4)}****${withdrawal.iban.substring(withdrawal.iban.length - 4)}` : '-'}</div>
         </div>
         <div>
-          <div className="text-sm opacity-75">Current Balance</div>
-          <div className="font-semibold">{withdrawal.influencers_wallets?.balance?.toFixed(2) || '0.00'} RON</div>
-        </div>
-        <div>
           <div className="text-sm opacity-75">Requested</div>
           <div className="text-sm">{formatDate(withdrawal.created_at)}</div>
         </div>
       </div>
-      <div className="text-sm opacity-75 mb-4">{withdrawal.description}</div>
       {!readOnly && withdrawal.status === 'pending' && (
         <div className="flex gap-3">
           <button

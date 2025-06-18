@@ -181,7 +181,7 @@ class InfluencerService {
           return { success: false, error: 'Failed to update IBAN' };
         }
       }
-      // Create withdrawal transaction
+      // Create withdrawal transaction (for history)
       const { error: transactionError } = await supabase
         .from('influencers_wallet_transactions')
         .insert({
@@ -196,6 +196,20 @@ class InfluencerService {
       if (transactionError) {
         console.error('Error creating withdrawal request:', transactionError);
         return { success: false, error: transactionError.message };
+      }
+      // Insert into influencer_withdrawals (for admin display)
+      const { error: withdrawalError } = await supabase
+        .from('influencer_withdrawals')
+        .insert({
+          tiktok_open_id: tiktokOpenId,
+          tiktok_display_name: tiktokDisplayName,
+          iban: iban.trim(),
+          amount: amount,
+          status: 'pending',
+        });
+      if (withdrawalError) {
+        console.error('Error creating influencer withdrawal record:', withdrawalError);
+        return { success: false, error: withdrawalError.message };
       }
       // Update wallet balance (deduct immediately)
       const { error: walletUpdateError } = await supabase

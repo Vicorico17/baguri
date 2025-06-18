@@ -474,19 +474,14 @@ class AdminService {
     }
   }
 
-  // Influencer Withdrawal Management Methods
+  // Influencer Withdrawal Management Methods (new table)
   async getPendingInfluencerWithdrawals(): Promise<{ success: boolean; data?: any[]; error?: string }> {
     try {
       const { data: withdrawals, error } = await supabase
-        .from('influencers_wallet_transactions')
-        .select(`
-          *,
-          influencers:tiktok_open_id (tiktok_display_name, email)
-        `)
-        .eq('type', 'withdrawal')
+        .from('influencer_withdrawals')
+        .select('*')
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
-
       if (error) {
         console.error('Error fetching pending influencer withdrawals:', error);
         return { success: false, error: error.message };
@@ -501,15 +496,10 @@ class AdminService {
   async getAllInfluencerWithdrawals(): Promise<{ success: boolean; data?: any[]; error?: string }> {
     try {
       const { data: withdrawals, error } = await supabase
-        .from('influencers_wallet_transactions')
-        .select(`
-          *,
-          influencers:tiktok_open_id (tiktok_display_name, email)
-        `)
-        .eq('type', 'withdrawal')
+        .from('influencer_withdrawals')
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
-
       if (error) {
         console.error('Error fetching all influencer withdrawals:', error);
         return { success: false, error: error.message };
