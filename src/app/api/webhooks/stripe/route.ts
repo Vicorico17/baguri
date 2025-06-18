@@ -113,34 +113,31 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     let influencerCommission = 0;
     if (referralCode) {
       console.log('🔗 Referral code detected in checkout session:', referralCode);
-      // Look up influencer by username (referralCode)
-      const { data: foundInfluencer, error: influencerError } = await supabase
+      // Look up influencer by tiktok_open_id (referralCode)
+      const { data: influencer, error: influencerError } = await supabase
         .from('influencers')
         .select('*')
-        .eq('tiktok_username', referralCode)
+        .eq('tiktok_open_id', referralCode)
         .single();
-      if (influencerError) {
+      if (influencerError || !influencer) {
         console.error('Error looking up influencer by referral code:', influencerError);
-      } else if (foundInfluencer) {
-        influencer = foundInfluencer;
+      } else {
         // Calculate commission (15% of total order amount)
-        influencerCommission = (session.amount_total ? session.amount_total / 100 : 0) * 0.15;
+        const influencerCommission = (session.amount_total ? session.amount_total / 100 : 0) * 0.15;
         // Get or create influencer wallet
         let { data: wallet, error: walletError } = await supabase
-          .from('influencer_wallets')
+          .from('influencers_wallets')
           .select('*')
-          .eq('influencer_id', influencer.id)
+          .eq('tiktok_open_id', influencer.tiktok_open_id)
           .single();
         if (walletError && walletError.code === 'PGRST116') {
           // Create wallet if it doesn't exist
           const { data: newWallet, error: createError } = await supabase
-            .from('influencer_wallets')
+            .from('influencers_wallets')
             .insert({
-              influencer_id: influencer.id,
-              balance: 0,
-              total_earnings: 0,
-              total_withdrawn: 0,
-              pending_balance: 0
+              tiktok_open_id: influencer.tiktok_open_id,
+              tiktok_display_name: influencer.display_name,
+              balance: 0
             })
             .select()
             .single();
@@ -151,41 +148,36 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           }
         }
         if (wallet) {
-          // Update wallet balance and total earnings
+          // Update wallet balance
           const newBalance = parseFloat(wallet.balance) + influencerCommission;
-          const newTotalEarnings = parseFloat(wallet.total_earnings) + influencerCommission;
           const { error: updateError } = await supabase
-            .from('influencer_wallets')
+            .from('influencers_wallets')
             .update({
               balance: newBalance,
-              total_earnings: newTotalEarnings,
               updated_at: new Date().toISOString()
             })
-            .eq('id', wallet.id);
+            .eq('tiktok_open_id', influencer.tiktok_open_id);
           if (updateError) {
             console.error('Error updating influencer wallet:', updateError);
           } else {
             // Create transaction record
             const { error: transactionError } = await supabase
-              .from('influencer_wallet_transactions')
+              .from('influencers_wallet_transactions')
               .insert({
-                wallet_id: wallet.id,
-                influencer_id: influencer.id,
+                tiktok_open_id: influencer.tiktok_open_id,
+                tiktok_display_name: influencer.display_name,
                 type: 'commission',
                 amount: influencerCommission,
-                status: 'completed',
                 description: `15% commission for order ${session.id}`,
-                order_id: session.id
+                created_at: new Date().toISOString()
               });
             if (transactionError) {
               console.error('Error creating influencer wallet transaction:', transactionError);
             } else {
-              console.log(`✅ Added ${influencerCommission} RON commission to influencer ${influencer.username} (wallet: ${wallet.id})`);
+              console.log(`✅ Added ${influencerCommission} RON commission to influencer ${influencer.display_name} (wallet: ${wallet.tiktok_open_id})`);
             }
           }
         }
-      } else {
-        console.warn('No influencer found for referral code:', referralCode);
       }
     }
 
