@@ -1,59 +1,45 @@
 import { supabase } from './supabase';
 
 export type InfluencerWallet = {
-  id: string;
-  influencerId: string;
+  tiktok_open_id: string;
+  tiktok_display_name: string;
   balance: number;
-  totalEarnings: number;
-  totalWithdrawn: number;
-  pendingBalance: number;
-  iban?: string;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at?: string;
 };
 
 export type InfluencerWalletTransaction = {
-  id: string;
-  walletId: string;
-  influencerId: string;
+  transaction_id: string;
+  tiktok_open_id: string;
+  tiktok_display_name: string;
   type: 'commission' | 'withdrawal' | 'refund' | 'adjustment';
   amount: number;
-  status: 'pending' | 'completed' | 'failed';
   description: string;
-  orderId?: string;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
 };
 
 class InfluencerService {
   // Get influencer wallet
-  async getInfluencerWallet(influencerId: string): Promise<InfluencerWallet | null> {
+  async getInfluencerWallet(tiktokOpenId: string): Promise<InfluencerWallet | null> {
     try {
       const { data: wallet, error } = await supabase
-        .from('influencer_wallets')
+        .from('influencers_wallets')
         .select('*')
-        .eq('influencer_id', influencerId)
+        .eq('tiktok_open_id', tiktokOpenId)
         .single();
-
       if (error) {
         if (error.code === 'PGRST116') {
-          // No wallet found, create one
-          return await this.createInfluencerWallet(influencerId);
+          return null;
         }
         console.error('Error fetching influencer wallet:', error);
         return null;
       }
-
       return {
-        id: wallet.id,
-        influencerId: wallet.influencer_id,
+        tiktok_open_id: wallet.tiktok_open_id,
+        tiktok_display_name: wallet.tiktok_display_name,
         balance: parseFloat(wallet.balance) || 0,
-        totalEarnings: parseFloat(wallet.total_earnings) || 0,
-        totalWithdrawn: parseFloat(wallet.total_withdrawn) || 0,
-        pendingBalance: parseFloat(wallet.pending_balance) || 0,
-        iban: wallet.iban,
-        createdAt: wallet.created_at,
-        updatedAt: wallet.updated_at,
+        created_at: wallet.created_at,
+        updated_at: wallet.updated_at,
       };
     } catch (error) {
       console.error('Error getting influencer wallet:', error);
@@ -210,36 +196,26 @@ class InfluencerService {
   }
 
   // Get wallet transactions
-  async getWalletTransactions(influencerId: string, limit: number = 50): Promise<InfluencerWalletTransaction[]> {
+  async getWalletTransactions(tiktokOpenId: string, limit: number = 50): Promise<InfluencerWalletTransaction[]> {
     try {
-      const wallet = await this.getInfluencerWallet(influencerId);
-      if (!wallet) {
-        return [];
-      }
-
       const { data: transactions, error } = await supabase
-        .from('influencer_wallet_transactions')
+        .from('influencers_wallet_transactions')
         .select('*')
-        .eq('wallet_id', wallet.id)
+        .eq('tiktok_open_id', tiktokOpenId)
         .order('created_at', { ascending: false })
         .limit(limit);
-
       if (error) {
         console.error('Error fetching influencer wallet transactions:', error);
         return [];
       }
-
       return (transactions || []).map((t: any) => ({
-        id: t.id,
-        walletId: t.wallet_id,
-        influencerId: t.influencer_id,
+        transaction_id: t.transaction_id,
+        tiktok_open_id: t.tiktok_open_id,
+        tiktok_display_name: t.tiktok_display_name,
         type: t.type,
         amount: parseFloat(t.amount) || 0,
-        status: t.status,
         description: t.description || '',
-        orderId: t.order_id,
-        createdAt: t.created_at,
-        updatedAt: t.updated_at,
+        created_at: t.created_at,
       }));
     } catch (error) {
       console.error('Error getting influencer wallet transactions:', error);

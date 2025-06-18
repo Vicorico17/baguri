@@ -114,15 +114,19 @@ function InfluencerDashboardContent() {
       if (!error && data) {
         setInfluencer(data);
         setWalletLoading(true);
-        const w = await influencerService.getInfluencerWallet(data.id);
-        setWallet(w);
-        setWalletLoading(false);
-        if (w) {
-          const txs = await influencerService.getWalletTransactions(data.id, 50);
-          setTransactions(txs);
-        } else {
-          setTransactions([]);
-        }
+        // Use tiktok_open_id for wallet and transactions
+        const fetchWalletAndTransactions = async () => {
+          const w = await influencerService.getInfluencerWallet(data.tiktok_open_id);
+          setWallet(w);
+          setWalletLoading(false);
+          if (w) {
+            const txs = await influencerService.getWalletTransactions(data.tiktok_open_id, 50);
+            setTransactions(txs);
+          } else {
+            setTransactions([]);
+          }
+        };
+        fetchWalletAndTransactions();
       } else {
         setInfluencer(null);
         setWallet(null);
@@ -377,73 +381,8 @@ function LoadingFallback() {
 
 // WalletCard component (adapted for influencer)
 function WalletCard({ wallet }: { wallet: InfluencerWallet | null }) {
-  const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
-  const [withdrawalAmount, setWithdrawalAmount] = useState('');
-  const [withdrawing, setWithdrawing] = useState(false);
-  const [iban, setIban] = useState(wallet?.iban || '');
-  const [isEditingIban, setIsEditingIban] = useState(false);
-  const [isUpdatingIban, setIsUpdatingIban] = useState(false);
-  const [walletState, setWalletState] = useState(wallet);
-
-  // Update IBAN in DB
-  const handleUpdateIban = async () => {
-    if (!walletState) return;
-    if (!iban || iban.length < 10) {
-      alert('Please enter a valid IBAN');
-      return;
-    }
-    setIsUpdatingIban(true);
-    const { error } = await supabase
-      .from('influencer_wallets')
-      .update({ iban: iban.toUpperCase(), updated_at: new Date().toISOString() })
-      .eq('id', walletState.id);
-    setIsUpdatingIban(false);
-    if (!error) {
-      setIsEditingIban(false);
-      setWalletState({ ...walletState, iban: iban.toUpperCase() });
-      alert('IBAN updated successfully!');
-    } else {
-      alert('Failed to update IBAN');
-    }
-  };
-
-  // Handle withdrawal
-  const handleWithdrawal = async () => {
-    if (!walletState) return;
-    const amount = parseFloat(withdrawalAmount);
-    if (isNaN(amount) || amount <= 0) {
-      alert('Please enter a valid amount');
-      return;
-    }
-    if (amount < 50) {
-      alert('Minimum withdrawal amount is 50 RON');
-      return;
-    }
-    if (amount > walletState.balance) {
-      alert('Insufficient balance');
-      return;
-    }
-    if (!walletState.iban || walletState.iban.length < 10) {
-      alert('Please add your IBAN before requesting a withdrawal');
-      return;
-    }
-    setWithdrawing(true);
-    const result = await influencerService.requestWithdrawal(walletState.influencerId, amount);
-    setWithdrawing(false);
-    if (result.success) {
-      alert('Withdrawal request submitted successfully! We will process it within 2-3 business days.');
-      setShowWithdrawalModal(false);
-      setWithdrawalAmount('');
-      // Reload wallet data
-      const updated = await influencerService.getInfluencerWallet(walletState.influencerId);
-      setWalletState(updated);
-    } else {
-      alert(`Error: ${result.error}`);
-    }
-  };
-
-  // If walletState is null, show a default wallet card
-  if (!walletState) {
+  // Only show balance and basic info for now
+  if (!wallet) {
     return (
       <div>
         <div className="flex items-center gap-2 mb-4">
@@ -455,21 +394,10 @@ function WalletCard({ wallet }: { wallet: InfluencerWallet | null }) {
             <p className="text-xs text-zinc-400 mb-1">Current Balance</p>
             <p className="text-4xl font-extrabold text-green-400">0.00 RON</p>
           </div>
-          <button
-            disabled
-            className="w-full bg-zinc-700 text-white py-3 px-6 rounded-lg font-medium flex items-center justify-center gap-2 cursor-not-allowed"
-          >
-            <Download size={20} />
-            Withdraw Funds
-          </button>
-          <p className="text-sm text-zinc-400 text-center mt-2">
-            Minimum withdrawal amount is 50 RON
-          </p>
         </div>
       </div>
     );
   }
-
   return (
     <div>
       <div className="flex items-center gap-2 mb-4">
@@ -479,129 +407,9 @@ function WalletCard({ wallet }: { wallet: InfluencerWallet | null }) {
       <div className="space-y-6">
         <div className="flex flex-col items-center justify-center bg-zinc-900/80 rounded-lg p-6 mb-4">
           <p className="text-xs text-zinc-400 mb-1">Current Balance</p>
-          <p className="text-4xl font-extrabold text-green-400">{walletState.balance.toFixed(2)} RON</p>
+          <p className="text-4xl font-extrabold text-green-400">{wallet.balance.toFixed(2)} RON</p>
         </div>
-        {/* IBAN Management */}
-        <div className="mb-2">
-          <label className="block text-sm font-medium mb-2">Bank Account (IBAN)</label>
-          {!isEditingIban ? (
-            <div className="bg-zinc-800/50 rounded-lg p-4 border border-zinc-600 flex items-center justify-between">
-              <span className="text-sm font-medium">
-                {walletState.iban ? `${walletState.iban.substring(0, 4)}****${walletState.iban.substring(walletState.iban.length - 4)}` : 'No IBAN set'}
-              </span>
-              <button
-                onClick={() => setIsEditingIban(true)}
-                className="text-blue-400 hover:text-blue-300 text-sm underline ml-4"
-              >
-                {walletState.iban ? 'Edit' : 'Add IBAN'}
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <input
-                type="text"
-                value={iban}
-                onChange={e => setIban(e.target.value.toUpperCase())}
-                placeholder="RO49AAAA1B31007593840000"
-                className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-3 text-white placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none"
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={handleUpdateIban}
-                  disabled={isUpdatingIban}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-600 text-white py-2 px-4 rounded-lg font-medium transition flex items-center justify-center gap-2"
-                >
-                  {isUpdatingIban ? 'Saving...' : 'Save IBAN'}
-                </button>
-                <button
-                  onClick={() => setIsEditingIban(false)}
-                  className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-white py-2 px-4 rounded-lg font-medium transition"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-        {/* Withdrawal Button */}
-        <button
-          onClick={() => setShowWithdrawalModal(true)}
-          disabled={!walletState.balance || walletState.balance < 50}
-          className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 disabled:from-zinc-700 disabled:to-zinc-600 disabled:cursor-not-allowed text-white py-3 px-6 rounded-lg font-medium transition flex items-center justify-center gap-2"
-        >
-          <Download size={20} />
-          Withdraw Funds
-        </button>
-        {(!walletState.balance || walletState.balance < 50) && (
-          <p className="text-sm text-zinc-400 text-center mt-2">
-            Minimum withdrawal amount is 50 RON
-          </p>
-        )}
       </div>
-      {/* Withdrawal Modal */}
-      {showWithdrawalModal && walletState && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 rounded-xl p-6 w-full max-w-md border border-zinc-700">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold">Withdraw Funds</h3>
-              <button
-                onClick={() => setShowWithdrawalModal(false)}
-                className="text-zinc-400 hover:text-white"
-              >
-                <XCircle size={24} />
-              </button>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">
-                Withdrawal Amount (RON)
-              </label>
-              <input
-                type="number"
-                value={withdrawalAmount}
-                onChange={e => setWithdrawalAmount(e.target.value)}
-                placeholder="50.00"
-                min="50"
-                max={walletState.balance || 0}
-                step="0.01"
-                className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-3 text-white placeholder:text-zinc-400 focus:border-green-500 focus:outline-none"
-              />
-              <div className="text-xs text-zinc-400 mt-1">
-                Available: {walletState.balance?.toFixed(2) || '0.00'} RON (Min: 50 RON)
-              </div>
-            </div>
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">
-                Bank Account (IBAN)
-              </label>
-              <div className="bg-zinc-800/50 rounded-lg p-4 border border-zinc-600">
-                <span className="text-sm font-medium">
-                  {walletState.iban ? `${walletState.iban.substring(0, 4)}****${walletState.iban.substring(walletState.iban.length - 4)}` : 'No IBAN set'}
-                </span>
-              </div>
-              {(!walletState.iban || walletState.iban.length < 10) && (
-                <p className="text-sm text-amber-400 text-center mt-2">
-                  ⚠️ Please add your IBAN to enable withdrawals
-                </p>
-              )}
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowWithdrawalModal(false)}
-                className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-white py-3 px-6 rounded-lg font-medium transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleWithdrawal}
-                disabled={withdrawing || !withdrawalAmount || parseFloat(withdrawalAmount) < 50 || !walletState.iban || walletState.iban.length < 10}
-                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white py-3 px-6 rounded-lg font-medium transition flex items-center justify-center gap-2"
-              >
-                {withdrawing ? 'Processing...' : 'Withdraw'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
