@@ -6,6 +6,7 @@ export type InfluencerWallet = {
   balance: number;
   created_at: string;
   updated_at?: string;
+  iban?: string;
 };
 
 export type InfluencerWalletTransaction = {
@@ -16,6 +17,7 @@ export type InfluencerWalletTransaction = {
   amount: number;
   description: string;
   created_at: string;
+  iban?: string;
 };
 
 // Types for new feature
@@ -61,6 +63,7 @@ class InfluencerService {
         balance: parseFloat(wallet.balance) || 0,
         created_at: wallet.created_at,
         updated_at: wallet.updated_at,
+        iban: wallet.iban || undefined,
       };
     } catch (error) {
       console.error('Error getting influencer wallet:', error);
@@ -92,6 +95,7 @@ class InfluencerService {
         balance: parseFloat(wallet.balance) || 0,
         created_at: wallet.created_at,
         updated_at: wallet.updated_at,
+        iban: wallet.iban || '',
       };
     } catch (error) {
       console.error('Error creating influencer wallet:', error);
@@ -150,22 +154,33 @@ class InfluencerService {
     }
   }
 
-  // Request withdrawal (no IBAN logic)
-  async requestWithdrawal(tiktokOpenId: string, tiktokDisplayName: string, amount: number): Promise<{ success: boolean; error?: string }> {
+  // Request withdrawal (with IBAN logic)
+  async requestWithdrawal(tiktokOpenId: string, tiktokDisplayName: string, amount: number, iban: string): Promise<{ success: boolean; error?: string }> {
     try {
       const wallet = await this.getInfluencerWallet(tiktokOpenId);
       if (!wallet) {
         return { success: false, error: 'Wallet not found' };
       }
-
       if (amount > wallet.balance) {
         return { success: false, error: 'Insufficient balance' };
       }
-
       if (amount < 50) {
         return { success: false, error: 'Minimum withdrawal amount is 50 RON' };
       }
-
+      if (!iban || iban.trim() === '') {
+        return { success: false, error: 'IBAN is required for withdrawal' };
+      }
+      // Save IBAN to wallet if changed
+      if (wallet.iban !== iban) {
+        const { error: ibanUpdateError } = await supabase
+          .from('influencers_wallets')
+          .update({ iban: iban.trim() })
+          .eq('tiktok_open_id', tiktokOpenId);
+        if (ibanUpdateError) {
+          console.error('Error updating IBAN:', ibanUpdateError);
+          return { success: false, error: 'Failed to update IBAN' };
+        }
+      }
       // Create withdrawal transaction
       const { error: transactionError } = await supabase
         .from('influencers_wallet_transactions')
@@ -175,14 +190,13 @@ class InfluencerService {
           type: 'withdrawal',
           amount: -amount, // Negative for withdrawal
           status: 'pending',
-          description: `Withdrawal request of ${amount} RON`,
+          description: `Withdrawal request of ${amount} RON to IBAN ${iban.slice(-4)}`,
+          iban: iban.trim(),
         });
-
       if (transactionError) {
         console.error('Error creating withdrawal request:', transactionError);
         return { success: false, error: transactionError.message };
       }
-
       // Update wallet balance (deduct immediately)
       const { error: walletUpdateError } = await supabase
         .from('influencers_wallets')
@@ -191,12 +205,10 @@ class InfluencerService {
           updated_at: new Date().toISOString(),
         })
         .eq('tiktok_open_id', tiktokOpenId);
-
       if (walletUpdateError) {
         console.error('Error updating influencer wallet:', walletUpdateError);
         return { success: false, error: walletUpdateError.message };
       }
-
       return { success: true };
     } catch (error: any) {
       console.error('Error requesting influencer withdrawal:', error);
@@ -225,6 +237,7 @@ class InfluencerService {
         amount: parseFloat(t.amount) || 0,
         description: t.description || '',
         created_at: t.created_at,
+        iban: t.iban || undefined,
       }));
     } catch (error) {
       console.error('Error getting influencer wallet transactions:', error);

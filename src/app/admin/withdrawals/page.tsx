@@ -40,6 +40,7 @@ interface InfluencerWithdrawalRequest {
   influencers_wallets: {
     balance: number;
   };
+  iban?: string;
 }
 
 export default function WithdrawalsAdmin() {

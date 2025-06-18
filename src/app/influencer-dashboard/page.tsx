@@ -47,6 +47,9 @@ function InfluencerDashboardContent() {
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requestSuccess, setRequestSuccess] = useState<string | null>(null);
   const [copiedProductId, setCopiedProductId] = useState<string | null>(null);
+  const [iban, setIban] = useState('');
+  const [isEditingIban, setIsEditingIban] = useState(false);
+  const [isUpdatingIban, setIsUpdatingIban] = useState(false);
 
   useEffect(() => {
     if (!searchParams) return;
@@ -137,6 +140,7 @@ function InfluencerDashboardContent() {
           setWallet(w);
           setWalletLoading(false);
           if (w) {
+            setIban(w.iban || '');
             const txs = await influencerService.getWalletTransactions(data.tiktok_open_id, 50);
             setTransactions(txs);
           } else {
@@ -149,6 +153,7 @@ function InfluencerDashboardContent() {
         setWallet(null);
         setWalletLoading(false);
         setTransactions([]);
+        setIban('');
       }
     };
     fetchInfluencer();
@@ -202,13 +207,18 @@ function InfluencerDashboardContent() {
       setWithdrawError('Insufficient balance');
       return;
     }
+    if (!iban || iban.trim() === '') {
+      setWithdrawError('Please add your IBAN before requesting a withdrawal');
+      return;
+    }
     setWithdrawing(true);
     setWithdrawError(null);
     try {
       const result = await influencerService.requestWithdrawal(
         wallet.tiktok_open_id,
         wallet.tiktok_display_name,
-        amount
+        amount,
+        iban.trim()
       );
       if (result.success) {
         setShowWithdrawModal(false);
@@ -217,6 +227,7 @@ function InfluencerDashboardContent() {
         const w = await influencerService.getInfluencerWallet(wallet.tiktok_open_id);
         setWallet(w);
         if (w) {
+          setIban(w.iban || '');
           const txs = await influencerService.getWalletTransactions(wallet.tiktok_open_id, 50);
           setTransactions(txs);
         }
@@ -561,6 +572,58 @@ function InfluencerDashboardContent() {
                 disabled={withdrawing}
               />
             </div>
+            <div className="mb-4">
+              <label className="block text-sm text-zinc-400 mb-1">Bank Account (IBAN)</label>
+              {!isEditingIban ? (
+                <div className="bg-zinc-800/50 rounded-lg p-4 border border-zinc-600">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">
+                        {iban ? `${iban.substring(0, 4)}****${iban.substring(iban.length - 4)}` : 'No IBAN set'}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setIsEditingIban(true)}
+                      className="text-blue-400 hover:text-blue-300 text-sm underline"
+                    >
+                      {iban ? 'Edit' : 'Add IBAN'}
+                    </button>
+                  </div>
+                  {iban && (
+                    <p className="text-xs text-zinc-400 mt-2">
+                      Funds will be transferred to this account within 2-3 business days.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={iban}
+                    onChange={e => setIban(e.target.value.toUpperCase())}
+                    placeholder="RO49AAAA1B31007593840000"
+                    className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-3 text-white placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setIsEditingIban(false)}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition flex items-center justify-center gap-2"
+                    >
+                      Save IBAN
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsEditingIban(false);
+                        setIban(wallet.iban || '');
+                      }}
+                      className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-white py-2 px-4 rounded-lg font-medium transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             {withdrawError && <div className="text-red-400 text-sm mb-2">{withdrawError}</div>}
             <div className="flex gap-3 mt-4">
               <button
@@ -572,7 +635,7 @@ function InfluencerDashboardContent() {
               </button>
               <button
                 onClick={handleWithdraw}
-                disabled={withdrawing || !withdrawAmount || parseFloat(withdrawAmount) < 50 || parseFloat(withdrawAmount) > wallet.balance}
+                disabled={withdrawing || !withdrawAmount || parseFloat(withdrawAmount) < 50 || parseFloat(withdrawAmount) > wallet.balance || !iban || iban.trim() === ''}
                 className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white py-3 px-6 rounded-lg font-medium transition flex items-center justify-center gap-2"
               >
                 {withdrawing ? (
@@ -589,6 +652,11 @@ function InfluencerDashboardContent() {
               </button>
             </div>
             <div className="text-xs text-zinc-400 mt-3">Minimum withdrawal amount is 50 RON.</div>
+            {(!iban || iban.trim() === '') && (
+              <p className="text-sm text-amber-400 text-center mt-2">
+                ⚠️ Please add your IBAN to enable withdrawals
+              </p>
+            )}
           </div>
         </div>
       )}
