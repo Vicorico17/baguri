@@ -48,16 +48,14 @@ class InfluencerService {
   }
 
   // Create influencer wallet
-  async createInfluencerWallet(influencerId: string): Promise<InfluencerWallet | null> {
+  async createInfluencerWallet(tiktokOpenId: string, tiktokDisplayName: string): Promise<InfluencerWallet | null> {
     try {
       const { data: wallet, error } = await supabase
-        .from('influencer_wallets')
+        .from('influencers_wallets')
         .insert({
-          influencer_id: influencerId,
+          tiktok_open_id: tiktokOpenId,
+          tiktok_display_name: tiktokDisplayName,
           balance: 0,
-          total_earnings: 0,
-          total_withdrawn: 0,
-          pending_balance: 0,
         })
         .select()
         .single();
@@ -68,15 +66,11 @@ class InfluencerService {
       }
 
       return {
-        id: wallet.id,
-        influencerId: wallet.influencer_id,
+        tiktok_open_id: wallet.tiktok_open_id,
+        tiktok_display_name: wallet.tiktok_display_name,
         balance: parseFloat(wallet.balance) || 0,
-        totalEarnings: parseFloat(wallet.total_earnings) || 0,
-        totalWithdrawn: parseFloat(wallet.total_withdrawn) || 0,
-        pendingBalance: parseFloat(wallet.pending_balance) || 0,
-        iban: wallet.iban,
-        createdAt: wallet.created_at,
-        updatedAt: wallet.updated_at,
+        created_at: wallet.created_at,
+        updated_at: wallet.updated_at,
       };
     } catch (error) {
       console.error('Error creating influencer wallet:', error);
@@ -85,12 +79,12 @@ class InfluencerService {
   }
 
   // Add earnings to influencer wallet (called when a product is sold)
-  async addEarnings(influencerId: string, amount: number, orderId: string, description: string): Promise<{ success: boolean; error?: string }> {
+  async addEarnings(tiktokOpenId: string, tiktokDisplayName: string, amount: number, orderId: string, description: string): Promise<{ success: boolean; error?: string }> {
     try {
       // Get or create wallet
-      let wallet = await this.getInfluencerWallet(influencerId);
+      let wallet = await this.getInfluencerWallet(tiktokOpenId);
       if (!wallet) {
-        wallet = await this.createInfluencerWallet(influencerId);
+        wallet = await this.createInfluencerWallet(tiktokOpenId, tiktokDisplayName);
         if (!wallet) {
           return { success: false, error: 'Failed to create wallet' };
         }
@@ -98,13 +92,12 @@ class InfluencerService {
 
       // Add earnings to wallet
       const { error: updateError } = await supabase
-        .from('influencer_wallets')
+        .from('influencers_wallets')
         .update({
           balance: (wallet.balance + amount).toFixed(2),
-          total_earnings: (wallet.totalEarnings + amount).toFixed(2),
           updated_at: new Date().toISOString(),
         })
-        .eq('id', wallet.id);
+        .eq('tiktok_open_id', tiktokOpenId);
 
       if (updateError) {
         console.error('Error updating influencer wallet:', updateError);
@@ -113,10 +106,10 @@ class InfluencerService {
 
       // Create transaction record
       const { error: transactionError } = await supabase
-        .from('influencer_wallet_transactions')
+        .from('influencers_wallet_transactions')
         .insert({
-          wallet_id: wallet.id,
-          influencer_id: influencerId,
+          tiktok_open_id: tiktokOpenId,
+          tiktok_display_name: tiktokDisplayName,
           type: 'commission',
           amount: amount,
           status: 'completed',
@@ -136,10 +129,10 @@ class InfluencerService {
     }
   }
 
-  // Request withdrawal with IBAN information
-  async requestWithdrawal(influencerId: string, amount: number): Promise<{ success: boolean; error?: string }> {
+  // Request withdrawal (no IBAN logic)
+  async requestWithdrawal(tiktokOpenId: string, tiktokDisplayName: string, amount: number): Promise<{ success: boolean; error?: string }> {
     try {
-      const wallet = await this.getInfluencerWallet(influencerId);
+      const wallet = await this.getInfluencerWallet(tiktokOpenId);
       if (!wallet) {
         return { success: false, error: 'Wallet not found' };
       }
@@ -152,20 +145,16 @@ class InfluencerService {
         return { success: false, error: 'Minimum withdrawal amount is 50 RON' };
       }
 
-      if (!wallet.iban) {
-        return { success: false, error: 'IBAN not found. Please add your IBAN before requesting withdrawal.' };
-      }
-
       // Create withdrawal transaction
       const { error: transactionError } = await supabase
-        .from('influencer_wallet_transactions')
+        .from('influencers_wallet_transactions')
         .insert({
-          wallet_id: wallet.id,
-          influencer_id: influencerId,
+          tiktok_open_id: tiktokOpenId,
+          tiktok_display_name: tiktokDisplayName,
           type: 'withdrawal',
           amount: -amount, // Negative for withdrawal
           status: 'pending',
-          description: `Withdrawal request of ${amount} RON to ${wallet.iban.slice(-4)}`,
+          description: `Withdrawal request of ${amount} RON`,
         });
 
       if (transactionError) {
@@ -173,15 +162,14 @@ class InfluencerService {
         return { success: false, error: transactionError.message };
       }
 
-      // Update wallet balance - move money from balance to pending_balance
+      // Update wallet balance (deduct immediately)
       const { error: walletUpdateError } = await supabase
-        .from('influencer_wallets')
+        .from('influencers_wallets')
         .update({
           balance: (wallet.balance - amount).toFixed(2),
-          pending_balance: (wallet.pendingBalance + amount).toFixed(2),
           updated_at: new Date().toISOString(),
         })
-        .eq('id', wallet.id);
+        .eq('tiktok_open_id', tiktokOpenId);
 
       if (walletUpdateError) {
         console.error('Error updating influencer wallet:', walletUpdateError);

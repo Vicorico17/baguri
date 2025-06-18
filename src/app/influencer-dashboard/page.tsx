@@ -479,7 +479,7 @@ function TransactionHistory({ transactions }: { transactions: any[] }) {
         <div className="space-y-3">
           {transactions.map((transaction) => (
             <div
-              key={transaction.id}
+              key={transaction.transaction_id}
               className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-lg border border-zinc-700"
             >
               <div className="flex items-center gap-3">
@@ -492,7 +492,7 @@ function TransactionHistory({ transactions }: { transactions: any[] }) {
                     {transaction.description}
                   </div>
                   <div className="text-xs text-zinc-500">
-                    {new Date(transaction.createdAt).toLocaleDateString()}
+                    {new Date(transaction.created_at).toLocaleDateString()}
                   </div>
                 </div>
               </div>
