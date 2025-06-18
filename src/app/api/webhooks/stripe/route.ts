@@ -122,8 +122,22 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       if (influencerError || !influencer) {
         console.error('Error looking up influencer by referral code:', influencerError);
       } else {
-        // Calculate commission (10% of total order amount)
-        const influencerCommission = (session.amount_total ? session.amount_total / 100 : 0) * 0.10;
+        // Determine commission tier based on follower count
+        let commissionPct = 0.0;
+        let tierLabel = '0%';
+        const followers = influencer.follower_count || influencer.followers || 0;
+        if (followers >= 100000) {
+          commissionPct = 0.15;
+          tierLabel = '15%';
+        } else if (followers >= 10000) {
+          commissionPct = 0.10;
+          tierLabel = '10%';
+        } else if (followers >= 1000) {
+          commissionPct = 0.05;
+          tierLabel = '5%';
+        }
+        // Calculate commission
+        const influencerCommission = (session.amount_total ? session.amount_total / 100 : 0) * commissionPct;
         // Get or create influencer wallet
         let { data: wallet, error: walletError } = await supabase
           .from('influencers_wallets')
@@ -168,7 +182,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
                 tiktok_display_name: influencer.display_name,
                 type: 'commission',
                 amount: influencerCommission,
-                description: `10% commission for order ${session.id}`,
+                description: `${tierLabel} commission for order ${session.id} (${followers} followers)`,
                 created_at: new Date().toISOString()
               });
             if (transactionError) {
