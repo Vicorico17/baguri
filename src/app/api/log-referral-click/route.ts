@@ -13,12 +13,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing referral_code or product_id' }, { status: 400 });
     }
 
-    // Look up influencer by username (referral_code)
+    // Look up influencer by tiktok_open_id (referral_code)
     let influencerId = null;
     const { data: influencer, error: influencerError } = await supabase
       .from('influencers')
       .select('id')
-      .eq('tiktok_username', referral_code)
+      .eq('tiktok_open_id', referral_code)
       .single();
     if (!influencerError && influencer) {
       influencerId = influencer.id;
