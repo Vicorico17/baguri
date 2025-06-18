@@ -718,7 +718,7 @@ function InfluencerWithdrawalCard({
         </div>
         <div>
           <div className="text-sm opacity-75">IBAN</div>
-          <div className="font-mono text-sm">{withdrawal.iban ? `${withdrawal.iban.substring(0, 4)}****${withdrawal.iban.substring(withdrawal.iban.length - 4)}` : '-'}</div>
+          <div className="font-mono text-sm">{withdrawal.iban || '-'}</div>
         </div>
         <div>
           <div className="text-sm opacity-75">Requested</div>

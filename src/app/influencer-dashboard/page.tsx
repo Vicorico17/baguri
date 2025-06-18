@@ -661,7 +661,7 @@ function InfluencerDashboardContent() {
         </div>
       )}
       {/* Address Modal */}
-      {addressModalOpen && selectedProduct && (
+      {addressModalOpen && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-8 max-w-md w-full relative">
             <button
@@ -672,63 +672,72 @@ function InfluencerDashboardContent() {
               ×
             </button>
             <h3 className="text-2xl font-bold mb-4">Request Free Item</h3>
+            {/* Show current address if any */}
+            {addresses.length > 0 && (
+              <div className="mb-4 bg-zinc-800/50 rounded-lg p-4 border border-zinc-600">
+                <div className="text-sm text-zinc-400 mb-1">Current Address</div>
+                <div className="text-white font-mono text-sm">{addresses[0].address.text}</div>
+              </div>
+            )}
+            {/* Add new address */}
             <div className="mb-4">
               <label className="block text-sm text-zinc-400 mb-1">Delivery Address</label>
-              <select
-                value={selectedAddressId || ''}
-                onChange={(e) => setSelectedAddressId(e.target.value)}
-                className="w-full px-4 py-2 rounded bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                {addresses.map((address) => (
-                  <option key={address.id} value={address.id}>{address.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm text-zinc-400 mb-1">New Address</label>
               <input
                 type="text"
                 value={newAddress}
-                onChange={(e) => setNewAddress(e.target.value)}
-                className="w-full px-4 py-2 rounded bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Enter new address"
+                onChange={e => setNewAddress(e.target.value)}
+                placeholder="Enter your delivery address"
+                className="w-full px-4 py-2 rounded bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={savingAddress}
               />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm text-zinc-400 mb-1">Address Label</label>
-              <input
-                type="text"
-                value={newAddressLabel}
-                onChange={(e) => setNewAddressLabel(e.target.value)}
-                className="w-full px-4 py-2 rounded bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Enter address label"
-              />
+              <button
+                onClick={handleSaveAddress}
+                className="mt-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition"
+                disabled={savingAddress || !newAddress.trim()}
+              >
+                {savingAddress ? 'Saving...' : 'Save Address'}
+              </button>
             </div>
             {requestError && <div className="text-red-400 text-sm mb-2">{requestError}</div>}
             <div className="flex gap-3 mt-4">
               <button
                 onClick={() => setAddressModalOpen(false)}
                 className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-white py-3 px-6 rounded-lg font-medium transition"
-                disabled={savingAddress}
+                disabled={requesting}
               >
                 Cancel
               </button>
               <button
-                onClick={handleSaveAddress}
-                disabled={savingAddress || !newAddress || !newAddressLabel}
-                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white py-3 px-6 rounded-lg font-medium transition"
+                onClick={handleSubmitRequest}
+                disabled={requesting || (!addresses.length && !newAddress.trim())}
+                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white py-3 px-6 rounded-lg font-medium transition flex items-center justify-center gap-2"
               >
-                {savingAddress ? (
+                {requesting ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Saving...
+                    Sending...
                   </>
                 ) : (
                   <>
-                    Save Address
+                    <Download size={16} />
+                    Proceed
                   </>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Show notification after request */}
+      {requestSuccess && (
+        <div className="fixed top-4 right-4 z-50 bg-green-600 border border-green-500 rounded-lg p-4 shadow-lg animate-slide-in">
+          <div className="flex items-center gap-3">
+            <CheckCircle size={20} className="text-green-300" />
+            <div>
+              <p className="font-medium">Request Sent!</p>
+              <p className="text-sm text-green-200">
+                A free item request has been sent to the designer.
+              </p>
             </div>
           </div>
         </div>
