@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle, Users, TrendingUp, AlertCircle, Heart } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
+import { supabase } from '@/lib/supabase';
 
 function InfluencerRulesContent() {
   const router = useRouter();
@@ -48,11 +49,60 @@ function InfluencerRulesContent() {
 
   const meetsRequirements = userStats.followers >= 1 && userStats.likes >= 1 && userStats.videos >= 1;
 
-  const handleContinueToDashboard = () => {
+  const handleContinueToDashboard = async () => {
     if (!meetsRequirements) return;
-    
-    // Continue to dashboard with the original parameters
-    router.push(`/influencer-dashboard?platform=${platform}&success=true&name=${encodeURIComponent(userName)}`);
+    if (platform === 'tiktok') {
+      if (!searchParams) {
+        alert('Missing search parameters. Please re-authenticate.');
+        return;
+      }
+      const tiktokOpenId = searchParams.get('open_id');
+      if (!tiktokOpenId) {
+        alert('Missing TikTok Open ID. Please re-authenticate.');
+        return;
+      }
+      // Update influencer as verified in Supabase
+      const { error } = await supabase
+        .from('influencers')
+        .update({ is_verified: true })
+        .eq('tiktok_open_id', tiktokOpenId);
+      if (error) {
+        alert('Failed to verify influencer. Please try again.');
+        console.error('Error updating influencer verification:', error);
+        return;
+      }
+      // Ensure wallet exists for verified influencer
+      const { data: existingWallet, error: walletFindError } = await supabase
+        .from('influencers_wallets')
+        .select('*')
+        .eq('tiktok_open_id', tiktokOpenId)
+        .single();
+      if (!existingWallet) {
+        // Get username from userStats or fallback
+        const tiktokUsername = userStats.username || tiktokOpenId;
+        const { data: newWallet, error: walletCreateError } = await supabase
+          .from('influencers_wallets')
+          .insert({
+            tiktok_open_id: tiktokOpenId,
+            tiktok_username: tiktokUsername,
+            balance: 0
+          })
+          .select()
+          .single();
+        if (walletCreateError) {
+          console.error('Error creating influencer wallet:', walletCreateError);
+        } else {
+          console.log('Wallet created for influencer:', tiktokOpenId, '| Wallet:', newWallet);
+        }
+      } else {
+        console.log('Wallet already exists for influencer:', tiktokOpenId, '| Wallet:', existingWallet);
+      }
+      // Continue to dashboard with the original parameters
+      router.push(`/influencer-dashboard?platform=${platform}&success=true&name=${encodeURIComponent(userName)}`);
+    } else {
+      // For other platforms, just continue as before
+      router.push(`/influencer-dashboard?platform=${platform}&success=true&name=${encodeURIComponent(userName)}`);
+    }
   };
 
 
