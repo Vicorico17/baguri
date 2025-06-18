@@ -356,12 +356,22 @@ export async function GET(request: NextRequest) {
           .eq('tiktok_open_id', tiktokOpenId)
           .single();
         if (!existingWallet) {
-          console.log('[INFLUENCER DEBUG] Creating wallet for influencer:', tiktokOpenId);
+          // Fetch display_name from influencers table
+          let displayName = tiktokDisplayName;
+          if (!displayName) {
+            const { data: influencerRow } = await supabase
+              .from('influencers')
+              .select('display_name')
+              .eq('tiktok_open_id', tiktokOpenId)
+              .single();
+            displayName = influencerRow?.display_name || tiktokOpenId;
+          }
+          console.log('[INFLUENCER DEBUG] Creating wallet for influencer:', tiktokOpenId, '| display_name:', displayName);
           const { data: newWallet, error: walletCreateError } = await supabase
             .from('influencers_wallets')
             .insert({
               tiktok_open_id: tiktokOpenId,
-              tiktok_username: tiktokUsername,
+              tiktok_display_name: displayName,
               balance: 0
             })
             .select()

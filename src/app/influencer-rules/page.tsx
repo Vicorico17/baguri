@@ -78,13 +78,21 @@ function InfluencerRulesContent() {
         .eq('tiktok_open_id', tiktokOpenId)
         .single();
       if (!existingWallet) {
-        // Get username from userStats or fallback
-        const tiktokUsername = userStats.username || tiktokOpenId;
+        // Fetch display_name from influencers table
+        let displayName = userName;
+        const { data: influencerRow } = await supabase
+          .from('influencers')
+          .select('display_name')
+          .eq('tiktok_open_id', tiktokOpenId)
+          .single();
+        if (influencerRow && influencerRow.display_name) {
+          displayName = influencerRow.display_name;
+        }
         const { data: newWallet, error: walletCreateError } = await supabase
           .from('influencers_wallets')
           .insert({
             tiktok_open_id: tiktokOpenId,
-            tiktok_username: tiktokUsername,
+            tiktok_display_name: displayName,
             balance: 0
           })
           .select()
