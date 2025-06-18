@@ -278,7 +278,8 @@ export async function GET(request: NextRequest) {
       username: userData?.username || '',
       followers: userData?.follower_count?.toString() || '0',
       likes: userData?.likes_count?.toString() || '0',
-      videos: userData?.video_count?.toString() || '0'
+      videos: userData?.video_count?.toString() || '0',
+      open_id: userData?.open_id || ''
     });
 
     // === Store influencer data in database ===
