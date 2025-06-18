@@ -85,11 +85,30 @@ function InfluencerDashboardContent() {
     if (!designer?.id) return;
     // Fetch influencer record
     const fetchInfluencer = async () => {
-      const { data, error } = await supabase
-        .from('influencers')
-        .select('*')
-        .eq('user_id', designer.id)
-        .single();
+      let data = null;
+      let error = null;
+      if (designer?.id) {
+        const res = await supabase
+          .from('influencers')
+          .select('*')
+          .eq('user_id', designer.id)
+          .single();
+        data = res.data;
+        error = res.error;
+      }
+      // Fallback: if not found by user_id, try by tiktok_open_id from URL
+      if ((!data || error) && searchParams) {
+        const openId = searchParams.get('open_id');
+        if (openId) {
+          const res2 = await supabase
+            .from('influencers')
+            .select('*')
+            .eq('tiktok_open_id', openId)
+            .single();
+          data = res2.data;
+          error = res2.error;
+        }
+      }
       if (!error && data) {
         setInfluencer(data);
         setWalletLoading(true);
