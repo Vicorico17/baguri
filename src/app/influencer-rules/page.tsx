@@ -78,16 +78,14 @@ function InfluencerRulesContent() {
         .eq('tiktok_open_id', tiktokOpenId)
         .single();
       if (!existingWallet) {
-        // Fetch display_name from influencers table
-        let displayName = userName;
+        // Always fetch display_name from influencers table
+        let displayName = null;
         const { data: influencerRow } = await supabase
           .from('influencers')
           .select('display_name')
           .eq('tiktok_open_id', tiktokOpenId)
           .single();
-        if (influencerRow && influencerRow.display_name) {
-          displayName = influencerRow.display_name;
-        }
+        displayName = influencerRow?.display_name || tiktokOpenId;
         const { data: newWallet, error: walletCreateError } = await supabase
           .from('influencers_wallets')
           .insert({
