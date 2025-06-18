@@ -153,6 +153,18 @@ function InfluencerDashboardContent() {
     }
   };
 
+  function getInfluencerTier(followers: number) {
+    if (followers >= 100000) {
+      return { tier: 'Gold', commission: 15, color: 'text-yellow-400', bg: 'bg-yellow-900/30' };
+    } else if (followers >= 10000) {
+      return { tier: 'Silver', commission: 10, color: 'text-gray-300', bg: 'bg-gray-800/30' };
+    } else if (followers >= 1000) {
+      return { tier: 'Bronze', commission: 5, color: 'text-orange-400', bg: 'bg-orange-900/30' };
+    } else {
+      return { tier: 'Unranked', commission: 0, color: 'text-zinc-400', bg: 'bg-zinc-800/30' };
+    }
+  }
+
   return (
     <div className="min-h-screen bg-black text-white relative">
       <BackgroundPaths />
@@ -240,6 +252,15 @@ function InfluencerDashboardContent() {
                   {tiktokData.username && (
                 <span className="text-zinc-400 text-sm">@{tiktokData.username}</span>
               )}
+            </div>
+          )}
+
+          {/* Influencer Tier Badge */}
+          {influencer && (
+            <div className={`max-w-2xl mx-auto mt-8 mb-6 p-4 rounded-xl flex items-center gap-4 ${getInfluencerTier(influencer.followers).bg} border border-zinc-700`}> 
+              <div className={`text-2xl font-bold ${getInfluencerTier(influencer.followers).color}`}>{getInfluencerTier(influencer.followers).tier}</div>
+              <div className="text-zinc-400 ml-2">Influencer Tier</div>
+              <div className="ml-auto text-lg font-semibold text-green-400">{getInfluencerTier(influencer.followers).commission}% commission</div>
             </div>
           )}
 
