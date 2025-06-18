@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
     
     const { items, referralCode } = parsedBody;
     console.log('Parsed items:', items);
+    console.log('Received referralCode from frontend:', referralCode);
 
     if (!items || items.length === 0) {
       console.log('No items provided');
@@ -100,6 +101,15 @@ export async function POST(request: NextRequest) {
 
     console.log('Line items for Stripe:', lineItems);
 
+    const sessionMetadata = {
+      created_via: 'baguri_cart_checkout',
+      created_at: new Date().toISOString(),
+      product_count: items.length.toString(),
+      product_names: items.map((item: any) => item.productName).join(', '),
+      ...(referralCode ? { referral_code: referralCode } : {})
+    };
+    console.log('Session metadata to be sent to Stripe:', sessionMetadata);
+
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -107,13 +117,7 @@ export async function POST(request: NextRequest) {
       mode: 'payment',
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/shop`,
-      metadata: {
-        created_via: 'baguri_cart_checkout',
-        created_at: new Date().toISOString(),
-        product_count: items.length.toString(),
-        product_names: items.map((item: any) => item.productName).join(', '),
-        ...(referralCode ? { referral_code: referralCode } : {})
-      },
+      metadata: sessionMetadata,
       billing_address_collection: 'auto',
       shipping_address_collection: {
         allowed_countries: ['RO'], // Romania only for now
@@ -121,6 +125,7 @@ export async function POST(request: NextRequest) {
     });
 
     console.log('Stripe Checkout Session created:', session.id);
+    console.log('Final session metadata in Stripe:', session.metadata);
     console.log('Checkout URL:', session.url);
     
     const response = { 
