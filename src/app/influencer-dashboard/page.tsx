@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Instagram, Music, Users, DollarSign, TrendingUp, Eye, Share2, CheckCircle, Heart, Video, Download, XCircle, Clock, Info } from 'lucide-react';
+import { ArrowLeft, Instagram, Music, Users, DollarSign, TrendingUp, Eye, Share2, CheckCircle, Heart, Video, Download, XCircle, Clock, Info, X } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
@@ -34,6 +34,18 @@ function InfluencerDashboardContent() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
+  const [itemRequests, setItemRequests] = useState<any[]>([]);
+  const [addressModalOpen, setAddressModalOpen] = useState(false);
+  const [addressLoading, setAddressLoading] = useState(false);
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [newAddress, setNewAddress] = useState('');
+  const [newAddressLabel, setNewAddressLabel] = useState('');
+  const [savingAddress, setSavingAddress] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [requestSuccess, setRequestSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (!searchParams) return;
@@ -139,7 +151,22 @@ function InfluencerDashboardContent() {
       }
     };
     fetchInfluencer();
-  }, [searchParams, router, designer?.id]);
+
+    // Fetch item requests and addresses
+    if (!influencer?.tiktok_open_id) return;
+    const fetchRequests = async () => {
+      const res = await fetch(`/api/influencer/item-request?tiktokOpenId=${influencer.tiktok_open_id}`);
+      const data = await res.json();
+      setItemRequests(data.requests || []);
+    };
+    const fetchAddresses = async () => {
+      const res = await fetch(`/api/influencer/address?tiktokOpenId=${influencer.tiktok_open_id}`);
+      const data = await res.json();
+      setAddresses(data.addresses || []);
+    };
+    fetchRequests();
+    fetchAddresses();
+  }, [searchParams, router, designer?.id, influencer?.tiktok_open_id]);
 
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
@@ -200,6 +227,98 @@ function InfluencerDashboardContent() {
       setWithdrawError('Failed to request withdrawal');
     } finally {
       setWithdrawing(false);
+    }
+  };
+
+  // Helper: get request status for a product
+  const getRequestStatus = (productId: string) => {
+    const req = itemRequests.find((r) => r.product_id === productId);
+    return req ? req.status : null;
+  };
+
+  // Open address modal for a product
+  const handleRequestFreeItem = (product: any) => {
+    setSelectedProduct(product);
+    setAddressModalOpen(true);
+    setSelectedAddressId(addresses[0]?.id || null);
+    setNewAddress('');
+    setNewAddressLabel('');
+    setRequestError(null);
+    setRequestSuccess(null);
+  };
+
+  // Save new address
+  const handleSaveAddress = async () => {
+    if (!newAddress) return;
+    setSavingAddress(true);
+    setRequestError(null);
+    try {
+      const res = await fetch('/api/influencer/address', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: { text: newAddress }, label: newAddressLabel, tiktokOpenId: influencer.tiktok_open_id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNewAddress('');
+        setNewAddressLabel('');
+        // Refresh addresses
+        const res2 = await fetch(`/api/influencer/address?tiktokOpenId=${influencer.tiktok_open_id}`);
+        const data2 = await res2.json();
+        setAddresses(data2.addresses || []);
+      } else {
+        setRequestError(data.error || 'Failed to save address');
+      }
+    } catch (err) {
+      setRequestError('Failed to save address');
+    } finally {
+      setSavingAddress(false);
+    }
+  };
+
+  // Submit item request
+  const handleSubmitRequest = async () => {
+    if (!selectedProduct) return;
+    setRequesting(true);
+    setRequestError(null);
+    setRequestSuccess(null);
+    let deliveryAddress = null;
+    if (selectedAddressId) {
+      deliveryAddress = addresses.find((a) => a.id === selectedAddressId)?.address;
+    } else if (newAddress) {
+      deliveryAddress = { text: newAddress };
+    }
+    if (!deliveryAddress) {
+      setRequestError('Please select or enter a delivery address.');
+      setRequesting(false);
+      return;
+    }
+    try {
+      const res = await fetch('/api/influencer/item-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: selectedProduct.id,
+          designerId: selectedProduct.designer_id,
+          deliveryAddress,
+          tiktokOpenId: influencer.tiktok_open_id
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setRequestSuccess('Request submitted!');
+        // Refresh requests
+        const res2 = await fetch(`/api/influencer/item-request?tiktokOpenId=${influencer.tiktok_open_id}`);
+        const data2 = await res2.json();
+        setItemRequests(data2.requests || []);
+        setAddressModalOpen(false);
+      } else {
+        setRequestError(data.error || 'Failed to submit request');
+      }
+    } catch (err) {
+      setRequestError('Failed to submit request');
+    } finally {
+      setRequesting(false);
     }
   };
 
@@ -351,17 +470,9 @@ function InfluencerDashboardContent() {
                         <div className="text-green-400 text-xs font-semibold mb-1">Earn {commission} RON per sale</div>
                         <button
                           className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition"
-                          onClick={() => {
-                            let refCode = influencer?.tiktok_open_id;
-                            if (!refCode && searchParams) {
-                              refCode = searchParams.get('open_id');
-                            }
-                            const link = `${window.location.origin}/shop?product=${product.id}&ref=${refCode || 'influencer'}`;
-                            navigator.clipboard.writeText(link);
-                            alert('Referral link copied to clipboard!');
-                          }}
+                          onClick={() => handleRequestFreeItem(product)}
                         >
-                          Generate & Copy Link
+                          Request Free Item
                         </button>
               </div>
                     );
@@ -457,6 +568,79 @@ function InfluencerDashboardContent() {
               </button>
             </div>
             <div className="text-xs text-zinc-400 mt-3">Minimum withdrawal amount is 50 RON.</div>
+          </div>
+        </div>
+      )}
+      {/* Address Modal */}
+      {addressModalOpen && selectedProduct && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-8 max-w-md w-full relative">
+            <button
+              onClick={() => setAddressModalOpen(false)}
+              className="absolute top-3 right-3 text-zinc-400 hover:text-white text-xl"
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <h3 className="text-2xl font-bold mb-4">Request Free Item</h3>
+            <div className="mb-4">
+              <label className="block text-sm text-zinc-400 mb-1">Delivery Address</label>
+              <select
+                value={selectedAddressId || ''}
+                onChange={(e) => setSelectedAddressId(e.target.value)}
+                className="w-full px-4 py-2 rounded bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                {addresses.map((address) => (
+                  <option key={address.id} value={address.id}>{address.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm text-zinc-400 mb-1">New Address</label>
+              <input
+                type="text"
+                value={newAddress}
+                onChange={(e) => setNewAddress(e.target.value)}
+                className="w-full px-4 py-2 rounded bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Enter new address"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm text-zinc-400 mb-1">Address Label</label>
+              <input
+                type="text"
+                value={newAddressLabel}
+                onChange={(e) => setNewAddressLabel(e.target.value)}
+                className="w-full px-4 py-2 rounded bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Enter address label"
+              />
+            </div>
+            {requestError && <div className="text-red-400 text-sm mb-2">{requestError}</div>}
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setAddressModalOpen(false)}
+                className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-white py-3 px-6 rounded-lg font-medium transition"
+                disabled={savingAddress}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveAddress}
+                disabled={savingAddress || !newAddress || !newAddressLabel}
+                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white py-3 px-6 rounded-lg font-medium transition"
+              >
+                {savingAddress ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    Save Address
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

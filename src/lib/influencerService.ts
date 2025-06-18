@@ -18,6 +18,27 @@ export type InfluencerWalletTransaction = {
   created_at: string;
 };
 
+// Types for new feature
+export type InfluencerAddress = {
+  id: string;
+  influencer_open_id: string;
+  address: any;
+  label?: string;
+  created_at: string;
+  updated_at?: string;
+};
+
+export type InfluencerItemRequest = {
+  id: string;
+  influencer_open_id: string;
+  designer_id: string;
+  product_id: string;
+  delivery_address: any;
+  status: 'pending' | 'accepted' | 'rejected';
+  created_at: string;
+  updated_at?: string;
+};
+
 class InfluencerService {
   // Get influencer wallet
   async getInfluencerWallet(tiktokOpenId: string): Promise<InfluencerWallet | null> {
@@ -208,6 +229,120 @@ class InfluencerService {
     } catch (error) {
       console.error('Error getting influencer wallet transactions:', error);
       return [];
+    }
+  }
+
+  // Create a new item request
+  async createItemRequest(productId: string, designerId: string, deliveryAddress: any, tiktokOpenId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await supabase
+        .from('influencer_item_requests')
+        .insert({
+          influencer_open_id: tiktokOpenId,
+          designer_id: designerId,
+          product_id: productId,
+          delivery_address: deliveryAddress,
+          status: 'pending',
+        });
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  // Get all item requests for the current influencer
+  async getItemRequests(tiktokOpenId: string): Promise<InfluencerItemRequest[]> {
+    try {
+      const { data, error } = await supabase
+        .from('influencer_item_requests')
+        .select('*')
+        .eq('influencer_open_id', tiktokOpenId)
+        .order('created_at', { ascending: false });
+      if (error) return [];
+      return data || [];
+    } catch {
+      return [];
+    }
+  }
+
+  // Get all saved addresses for the current influencer
+  async getSavedAddresses(tiktokOpenId: string): Promise<InfluencerAddress[]> {
+    try {
+      const { data, error } = await supabase
+        .from('influencer_addresses')
+        .select('*')
+        .eq('influencer_open_id', tiktokOpenId)
+        .order('created_at', { ascending: false });
+      if (error) return [];
+      return data || [];
+    } catch {
+      return [];
+    }
+  }
+
+  // Save a new address
+  async saveAddress(address: any, label: string, tiktokOpenId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await supabase
+        .from('influencer_addresses')
+        .insert({
+          influencer_open_id: tiktokOpenId,
+          address,
+          label,
+        });
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  // Delete a saved address
+  async deleteAddress(addressId: string, tiktokOpenId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await supabase
+        .from('influencer_addresses')
+        .delete()
+        .eq('id', addressId)
+        .eq('influencer_open_id', tiktokOpenId);
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  // Cancel an item request
+  async cancelItemRequest(requestId: string, tiktokOpenId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await supabase
+        .from('influencer_item_requests')
+        .delete()
+        .eq('id', requestId)
+        .eq('influencer_open_id', tiktokOpenId);
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  // Optionally: get status for a specific product request
+  async getItemRequestStatus(productId: string, tiktokOpenId: string): Promise<'pending' | 'accepted' | 'rejected' | null> {
+    try {
+      const { data, error } = await supabase
+        .from('influencer_item_requests')
+        .select('status')
+        .eq('product_id', productId)
+        .eq('influencer_open_id', tiktokOpenId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      if (error || !data) return null;
+      return data.status;
+    } catch {
+      return null;
     }
   }
 }

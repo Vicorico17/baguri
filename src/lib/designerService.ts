@@ -90,6 +90,20 @@ export type DesignerDashboardData = {
   completionPercentage: number;
 };
 
+// Types for influencer item requests (reuse if imported)
+export type InfluencerItemRequest = {
+  id: string;
+  influencer_open_id: string;
+  designer_id: string;
+  product_id: string;
+  delivery_address: any;
+  status: 'pending' | 'accepted' | 'rejected';
+  created_at: string;
+  updated_at?: string;
+  influencer?: any;
+  product?: any;
+};
+
 class DesignerService {
   // Commission tier definitions
   private getCommissionTiers(): CommissionTier[] {
@@ -1059,6 +1073,55 @@ class DesignerService {
     } catch (error) {
       console.error('Error checking Instagram verification:', error);
       return { success: false, verified: false, error: 'Failed to check verification status' };
+    }
+  }
+
+  // Get all influencer item requests for this designer (with influencer and product info)
+  async getInfluencerItemRequests(designerId: string): Promise<InfluencerItemRequest[]> {
+    try {
+      const { data, error } = await supabase
+        .from('influencer_item_requests')
+        .select(`*, influencer:influencer_open_id(*), product:product_id(*)`)
+        .eq('designer_id', designerId)
+        .order('created_at', { ascending: false });
+      if (error) return [];
+      return data || [];
+    } catch {
+      return [];
+    }
+  }
+
+  // Accept or reject an influencer item request
+  async respondToInfluencerItemRequest(requestId: string, status: 'accepted' | 'rejected'): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await supabase
+        .from('influencer_item_requests')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', requestId);
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  // Optionally: get stats for influencer item requests
+  async getInfluencerItemRequestStats(designerId: string): Promise<{ pending: number; accepted: number; rejected: number }> {
+    try {
+      const { data, error } = await supabase
+        .from('influencer_item_requests')
+        .select('status', { count: 'exact', head: false })
+        .eq('designer_id', designerId);
+      if (error || !data) return { pending: 0, accepted: 0, rejected: 0 };
+      const stats = { pending: 0, accepted: 0, rejected: 0 };
+      data.forEach((r: any) => {
+        if (r.status === 'pending') stats.pending++;
+        if (r.status === 'accepted') stats.accepted++;
+        if (r.status === 'rejected') stats.rejected++;
+      });
+      return stats;
+    } catch {
+      return { pending: 0, accepted: 0, rejected: 0 };
     }
   }
 }

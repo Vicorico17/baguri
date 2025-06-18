@@ -398,4 +398,31 @@ ON CONFLICT (designer_id) DO NOTHING;
 UPDATE designers SET sales_total = 500.00 WHERE id = (SELECT id FROM designers WHERE status = 'approved' LIMIT 1);
 UPDATE designers SET sales_total = 5000.00 WHERE id = (SELECT id FROM designers WHERE status = 'approved' OFFSET 1 LIMIT 1);
 UPDATE designers SET sales_total = 15000.00 WHERE id = (SELECT id FROM designers WHERE status = 'approved' OFFSET 2 LIMIT 1);
-*/ 
+*/
+
+-- 17. Create influencer_addresses table (for saved delivery addresses)
+CREATE TABLE IF NOT EXISTS influencer_addresses (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    influencer_open_id TEXT NOT NULL REFERENCES influencers(tiktok_open_id) ON DELETE CASCADE,
+    address JSONB NOT NULL,
+    label TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 18. Create influencer_item_requests table (for influencers requesting free items from designers)
+CREATE TABLE IF NOT EXISTS influencer_item_requests (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    influencer_open_id TEXT NOT NULL REFERENCES influencers(tiktok_open_id) ON DELETE CASCADE,
+    designer_id UUID NOT NULL REFERENCES designers(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES designer_products(id) ON DELETE CASCADE,
+    delivery_address JSONB NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for fast lookup
+CREATE INDEX IF NOT EXISTS idx_influencer_item_requests_influencer ON influencer_item_requests(influencer_open_id);
+CREATE INDEX IF NOT EXISTS idx_influencer_item_requests_designer ON influencer_item_requests(designer_id);
+CREATE INDEX IF NOT EXISTS idx_influencer_item_requests_product ON influencer_item_requests(product_id); 

@@ -100,6 +100,10 @@ function DesignerDashboardContent() {
     },
     nextTier: null
   });
+  const [influencerRequests, setInfluencerRequests] = useState<any[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [requestError, setRequestError] = useState<string | null>(null);
 
   // Optimized redirect logic - immediate redirect if not authenticated
   useEffect(() => {
@@ -390,6 +394,52 @@ function DesignerDashboardContent() {
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, [user?.id]);
+
+  // Fetch influencer item requests
+  useEffect(() => {
+    if (!dashboardData || !dashboardData.wallet || !dashboardData.wallet.designerId) return;
+    const fetchRequests = async () => {
+      setLoadingRequests(true);
+      setRequestError(null);
+      try {
+        const res = await fetch(`/api/designer/influencer-item-requests?designerId=${dashboardData.wallet!.designerId}`);
+        const data = await res.json();
+        setInfluencerRequests(data.requests || []);
+      } catch (err) {
+        setRequestError('Failed to load influencer requests');
+      } finally {
+        setLoadingRequests(false);
+      }
+    };
+    fetchRequests();
+  }, [dashboardData && dashboardData.wallet && dashboardData.wallet.designerId ? dashboardData.wallet.designerId : null]);
+
+  // Handle accept/reject
+  const handleRequestAction = async (requestId: string, status: 'accepted' | 'rejected') => {
+    if (!dashboardData || !dashboardData.wallet || !dashboardData.wallet.designerId) return;
+    setActionLoading(requestId + status);
+    setRequestError(null);
+    try {
+      const res = await fetch('/api/designer/influencer-item-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId, status })
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Refresh requests
+        const res2 = await fetch(`/api/designer/influencer-item-requests?designerId=${dashboardData.wallet.designerId}`);
+        const data2 = await res2.json();
+        setInfluencerRequests(data2.requests || []);
+      } else {
+        setRequestError(data.error || 'Failed to update request');
+      }
+    } catch (err) {
+      setRequestError('Failed to update request');
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   // Show loading state while checking authentication
   if (!initialized) {
@@ -1066,132 +1116,70 @@ function DesignerDashboardContent() {
                       </div>
                     </div>
 
-                    {/* Connect With You Subsection */}
-                    <div className="border-t border-zinc-700 pt-8">
-                      <h3 className="text-lg font-semibold mb-6 flex items-center gap-2 text-zinc-300">
-                        🌐 Connect With You
-                      </h3>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm font-medium mb-2 flex items-center gap-2">
-                            <ProgressCircle isComplete={!!profile.instagramHandle.trim() && profile.instagramVerified} />
-                            Instagram Handle
-                            {profile.instagramVerified && (
-                              <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
-                                Verified
-                              </span>
-                            )}
-                          </label>
-                          {!isEditMode && profile.instagramHandle ? (
-                            <div className="space-y-3">
-                              <div className="flex items-center gap-3 px-4 py-3">
-                                <Instagram size={20} className="text-zinc-400" />
-                                <span className="text-zinc-300">{profile.instagramHandle}</span>
-                                {profile.instagramVerified && (
-                                  <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                                    <CheckCircle size={12} className="text-white" />
+                    {/* Influencer Item Requests Section */}
+                    <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl overflow-hidden mb-8">
+                      <div className="p-6 flex items-center justify-between">
+                        <h2 className="text-2xl font-bold flex items-center gap-2">
+                          <User size={24} className="text-green-400" /> Influencer Item Requests
+                        </h2>
+                      </div>
+                      <div className="px-6 pb-6">
+                        {loadingRequests ? (
+                          <div className="text-zinc-400">Loading requests...</div>
+                        ) : influencerRequests.length === 0 ? (
+                          <div className="text-zinc-500">No influencer item requests at the moment.</div>
+                        ) : (
+                          <div className="space-y-4">
+                            {influencerRequests.map((req: any) => (
+                              <div key={req.id} className="border border-zinc-800 rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-zinc-950/60">
+                                <div className="flex items-center gap-4 flex-1">
+                                  <User size={20} className="text-green-400" />
+                                  <div>
+                                    <div className="font-semibold text-white">{req.influencer?.display_name || req.influencer_open_id}</div>
+                                    <div className="text-zinc-400 text-xs">{req.influencer_open_id}</div>
                                   </div>
-                                )}
-                              </div>
-                              {!profile.instagramVerified && (
-                                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
-                                  <p className="text-amber-400 text-sm mb-2">
-                                    ⚠️ Instagram account not verified. Verify ownership to prevent impersonation.
-                                  </p>
-                                  <button
-                                    onClick={handleInstagramVerification}
-                                    disabled={verifyingInstagram}
-                                    className="bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white px-3 py-1 rounded text-sm font-medium transition flex items-center gap-2"
-                                  >
-                                    {verifyingInstagram ? (
-                                      <>
-                                        <Loader2 size={14} className="animate-spin" />
-                                        Verifying...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Instagram size={14} />
-                                        Verify with Instagram
-                                      </>
-                                    )}
-                                  </button>
-                                </div>
-                              )}
-                              {profile.instagramVerified && (
-                                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
-                                  <div className="flex items-center justify-between">
-                                    <p className="text-green-400 text-sm">
-                                      ✅ Instagram account verified and secured
-                                    </p>
-                                    <button
-                                      onClick={handleRevokeInstagramVerification}
-                                      className="text-red-400 hover:text-red-300 text-xs underline"
-                                    >
-                                      Revoke
-                                    </button>
+                                  <div className="ml-6 flex items-center gap-2">
+                                    <Package size={18} className="text-blue-400" />
+                                    <span className="font-medium text-white">{req.product?.name || 'Product'}</span>
                                   </div>
                                 </div>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="space-y-3">
-                              <div className="relative">
-                                <Instagram size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400" />
-                                <input
-                                  type="text"
-                                  value={profile.instagramHandle}
-                                  onChange={(e) => updateProfile('instagramHandle', e.target.value)}
-                                  disabled={!isEditMode}
-                                  className={`w-full pl-12 pr-4 py-3 border rounded-lg transition ${
-                                    isEditMode 
-                                      ? 'bg-zinc-800 border-zinc-700 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent'
-                                      : 'bg-zinc-700/50 border-zinc-600 text-zinc-300 cursor-not-allowed'
-                                  }`}
-                                  placeholder="@yourbrand"
-                                />
-                              </div>
-                              {isEditMode && profile.instagramHandle && !profile.instagramVerified && (
-                                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
-                                  <p className="text-amber-400 text-sm mb-2">
-                                    💡 Save your changes first, then verify your Instagram account to prevent impersonation.
-                                  </p>
+                                <div className="flex-1">
+                                  <div className="text-zinc-400 text-sm">Delivery Address:</div>
+                                  <div className="text-white text-sm font-mono break-words">{req.delivery_address?.text || JSON.stringify(req.delivery_address)}</div>
                                 </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div>
-                          <label className="text-sm font-medium mb-2 flex items-center gap-2">
-                            <ProgressCircle isComplete={!!profile.tiktokHandle?.trim()} />
-                            TikTok Handle (Optional for 100%)
-                          </label>
-                          {!isEditMode && profile.tiktokHandle ? (
-                            <div className="flex items-center gap-3 px-4 py-3">
-                              <span className="text-zinc-400 text-sm font-bold">TT</span>
-                              <span className="text-zinc-300">{profile.tiktokHandle}</span>
-                            </div>
-                          ) : (
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 text-sm font-bold">
-                                TT
-                              </span>
-                              <input
-                                type="text"
-                                value={profile.tiktokHandle || ''}
-                                onChange={(e) => updateProfile('tiktokHandle', e.target.value)}
-                                disabled={!isEditMode}
-                                className={`w-full pl-12 pr-4 py-3 border rounded-lg transition ${
-                                  isEditMode 
-                                    ? 'bg-zinc-800 border-zinc-700 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent'
-                                    : 'bg-zinc-700/50 border-zinc-600 text-zinc-300 cursor-not-allowed'
-                                }`}
-                                placeholder="@yourbrand"
-                              />
-                            </div>
-                          )}
-                        </div>
+                                <div className="flex flex-col items-end gap-2 min-w-[120px]">
+                                  {req.status === 'pending' ? (
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => handleRequestAction(req.id, 'accepted')}
+                                        disabled={actionLoading === req.id + 'accepted'}
+                                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition"
+                                      >
+                                        {actionLoading === req.id + 'accepted' ? 'Accepting...' : 'Accept'}
+                                      </button>
+                                      <button
+                                        onClick={() => handleRequestAction(req.id, 'rejected')}
+                                        disabled={actionLoading === req.id + 'rejected'}
+                                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition"
+                                      >
+                                        {actionLoading === req.id + 'rejected' ? 'Rejecting...' : 'Reject'}
+                                      </button>
+                                    </div>
+                                  ) : req.status === 'accepted' ? (
+                                    <div className="flex items-center gap-2 text-green-400 font-semibold">
+                                      <CheckCircle size={16} /> Accepted
+                                    </div>
+                                  ) : req.status === 'rejected' ? (
+                                    <div className="flex items-center gap-2 text-red-400 font-semibold">
+                                      <XCircle size={16} /> Rejected
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {requestError && <div className="text-red-400 text-sm mt-2">{requestError}</div>}
                       </div>
                     </div>
                   </div>
