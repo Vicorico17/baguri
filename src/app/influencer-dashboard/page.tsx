@@ -474,7 +474,7 @@ function InfluencerDashboardContent() {
                           <button
                             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 mb-2 w-full"
                             onClick={async () => {
-                              const url = `${window.location.origin}/shop/${product.id}?ref=${influencer.tiktok_open_id}`;
+                              const url = `${window.location.origin}/shop?product=${product.id}&ref=${influencer.tiktok_open_id}`;
                               await navigator.clipboard.writeText(url);
                               setCopiedProductId(product.id);
                               setTimeout(() => setCopiedProductId(null), 2000);
