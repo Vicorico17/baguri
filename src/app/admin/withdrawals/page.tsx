@@ -67,6 +67,7 @@ export default function WithdrawalsAdmin() {
   } | null>(null);
   const [influencerRejectionReason, setInfluencerRejectionReason] = useState('');
   const [influencerRejecting, setInfluencerRejecting] = useState(false);
+  const [showAllInfluencer, setShowAllInfluencer] = useState(false);
   const router = useRouter();
 
   const loadWithdrawals = useCallback(async () => {
@@ -101,7 +102,12 @@ export default function WithdrawalsAdmin() {
   const loadInfluencerWithdrawals = useCallback(async () => {
     try {
       setInfluencerLoading(true);
-      const result = await adminService.getPendingInfluencerWithdrawals();
+      let result;
+      if (showAllInfluencer) {
+        result = await adminService.getAllInfluencerWithdrawals();
+      } else {
+        result = await adminService.getPendingInfluencerWithdrawals();
+      }
       if (result.success) {
         setInfluencerWithdrawals(result.data || []);
       }
@@ -110,7 +116,7 @@ export default function WithdrawalsAdmin() {
     } finally {
       setInfluencerLoading(false);
     }
-  }, []);
+  }, [showAllInfluencer]);
 
   useEffect(() => {
     // Check if admin is authenticated
@@ -293,12 +299,20 @@ export default function WithdrawalsAdmin() {
                   </>
                 )}
                 {tab === 'influencer' && (
-                  <button
-                    onClick={loadInfluencerWithdrawals}
-                    className="p-2 border border-zinc-700 rounded-lg hover:border-zinc-600 transition"
-                  >
-                    <RefreshCw size={16} />
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setShowAllInfluencer((prev) => !prev)}
+                      className="px-4 py-2 border border-zinc-700 rounded-lg hover:border-zinc-600 transition"
+                    >
+                      {showAllInfluencer ? 'Show Pending Only' : 'Show All'}
+                    </button>
+                    <button
+                      onClick={loadInfluencerWithdrawals}
+                      className="p-2 border border-zinc-700 rounded-lg hover:border-zinc-600 transition"
+                    >
+                      <RefreshCw size={16} />
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -409,32 +423,23 @@ export default function WithdrawalsAdmin() {
           )}
 
           {tab === 'influencer' && (
-            <div>
+            <div className="mb-8">
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <Clock size={20} className="text-blue-400" />
-                Pending Influencer Withdrawals ({influencerWithdrawals.length})
+                {showAllInfluencer ? `All Influencer Withdrawals (${influencerWithdrawals.length})` : `Pending Influencer Withdrawals (${influencerWithdrawals.length})`}
               </h2>
-              {influencerLoading ? (
-                <div className="text-zinc-400">Loading influencer withdrawals...</div>
-              ) : influencerWithdrawals.length === 0 ? (
-                <div className="text-center py-12">
-                  <CheckCircle size={64} className="mx-auto text-green-400 mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">All caught up!</h3>
-                  <p className="text-zinc-400">No pending influencer withdrawal requests at the moment.</p>
-                </div>
-              ) : (
-                <div className="grid gap-4">
-                  {influencerWithdrawals.map((withdrawal) => (
-                    <InfluencerWithdrawalCard
-                      key={withdrawal.transaction_id}
-                      withdrawal={withdrawal}
-                      onApprove={() => handleApproveInfluencer(withdrawal.transaction_id)}
-                      onReject={() => setInfluencerRejectionModal({ withdrawal, isOpen: true })}
-                      isLoading={influencerActionLoading === withdrawal.transaction_id}
-                    />
-                  ))}
-                </div>
-              )}
+              <div className="grid gap-4">
+                {influencerWithdrawals.map((withdrawal) => (
+                  <InfluencerWithdrawalCard
+                    key={withdrawal.transaction_id}
+                    withdrawal={withdrawal}
+                    onApprove={() => handleApproveInfluencer(withdrawal.transaction_id)}
+                    onReject={() => setInfluencerRejectionModal({ withdrawal, isOpen: true })}
+                    isLoading={influencerActionLoading === withdrawal.transaction_id}
+                    readOnly={withdrawal.status !== 'pending'}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -713,10 +718,14 @@ function InfluencerWithdrawalCard({
           <span className="text-sm font-medium capitalize">{withdrawal.status}</span>
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
         <div>
           <div className="text-sm opacity-75">Amount</div>
           <div className="text-xl font-bold">{Math.abs(withdrawal.amount).toFixed(2)} RON</div>
+        </div>
+        <div>
+          <div className="text-sm opacity-75">IBAN</div>
+          <div className="font-mono text-sm">{withdrawal.iban ? `${withdrawal.iban.substring(0, 4)}****${withdrawal.iban.substring(withdrawal.iban.length - 4)}` : '-'}</div>
         </div>
         <div>
           <div className="text-sm opacity-75">Current Balance</div>
