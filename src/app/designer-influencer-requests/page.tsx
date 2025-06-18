@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 
 export default function DesignerInfluencerRequestsPage() {
-  const { user, initialized } = useDesignerAuth();
+  const { user, initialized, designerProfile } = useDesignerAuth();
   const [influencerRequests, setInfluencerRequests] = useState<any[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -14,12 +14,12 @@ export default function DesignerInfluencerRequestsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!designerProfile?.id) return;
     const fetchRequests = async () => {
       setLoadingRequests(true);
       setRequestError(null);
       try {
-        const res = await fetch(`/api/designer/influencer-item-requests?designerId=${user.id}`);
+        const res = await fetch(`/api/designer/influencer-item-requests?designerId=${designerProfile.id}`);
         const data = await res.json();
         setInfluencerRequests(data.requests || []);
       } catch (err) {
@@ -29,10 +29,10 @@ export default function DesignerInfluencerRequestsPage() {
       }
     };
     fetchRequests();
-  }, [user?.id]);
+  }, [designerProfile?.id]);
 
   const handleRequestAction = async (requestId: string, status: 'accepted' | 'rejected') => {
-    if (!user?.id) return;
+    if (!designerProfile?.id) return;
     setActionLoading(requestId + status);
     setRequestError(null);
     try {
@@ -44,7 +44,7 @@ export default function DesignerInfluencerRequestsPage() {
       const data = await res.json();
       if (data.success) {
         // Refresh requests
-        const res2 = await fetch(`/api/designer/influencer-item-requests?designerId=${user.id}`);
+        const res2 = await fetch(`/api/designer/influencer-item-requests?designerId=${designerProfile.id}`);
         const data2 = await res2.json();
         setInfluencerRequests(data2.requests || []);
       } else {
