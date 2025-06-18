@@ -60,10 +60,12 @@ function InfluencerDashboardContent() {
     
     if (success === 'true') {
       setShowSuccess(true);
-      // Remove URL parameters after showing success
+      // Remove only the 'success' param after showing notification, keep open_id, platform, and name
       setTimeout(() => {
         setShowSuccess(false);
-        router.replace('/influencer-dashboard');
+        const params = new URLSearchParams(searchParams?.toString() || '');
+        params.delete('success');
+        router.replace(`/influencer-dashboard?${params.toString()}`);
       }, 3000);
     }
 

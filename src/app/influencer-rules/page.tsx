@@ -109,7 +109,7 @@ function InfluencerRulesContent() {
         console.log('Wallet already exists for influencer:', tiktokOpenId, '| Wallet:', existingWallet);
       }
       // Continue to dashboard with the original parameters
-      router.push(`/influencer-dashboard?platform=${platform}&success=true&name=${encodeURIComponent(userName)}`);
+      router.push(`/influencer-dashboard?platform=${platform}&success=true&name=${encodeURIComponent(userName)}&open_id=${tiktokOpenId}`);
     } else {
       // For other platforms, just continue as before
       router.push(`/influencer-dashboard?platform=${platform}&success=true&name=${encodeURIComponent(userName)}`);
