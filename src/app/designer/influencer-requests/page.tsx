@@ -1,3 +1,4 @@
+'use client';
 import { useEffect, useState } from 'react';
 import { useDesignerAuth } from '@/contexts/DesignerAuthContext';
 import { User, Package, CheckCircle, XCircle } from 'lucide-react';
