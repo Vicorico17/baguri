@@ -302,45 +302,6 @@ function InfluencerDashboardContent() {
             </div>
           )}
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-              <div className="flex items-center gap-3 mb-2">
-                <DollarSign size={20} className="text-green-400" />
-                <span className="text-sm text-zinc-400">Total Earnings</span>
-              </div>
-              <p className="text-2xl font-bold">0.00 RON</p>
-              <p className="text-xs text-zinc-500 mt-1">+0% from last month</p>
-            </div>
-
-            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-              <div className="flex items-center gap-3 mb-2">
-                <Share2 size={20} className="text-blue-400" />
-                <span className="text-sm text-zinc-400">Clicks Generated</span>
-              </div>
-              <p className="text-2xl font-bold">0</p>
-              <p className="text-xs text-zinc-500 mt-1">Start promoting to see data</p>
-            </div>
-
-            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-              <div className="flex items-center gap-3 mb-2">
-                <TrendingUp size={20} className="text-purple-400" />
-                <span className="text-sm text-zinc-400">Conversions</span>
-              </div>
-              <p className="text-2xl font-bold">0</p>
-              <p className="text-xs text-zinc-500 mt-1">0% conversion rate</p>
-            </div>
-
-            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-              <div className="flex items-center gap-3 mb-2">
-                <Eye size={20} className="text-yellow-400" />
-                <span className="text-sm text-zinc-400">Reach</span>
-              </div>
-              <p className="text-2xl font-bold">0</p>
-              <p className="text-xs text-zinc-500 mt-1">People reached this month</p>
-            </div>
-          </div>
-
           {/* Influencer Product Browser */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-8">
             <h3 className="text-lg font-semibold mb-4">Promote Products & Earn Commission</h3>
