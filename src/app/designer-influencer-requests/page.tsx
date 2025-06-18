@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useDesignerAuth } from '@/contexts/DesignerAuthContext';
 import { User, Package, CheckCircle, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { BackgroundPaths } from "@/components/ui/background-paths";
 
 export default function DesignerInfluencerRequestsPage() {
   const { user, initialized } = useDesignerAuth();
@@ -65,8 +66,15 @@ export default function DesignerInfluencerRequestsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
-      <div className="max-w-3xl mx-auto py-12 px-4">
+    <div className="min-h-screen bg-zinc-950 text-white relative">
+      <BackgroundPaths />
+      <div className="max-w-3xl mx-auto py-12 px-4 relative z-10">
+        <button
+          onClick={() => router.push('/designer-dashboard')}
+          className="mb-8 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg font-medium transition shadow border border-zinc-700"
+        >
+          ← Back to Dashboard
+        </button>
         <h1 className="text-3xl font-bold mb-8 flex items-center gap-2">
           <User size={28} className="text-green-400" /> Influencer Item Requests
         </h1>
