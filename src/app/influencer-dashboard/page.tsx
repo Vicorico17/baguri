@@ -158,15 +158,8 @@ function InfluencerDashboardContent() {
   };
 
   function getInfluencerTier(followers: number) {
-    if (followers >= 100000) {
-      return { tier: 'Gold', commission: 15, color: 'text-yellow-400', bg: 'bg-yellow-900/30' };
-    } else if (followers >= 10000) {
-      return { tier: 'Silver', commission: 10, color: 'text-gray-300', bg: 'bg-gray-800/30' };
-    } else if (followers >= 1000) {
-      return { tier: 'Bronze', commission: 5, color: 'text-orange-400', bg: 'bg-orange-900/30' };
-    } else {
-      return { tier: 'Unranked', commission: 0, color: 'text-zinc-400', bg: 'bg-zinc-800/30' };
-    }
+    // For now, always return 10% flat
+    return { tier: 'Standard', commission: 10, color: 'text-green-400', bg: 'bg-green-900/30' };
   }
 
   // Withdraw handler
@@ -376,7 +369,7 @@ function InfluencerDashboardContent() {
                     const firstImage = firstColor?.images?.[0];
                     // Calculate commission
                     const price = parseFloat(product.price);
-                    const commission = price ? (price * 0.15).toFixed(2) : '0.00';
+                    const commission = price ? (price * 0.10).toFixed(2) : '0.00';
                     return (
                       <div key={product.id} className="min-w-[220px] bg-zinc-800 rounded-lg p-4 flex flex-col gap-3 items-center">
                         <div className="w-32 h-32 bg-zinc-900 rounded-lg overflow-hidden mb-2 flex items-center justify-center">
@@ -434,6 +427,19 @@ function InfluencerDashboardContent() {
         </div>
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
           <TransactionHistory transactions={transactions} />
+        </div>
+        {/* Soon: Tier-based commissions visual section */}
+        <div className="mt-10 bg-gradient-to-r from-green-900/60 to-blue-900/60 border border-green-700/30 rounded-xl p-6 flex flex-col items-center text-center">
+          <div className="text-2xl font-bold text-green-300 mb-2">Soon: Tier-based Commissions</div>
+          <div className="text-zinc-300 max-w-xl">
+            <p className="mb-2">We&apos;re working on a new tier system to reward top influencers with higher commissions!</p>
+            <ul className="list-disc list-inside text-left mx-auto mb-2">
+              <li><span className="font-bold text-yellow-400">Gold</span>: 15% commission (100,000+ followers)</li>
+              <li><span className="font-bold text-gray-300">Silver</span>: 10% commission (10,000+ followers)</li>
+              <li><span className="font-bold text-orange-400">Bronze</span>: 5% commission (1,000+ followers)</li>
+            </ul>
+            <p>For now, everyone earns a flat <span className="font-bold text-green-400">10% commission</span> per purchase. Stay tuned for updates!</p>
+          </div>
         </div>
       </div>
       {/* Withdraw Modal */}
