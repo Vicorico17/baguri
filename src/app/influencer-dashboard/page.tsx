@@ -30,6 +30,10 @@ function InfluencerDashboardContent() {
   const [walletLoading, setWalletLoading] = useState(true);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!searchParams) return;
@@ -164,6 +168,47 @@ function InfluencerDashboardContent() {
       return { tier: 'Unranked', commission: 0, color: 'text-zinc-400', bg: 'bg-zinc-800/30' };
     }
   }
+
+  // Withdraw handler
+  const handleWithdraw = async () => {
+    if (!wallet || !influencer) return;
+    const amount = parseFloat(withdrawAmount);
+    if (isNaN(amount) || amount < 50) {
+      setWithdrawError('Minimum withdrawal amount is 50 RON');
+      return;
+    }
+    if (amount > wallet.balance) {
+      setWithdrawError('Insufficient balance');
+      return;
+    }
+    setWithdrawing(true);
+    setWithdrawError(null);
+    try {
+      const result = await influencerService.requestWithdrawal(
+        wallet.tiktok_open_id,
+        wallet.tiktok_display_name,
+        amount
+      );
+      if (result.success) {
+        setShowWithdrawModal(false);
+        setWithdrawAmount('');
+        // Reload wallet and transactions
+        const w = await influencerService.getInfluencerWallet(wallet.tiktok_open_id);
+        setWallet(w);
+        if (w) {
+          const txs = await influencerService.getWalletTransactions(wallet.tiktok_open_id, 50);
+          setTransactions(txs);
+        }
+        alert('Withdrawal request submitted successfully! We will process it within 2-3 business days.');
+      } else {
+        setWithdrawError(result.error || 'Failed to request withdrawal');
+      }
+    } catch (err) {
+      setWithdrawError('Failed to request withdrawal');
+    } finally {
+      setWithdrawing(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-black text-white relative">
@@ -382,12 +427,72 @@ function InfluencerDashboardContent() {
       {/* Wallet and Transaction History at the bottom, in the same container */}
       <div className="mt-12 max-w-3xl mx-auto">
         <div className="bg-zinc-950 border-2 border-green-700/40 rounded-lg p-6 mb-8 shadow-lg shadow-green-900/20">
-          <WalletCard wallet={wallet} />
+          <WalletCard 
+            wallet={wallet} 
+            onWithdraw={() => setShowWithdrawModal(true)} 
+          />
         </div>
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
           <TransactionHistory transactions={transactions} />
         </div>
       </div>
+      {/* Withdraw Modal */}
+      {showWithdrawModal && wallet && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-8 max-w-md w-full relative">
+            <button
+              onClick={() => setShowWithdrawModal(false)}
+              className="absolute top-3 right-3 text-zinc-400 hover:text-white text-xl"
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <h3 className="text-2xl font-bold mb-4">Withdraw Funds</h3>
+            <div className="mb-4">
+              <label className="block text-sm text-zinc-400 mb-1">Amount (RON)</label>
+              <input
+                type="number"
+                min={50}
+                max={wallet.balance}
+                step={1}
+                value={withdrawAmount}
+                onChange={e => setWithdrawAmount(e.target.value)}
+                className="w-full px-4 py-2 rounded bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Enter amount to withdraw"
+                disabled={withdrawing}
+              />
+            </div>
+            {withdrawError && <div className="text-red-400 text-sm mb-2">{withdrawError}</div>}
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setShowWithdrawModal(false)}
+                className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-white py-3 px-6 rounded-lg font-medium transition"
+                disabled={withdrawing}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleWithdraw}
+                disabled={withdrawing || !withdrawAmount || parseFloat(withdrawAmount) < 50 || parseFloat(withdrawAmount) > wallet.balance}
+                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white py-3 px-6 rounded-lg font-medium transition flex items-center justify-center gap-2"
+              >
+                {withdrawing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Download size={16} />
+                    Withdraw
+                  </>
+                )}
+              </button>
+            </div>
+            <div className="text-xs text-zinc-400 mt-3">Minimum withdrawal amount is 50 RON.</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -401,8 +506,7 @@ function LoadingFallback() {
 }
 
 // WalletCard component (adapted for influencer)
-function WalletCard({ wallet }: { wallet: InfluencerWallet | null }) {
-  // Only show balance and basic info for now
+function WalletCard({ wallet, onWithdraw }: { wallet: InfluencerWallet | null, onWithdraw?: () => void }) {
   if (!wallet) {
     return (
       <div>
@@ -430,6 +534,15 @@ function WalletCard({ wallet }: { wallet: InfluencerWallet | null }) {
           <p className="text-xs text-zinc-400 mb-1">Current Balance</p>
           <p className="text-4xl font-extrabold text-green-400">{wallet.balance.toFixed(2)} RON</p>
         </div>
+        {onWithdraw && wallet.balance >= 50 && (
+          <button
+            onClick={onWithdraw}
+            className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 mt-2"
+          >
+            <Download size={16} />
+            Withdraw
+          </button>
+        )}
       </div>
     </div>
   );
