@@ -481,8 +481,7 @@ class AdminService {
         .from('influencers_wallet_transactions')
         .select(`
           *,
-          influencers:tiktok_open_id (tiktok_display_name, email),
-          influencers_wallets:tiktok_open_id (balance)
+          influencers:tiktok_open_id (tiktok_display_name, email)
         `)
         .eq('type', 'withdrawal')
         .eq('status', 'pending')
@@ -505,8 +504,7 @@ class AdminService {
         .from('influencers_wallet_transactions')
         .select(`
           *,
-          influencers:tiktok_open_id (tiktok_display_name, email),
-          influencers_wallets:tiktok_open_id (balance)
+          influencers:tiktok_open_id (tiktok_display_name, email)
         `)
         .eq('type', 'withdrawal')
         .order('created_at', { ascending: false })
