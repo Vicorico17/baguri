@@ -4,7 +4,7 @@ import { useDesignerAuth } from '@/contexts/DesignerAuthContext';
 import { User, Package, CheckCircle, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-export default function InfluencerRequestsPage() {
+export default function DesignerInfluencerRequestsPage() {
   const { user, initialized } = useDesignerAuth();
   const [influencerRequests, setInfluencerRequests] = useState<any[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);

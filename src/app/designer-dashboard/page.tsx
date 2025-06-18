@@ -1254,6 +1254,14 @@ function DesignerDashboardContent() {
                         <Trophy size={16} />
                         Commission Levels
                       </Link>
+
+                      <Link
+                        href="/designer-influencer-requests"
+                        className="w-full py-3 bg-pink-700 hover:bg-pink-800 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+                      >
+                        <User size={16} />
+                        Influencer Item Requests
+                      </Link>
                     </div>
                   </>
                 )}
