@@ -281,23 +281,24 @@ function InfluencerRulesContent() {
 
                 {/* Action Button */}
                 <div className="text-center">
-                  <button
-                    onClick={handleContinueToDashboard}
-                    disabled={!meetsRequirements || loading}
-                    className={`px-12 py-4 rounded-xl font-bold text-lg transition transform ${
-                      meetsRequirements && !loading
-                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl hover:scale-105'
-                        : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                    } flex items-center justify-center gap-2`}
-                  >
-                    {loading ? (
-                      <span className="flex items-center gap-2">
-                        <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white border-2 mr-2"></span>
-                        Loading...
-                      </span>
-                    ) : meetsRequirements ? 'Continue to Dashboard' : 'Requirements Not Met'}
-                  </button>
-                  
+                  <div className="flex justify-center">
+                    <button
+                      onClick={handleContinueToDashboard}
+                      disabled={!meetsRequirements || loading}
+                      className={`px-12 py-4 rounded-xl font-bold text-lg transition transform ${
+                        meetsRequirements && !loading
+                          ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl hover:scale-105'
+                          : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                      } flex items-center justify-center gap-2`}
+                    >
+                      {loading ? (
+                        <span className="flex items-center gap-2">
+                          <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white border-2 mr-2"></span>
+                          Loading...
+                        </span>
+                      ) : meetsRequirements ? 'Continue to Dashboard' : 'Requirements Not Met'}
+                    </button>
+                  </div>
                   <div className="mt-4">
                     <Link
                       href="/influencer-auth"
