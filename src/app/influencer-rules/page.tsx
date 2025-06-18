@@ -12,6 +12,7 @@ function InfluencerRulesContent() {
   const searchParams = useSearchParams();
   const [platform, setPlatform] = useState<'instagram' | 'tiktok' | null>(null);
   const [userName, setUserName] = useState<string>('');
+  const [loading, setLoading] = useState(false);
 
   const [userStats, setUserStats] = useState({
     followers: 0,
@@ -51,14 +52,17 @@ function InfluencerRulesContent() {
 
   const handleContinueToDashboard = async () => {
     if (!meetsRequirements) return;
+    setLoading(true);
     if (platform === 'tiktok') {
       if (!searchParams) {
         alert('Missing search parameters. Please re-authenticate.');
+        setLoading(false);
         return;
       }
       const tiktokOpenId = searchParams.get('open_id');
       if (!tiktokOpenId) {
         alert('Missing TikTok Open ID. Please re-authenticate.');
+        setLoading(false);
         return;
       }
       // Update influencer as verified in Supabase
@@ -69,6 +73,7 @@ function InfluencerRulesContent() {
       if (error) {
         alert('Failed to verify influencer. Please try again.');
         console.error('Error updating influencer verification:', error);
+        setLoading(false);
         return;
       }
       // Ensure wallet exists for verified influencer
@@ -109,6 +114,7 @@ function InfluencerRulesContent() {
       // For other platforms, just continue as before
       router.push(`/influencer-dashboard?platform=${platform}&success=true&name=${encodeURIComponent(userName)}`);
     }
+    setLoading(false);
   };
 
 
@@ -277,14 +283,19 @@ function InfluencerRulesContent() {
                 <div className="text-center">
                   <button
                     onClick={handleContinueToDashboard}
-                    disabled={!meetsRequirements}
+                    disabled={!meetsRequirements || loading}
                     className={`px-12 py-4 rounded-xl font-bold text-lg transition transform ${
-                      meetsRequirements
+                      meetsRequirements && !loading
                         ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl hover:scale-105'
                         : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                    }`}
+                    } flex items-center justify-center gap-2`}
                   >
-                    {meetsRequirements ? 'Continue to Dashboard' : 'Requirements Not Met'}
+                    {loading ? (
+                      <span className="flex items-center gap-2">
+                        <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white border-2 mr-2"></span>
+                        Loading...
+                      </span>
+                    ) : meetsRequirements ? 'Continue to Dashboard' : 'Requirements Not Met'}
                   </button>
                   
                   <div className="mt-4">
