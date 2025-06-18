@@ -299,53 +299,86 @@ export async function GET(request: NextRequest) {
 
     console.log('[INFLUENCER DEBUG] Username:', tiktokUsername, '| OpenId:', tiktokOpenId);
     if (tiktokOpenId) {
-      // Try to find existing influencer by tiktok_username
+      console.log('[INFLUENCER DEBUG] Looking up influencer by tiktok_open_id:', tiktokOpenId);
+      // Try to find existing influencer by tiktok_open_id
       const { data: existingInfluencer, error: findError } = await supabase
         .from('influencers')
         .select('*')
-        .eq('tiktok_username', tiktokUsername)
+        .eq('tiktok_open_id', tiktokOpenId)
         .single();
       if (findError && typeof findError === 'object' && (findError as any)?.code !== 'PGRST116') {
-        console.error('Error looking up influencer:', findError);
+        console.error('[INFLUENCER DEBUG] Error looking up influencer:', findError);
+      } else {
+        console.log('[INFLUENCER DEBUG] Influencer lookup result:', existingInfluencer);
       }
+      // Rules: 10k+ followers, 100k+ likes, 5+ videos
       const passesRules = (tiktokFollowers >= 10000) && (tiktokLikes >= 100000) && (tiktokVideos >= 5);
+      console.log('[INFLUENCER DEBUG] passesRules:', passesRules, '| Followers:', tiktokFollowers, '| Likes:', tiktokLikes, '| Videos:', tiktokVideos);
       const influencerPayload = {
-        user_id: tiktokOpenId,
-        tiktok_username: tiktokUsername,
         tiktok_open_id: tiktokOpenId,
-        tiktok_display_name: tiktokDisplayName,
-        tiktok_avatar_url: tiktokAvatarUrl,
-        tiktok_followers: tiktokFollowers,
-        tiktok_likes: tiktokLikes,
-        tiktok_videos: tiktokVideos,
+        username: tiktokUsername,
+        display_name: tiktokDisplayName,
+        avatar_url: tiktokAvatarUrl,
         is_verified: passesRules
       };
       console.log('[INFLUENCER DEBUG] Data to be added/updated in influencers table:', influencerPayload);
       if (!existingInfluencer) {
+        console.log('[INFLUENCER DEBUG] Inserting new influencer...');
         const { data: newInfluencer, error: createError } = await supabase
           .from('influencers')
           .insert(influencerPayload)
           .select()
           .single();
         if (createError) {
-          console.error('Error creating influencer:', createError);
+          console.error('[INFLUENCER DEBUG] Error creating influencer:', createError);
         } else {
-          console.log('[INFLUENCER DEBUG] TikTok data successfully ADDED to influencers table:', newInfluencer?.id || newInfluencer);
+          console.log('[INFLUENCER DEBUG] TikTok data successfully ADDED to influencers table:', newInfluencer?.tiktok_open_id || newInfluencer);
         }
       } else {
+        console.log('[INFLUENCER DEBUG] Updating existing influencer...');
         const { error: updateError } = await supabase
           .from('influencers')
           .update(influencerPayload)
-          .eq('id', existingInfluencer.id);
+          .eq('tiktok_open_id', tiktokOpenId);
         if (updateError) {
-          console.error('Error updating influencer:', updateError);
+          console.error('[INFLUENCER DEBUG] Error updating influencer:', updateError);
         } else {
-          console.log('[INFLUENCER DEBUG] TikTok data successfully UPDATED in influencers table:', existingInfluencer.id);
+          console.log('[INFLUENCER DEBUG] TikTok data successfully UPDATED in influencers table:', tiktokOpenId);
+        }
+      }
+      // If verified, create wallet if not exists
+      if (passesRules) {
+        console.log('[INFLUENCER DEBUG] Checking for existing wallet for influencer:', tiktokOpenId);
+        const { data: existingWallet, error: walletFindError } = await supabase
+          .from('influencers_wallets')
+          .select('*')
+          .eq('tiktok_open_id', tiktokOpenId)
+          .single();
+        if (!existingWallet) {
+          console.log('[INFLUENCER DEBUG] Creating wallet for influencer:', tiktokOpenId);
+          const { data: newWallet, error: walletCreateError } = await supabase
+            .from('influencers_wallets')
+            .insert({
+              tiktok_open_id: tiktokOpenId,
+              tiktok_username: tiktokUsername,
+              balance: 0
+            })
+            .select()
+            .single();
+          if (walletCreateError) {
+            console.error('[INFLUENCER DEBUG] Error creating influencer wallet:', walletCreateError);
+          } else {
+            console.log('[INFLUENCER DEBUG] Wallet created for influencer:', tiktokOpenId, '| Wallet:', newWallet);
+          }
+        } else {
+          console.log('[INFLUENCER DEBUG] Wallet already exists for influencer:', tiktokOpenId, '| Wallet:', existingWallet);
         }
       }
     } else {
       console.log('[INFLUENCER DEBUG] Skipping insert/update: missing tiktokOpenId');
     }
+    // Log the redirect to rules page
+    console.log('[INFLUENCER DEBUG] Redirecting to influencer rules page with params:', userParams.toString());
 
     // Redirect to influencer rules page with user stats
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-rules?${userParams.toString()}`);
