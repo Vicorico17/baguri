@@ -46,6 +46,7 @@ function InfluencerDashboardContent() {
   const [requesting, setRequesting] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requestSuccess, setRequestSuccess] = useState<string | null>(null);
+  const [copiedProductId, setCopiedProductId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!searchParams) return;
@@ -468,8 +469,28 @@ function InfluencerDashboardContent() {
                         <div className="font-bold text-white text-base text-center line-clamp-2">{product.name}</div>
                         <div className="text-zinc-400 text-sm mb-2">{product.price} RON</div>
                         <div className="text-green-400 text-xs font-semibold mb-1">Earn {commission} RON per sale</div>
+                        {/* Share Link and Earn Commission button */}
+                        {influencer && influencer.tiktok_open_id && (
+                          <button
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 mb-2 w-full"
+                            onClick={async () => {
+                              const url = `${window.location.origin}/shop/${product.id}?ref=${influencer.tiktok_open_id}`;
+                              await navigator.clipboard.writeText(url);
+                              setCopiedProductId(product.id);
+                              setTimeout(() => setCopiedProductId(null), 2000);
+                            }}
+                          >
+                            <Share2 size={16} />
+                            {copiedProductId === product.id ? (
+                              <span className="flex items-center gap-1"><CheckCircle size={14} className="text-green-300" /> Copied!</span>
+                            ) : (
+                              'Share Link and Earn Commission'
+                            )}
+                          </button>
+                        )}
+                        {/* Request Free Item button */}
                         <button
-                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition"
+                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition w-full"
                           onClick={() => handleRequestFreeItem(product)}
                         >
                           Request Free Item
@@ -674,6 +695,7 @@ function WalletCard({ wallet, onWithdraw }: { wallet: InfluencerWallet | null, o
       </div>
     );
   }
+  const canWithdraw = wallet.balance >= 50;
   return (
     <div>
       <div className="flex items-center gap-2 mb-4">
@@ -685,14 +707,16 @@ function WalletCard({ wallet, onWithdraw }: { wallet: InfluencerWallet | null, o
           <p className="text-xs text-zinc-400 mb-1">Current Balance</p>
           <p className="text-4xl font-extrabold text-green-400">{wallet.balance.toFixed(2)} RON</p>
         </div>
-        {onWithdraw && wallet.balance >= 50 && (
-          <button
-            onClick={onWithdraw}
-            className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 mt-2"
-          >
-            <Download size={16} />
-            Withdraw
-          </button>
+        <button
+          onClick={canWithdraw && onWithdraw ? onWithdraw : undefined}
+          className={`w-full py-3 rounded-lg font-medium transition flex items-center justify-center gap-2 mt-2 ${canWithdraw ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-zinc-700 text-zinc-400 cursor-not-allowed'}`}
+          disabled={!canWithdraw}
+        >
+          <Download size={16} />
+          Withdraw
+        </button>
+        {!canWithdraw && (
+          <div className="text-xs text-zinc-400 mt-1 text-center">Minimum withdrawal amount is 50 RON.</div>
         )}
       </div>
     </div>
