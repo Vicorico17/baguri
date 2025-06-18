@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Instagram, Music, Users, DollarSign, TrendingUp, Eye, Share2, CheckCircle, Heart, Video, Download, XCircle, Clock, Info, X } from 'lucide-react';
+import { ArrowLeft, Instagram, Music, Users, DollarSign, TrendingUp, Eye, Share2, CheckCircle, Heart, Video, Download, XCircle, Clock, Info, X, Package } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
@@ -510,6 +510,54 @@ function InfluencerDashboardContent() {
                     );
                   })
                 )}
+              </div>
+            )}
+          </div>
+
+          {/* Requested Items Section */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-8">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Package size={20} className="text-pink-400" /> Your Requested Items
+            </h3>
+            {itemRequests.length === 0 ? (
+              <div className="text-zinc-500">You have not requested any free items yet.</div>
+            ) : (
+              <div className="space-y-4">
+                {itemRequests.map((req) => {
+                  // Try to find product details from products array
+                  const product = products.find((p) => p.id === req.product_id);
+                  let productName = product?.name || req.product_id;
+                  let productImage = null;
+                  if (product) {
+                    let colors = [];
+                    try {
+                      if (typeof product.colors === 'string') {
+                        colors = JSON.parse(product.colors);
+                      } else if (Array.isArray(product.colors)) {
+                        colors = product.colors;
+                      }
+                    } catch {}
+                    productImage = colors[0]?.images?.[0] || null;
+                  }
+                  let statusColor = req.status === 'pending' ? 'text-yellow-400' : req.status === 'accepted' ? 'text-green-400' : 'text-red-400';
+                  let statusLabel = req.status.charAt(0).toUpperCase() + req.status.slice(1);
+                  return (
+                    <div key={req.id} className="flex items-center gap-4 bg-zinc-800/60 border border-zinc-700 rounded-lg p-4">
+                      <div className="w-16 h-16 bg-zinc-900 rounded-lg overflow-hidden flex items-center justify-center">
+                        {productImage ? (
+                          <Image src={productImage} alt={productName} width={64} height={64} className="object-cover w-full h-full" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-zinc-700 text-zinc-400 text-xs font-bold">IMG</div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-white truncate">{productName}</div>
+                        <div className="text-zinc-400 text-xs truncate">Delivery: {req.delivery_address?.text || JSON.stringify(req.delivery_address)}</div>
+                      </div>
+                      <div className={`font-bold text-sm ${statusColor}`}>{statusLabel}</div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

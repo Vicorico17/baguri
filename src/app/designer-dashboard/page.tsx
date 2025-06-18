@@ -1116,231 +1116,164 @@ function DesignerDashboardContent() {
                       </div>
                     </div>
 
-                    {/* Influencer Item Requests Section */}
-                    <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl overflow-hidden mb-8">
+                    {/* Account Settings Section */}
+                    <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl overflow-hidden">
                       <div className="p-6 flex items-center justify-between">
-                        <h2 className="text-2xl font-bold flex items-center gap-2">
-                          <User size={24} className="text-green-400" /> Influencer Item Requests
-                        </h2>
-                      </div>
-                      <div className="px-6 pb-6">
-                        {loadingRequests ? (
-                          <div className="text-zinc-400">Loading requests...</div>
-                        ) : influencerRequests.length === 0 ? (
-                          <div className="text-zinc-500">No influencer item requests at the moment.</div>
-                        ) : (
-                          <div className="space-y-4">
-                            {influencerRequests.map((req: any) => (
-                              <div key={req.id} className="border border-zinc-800 rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-zinc-950/60">
-                                <div className="flex items-center gap-4 flex-1">
-                                  <User size={20} className="text-green-400" />
-                                  <div>
-                                    <div className="font-semibold text-white">{req.influencer?.display_name || req.influencer_open_id}</div>
-                                    <div className="text-zinc-400 text-xs">{req.influencer_open_id}</div>
-                                  </div>
-                                  <div className="ml-6 flex items-center gap-2">
-                                    <Package size={18} className="text-blue-400" />
-                                    <span className="font-medium text-white">{req.product?.name || 'Product'}</span>
-                                  </div>
-                                </div>
-                                <div className="flex-1">
-                                  <div className="text-zinc-400 text-sm">Delivery Address:</div>
-                                  <div className="text-white text-sm font-mono break-words">{req.delivery_address?.text || JSON.stringify(req.delivery_address)}</div>
-                                </div>
-                                <div className="flex flex-col items-end gap-2 min-w-[120px]">
-                                  {req.status === 'pending' ? (
-                                    <div className="flex gap-2">
-                                      <button
-                                        onClick={() => handleRequestAction(req.id, 'accepted')}
-                                        disabled={actionLoading === req.id + 'accepted'}
-                                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition"
-                                      >
-                                        {actionLoading === req.id + 'accepted' ? 'Accepting...' : 'Accept'}
-                                      </button>
-                                      <button
-                                        onClick={() => handleRequestAction(req.id, 'rejected')}
-                                        disabled={actionLoading === req.id + 'rejected'}
-                                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition"
-                                      >
-                                        {actionLoading === req.id + 'rejected' ? 'Rejecting...' : 'Reject'}
-                                      </button>
-                                    </div>
-                                  ) : req.status === 'accepted' ? (
-                                    <div className="flex items-center gap-2 text-green-400 font-semibold">
-                                      <CheckCircle size={16} /> Accepted
-                                    </div>
-                                  ) : req.status === 'rejected' ? (
-                                    <div className="flex items-center gap-2 text-red-400 font-semibold">
-                                      <XCircle size={16} /> Rejected
-                                    </div>
-                                  ) : null}
-                                </div>
-                              </div>
-                            ))}
+                        <button
+                          onClick={() => setAccountSettingsOpen(!accountSettingsOpen)}
+                          className="flex items-center justify-between hover:bg-zinc-800/50 transition text-left flex-1 -mx-6 -my-6 px-6 py-6"
+                        >
+                          <div>
+                            <h2 className="text-2xl font-bold flex items-center gap-2">
+                              🔐 Account Settings
+                              {accountSettingsOpen ? (
+                                <ChevronUp size={24} className="text-zinc-400 ml-2" />
+                              ) : (
+                                <ChevronDown size={24} className="text-zinc-400 ml-2" />
+                              )}
+                            </h2>
+                            <p className="text-zinc-400 text-sm mt-1">Manage your login credentials</p>
                           </div>
-                        )}
-                        {requestError && <div className="text-red-400 text-sm mt-2">{requestError}</div>}
+                        </button>
                       </div>
+                      
+                      {accountSettingsOpen && (
+                        <div className="px-6 pb-6">
+                          <div className="space-y-6">
+                            <div>
+                              <label className="text-sm font-medium mb-2 flex items-center gap-2">
+                                <ProgressCircle isComplete={!!profile.email.trim()} />
+                                Email Address
+                                <span className="text-xs text-zinc-500">(from your account)</span>
+                              </label>
+                              <div className="px-4 py-3 text-zinc-300 bg-zinc-700/50 border border-zinc-600 rounded-lg">
+                                {profile.email || user?.email || 'No email found'}
+                                </div>
+                              <p className="text-xs text-zinc-500 mt-1">
+                                Email is synced from your account and cannot be changed here
+                              </p>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <button
+                                onClick={() => {
+                                  setShowEmailModal(true);
+                                }}
+                                className="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-800 text-white border border-zinc-600 rounded-lg hover:bg-zinc-700 transition font-medium"
+                              >
+                                Change Your Email
+                              </button>
+                              
+                              <button
+                                onClick={() => {
+                                  setShowPasswordModal(true);
+                                }}
+                                className="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-800 text-white border border-zinc-600 rounded-lg hover:bg-zinc-700 transition font-medium"
+                              >
+                                Change Your Password
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Account Settings Section */}
-              <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl overflow-hidden">
-                <div className="p-6 flex items-center justify-between">
-                  <button
-                    onClick={() => setAccountSettingsOpen(!accountSettingsOpen)}
-                    className="flex items-center justify-between hover:bg-zinc-800/50 transition text-left flex-1 -mx-6 -my-6 px-6 py-6"
-                  >
-                    <div>
-                      <h2 className="text-2xl font-bold flex items-center gap-2">
-                        🔐 Account Settings
-                        {accountSettingsOpen ? (
-                          <ChevronUp size={24} className="text-zinc-400 ml-2" />
-                        ) : (
-                          <ChevronDown size={24} className="text-zinc-400 ml-2" />
-                        )}
-                      </h2>
-                      <p className="text-zinc-400 text-sm mt-1">Manage your login credentials</p>
-                    </div>
-                  </button>
-                </div>
-                
-                {accountSettingsOpen && (
-                  <div className="px-6 pb-6">
-                    <div className="space-y-6">
-                      <div>
-                        <label className="text-sm font-medium mb-2 flex items-center gap-2">
-                          <ProgressCircle isComplete={!!profile.email.trim()} />
-                          Email Address
-                          <span className="text-xs text-zinc-500">(from your account)</span>
-                        </label>
-                        <div className="px-4 py-3 text-zinc-300 bg-zinc-700/50 border border-zinc-600 rounded-lg">
-                          {profile.email || user?.email || 'No email found'}
-                          </div>
-                        <p className="text-xs text-zinc-500 mt-1">
-                          Email is synced from your account and cannot be changed here
-                        </p>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <button
-                          onClick={() => {
-                            setShowEmailModal(true);
-                          }}
-                          className="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-800 text-white border border-zinc-600 rounded-lg hover:bg-zinc-700 transition font-medium"
-                        >
-                          Change Your Email
-                        </button>
+              {/* Sidebar */}
+              <div className="space-y-6">
+                {status === 'approved' && (
+                  <>
+                    {/* Action Buttons */}
+                    {/* Wallet & Earnings - Now First */}
+                    {dashboardData?.wallet && (
+                      <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-xl p-6">
+                        <div className="flex items-center gap-2 mb-4">
+                          <Wallet size={20} className="text-green-400" />
+                          <h3 className="text-lg font-bold">Wallet & Earnings</h3>
+                        </div>
                         
-                        <button
-                          onClick={() => {
-                            setShowPasswordModal(true);
-                          }}
-                          className="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-800 text-white border border-zinc-600 rounded-lg hover:bg-zinc-700 transition font-medium"
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div className="bg-zinc-800/50 rounded-lg p-3">
+                            <p className="text-xs text-zinc-400 mb-1">Available Balance</p>
+                            <p className="text-lg font-bold text-green-400">{dashboardData.wallet.balance.toFixed(2)} RON</p>
+                          </div>
+                          <div className="bg-zinc-800/50 rounded-lg p-3">
+                            <p className="text-xs text-zinc-400 mb-1">Total Sales</p>
+                            <p className="text-lg font-bold text-blue-400">{dashboardData.salesTotal.toFixed(2)} RON</p>
+                          </div>
+                        </div>
+                        
+                        <Link 
+                          href="/wallet"
+                          className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
                         >
-                          Change Your Password
-                        </button>
+                          <Wallet size={16} />
+                          Manage Wallet
+                        </Link>
                       </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {status === 'approved' && (
-                <>
-                  {/* Action Buttons */}
-                  {/* Wallet & Earnings - Now First */}
-                  {dashboardData?.wallet && (
-                    <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-xl p-6">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Wallet size={20} className="text-green-400" />
-                        <h3 className="text-lg font-bold">Wallet & Earnings</h3>
-                      </div>
+                    )}
+
+                    <div className="space-y-3">
+                      <Link
+                        href="/products"
+                        className="w-full py-3 bg-white text-black rounded-lg font-medium transition flex items-center justify-center gap-2 hover:bg-zinc-200"
+                      >
+                        <Plus size={16} />
+                        Manage Products
+                      </Link>
                       
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="bg-zinc-800/50 rounded-lg p-3">
-                          <p className="text-xs text-zinc-400 mb-1">Available Balance</p>
-                          <p className="text-lg font-bold text-green-400">{dashboardData.wallet.balance.toFixed(2)} RON</p>
-                        </div>
-                        <div className="bg-zinc-800/50 rounded-lg p-3">
-                          <p className="text-xs text-zinc-400 mb-1">Total Sales</p>
-                          <p className="text-lg font-bold text-blue-400">{dashboardData.salesTotal.toFixed(2)} RON</p>
-                        </div>
-                      </div>
-                      
-                      <Link 
-                        href="/wallet"
+                      <button
+                        onClick={() => {
+                          const slug = profile.brandName?.toLowerCase().replace(/\s+/g, '-');
+                          if (slug) {
+                            window.open(`/designer/${slug}`, '_blank');
+                          } else {
+                            window.open('/designers', '_blank');
+                          }
+                        }}
                         className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
                       >
-                        <Wallet size={16} />
-                        Manage Wallet
+                        <Globe size={16} />
+                        View Your Store
+                      </button>
+                      
+                      <Link
+                        href="/designer-subscription"
+                        className="w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-black rounded-lg font-medium transition flex items-center justify-center gap-2"
+                      >
+                        <Crown size={16} />
+                        View Plans
+                      </Link>
+                      
+                      <Link
+                        href="/commission-levels"
+                        className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 hover:from-purple-500 hover:to-blue-500"
+                      >
+                        <Trophy size={16} />
+                        Commission Levels
                       </Link>
                     </div>
-                  )}
+                  </>
+                )}
 
-                  <div className="space-y-3">
-                    <Link
-                      href="/products"
-                      className="w-full py-3 bg-white text-black rounded-lg font-medium transition flex items-center justify-center gap-2 hover:bg-zinc-200"
-                    >
-                      <Plus size={16} />
-                      Manage Products
-                    </Link>
-                    
-                    <button
-                      onClick={() => {
-                        const slug = profile.brandName?.toLowerCase().replace(/\s+/g, '-');
-                        if (slug) {
-                          window.open(`/designer/${slug}`, '_blank');
-                        } else {
-                          window.open('/designers', '_blank');
-                        }
-                      }}
-                      className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
-                    >
-                      <Globe size={16} />
-                      View Your Store
-                    </button>
-                    
-                    <Link
-                      href="/designer-subscription"
-                      className="w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-black rounded-lg font-medium transition flex items-center justify-center gap-2"
-                    >
-                      <Crown size={16} />
-                      View Plans
-                    </Link>
-                    
-                    <Link
-                      href="/commission-levels"
-                      className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 hover:from-purple-500 hover:to-blue-500"
-                    >
-                      <Trophy size={16} />
-                      Commission Levels
-                    </Link>
-                  </div>
-                </>
-              )}
-
-              {status !== 'approved' && (
-                <ActionCard
-                  status={status}
-                  canSubmit={canSubmit}
-                  onSubmit={handleSubmitForReview}
-                  completionPercentage={completionPercentage}
-                  setIsEditMode={setIsEditMode}
-                  submitting={submitting}
-                  profile={profile}
-                />
-              )}
-              
-              <GuidelinesCard />
-              
-              {status !== 'approved' && <WalletCard wallet={dashboardData?.wallet} />}
+                {status !== 'approved' && (
+                  <ActionCard
+                    status={status}
+                    canSubmit={canSubmit}
+                    onSubmit={handleSubmitForReview}
+                    completionPercentage={completionPercentage}
+                    setIsEditMode={setIsEditMode}
+                    submitting={submitting}
+                    profile={profile}
+                  />
+                )}
+                
+                <GuidelinesCard />
+                
+                {status !== 'approved' && <WalletCard wallet={dashboardData?.wallet} />}
+              </div>
             </div>
           </div>
         </div>
