@@ -473,6 +473,143 @@ class AdminService {
       return { success: false, error: 'Failed to reject withdrawal' };
     }
   }
+
+  // Influencer Withdrawal Management Methods
+  async getPendingInfluencerWithdrawals(): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    try {
+      const { data: withdrawals, error } = await supabase
+        .from('influencers_wallet_transactions')
+        .select(`
+          *,
+          influencers:tiktok_open_id (tiktok_display_name, email),
+          influencers_wallets:tiktok_open_id (balance)
+        `)
+        .eq('type', 'withdrawal')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching pending influencer withdrawals:', error);
+        return { success: false, error: error.message };
+      }
+      return { success: true, data: withdrawals || [] };
+    } catch (error) {
+      console.error('Error in getPendingInfluencerWithdrawals:', error);
+      return { success: false, error: 'Failed to fetch influencer withdrawals' };
+    }
+  }
+
+  async getAllInfluencerWithdrawals(): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    try {
+      const { data: withdrawals, error } = await supabase
+        .from('influencers_wallet_transactions')
+        .select(`
+          *,
+          influencers:tiktok_open_id (tiktok_display_name, email),
+          influencers_wallets:tiktok_open_id (balance)
+        `)
+        .eq('type', 'withdrawal')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) {
+        console.error('Error fetching all influencer withdrawals:', error);
+        return { success: false, error: error.message };
+      }
+      return { success: true, data: withdrawals || [] };
+    } catch (error) {
+      console.error('Error in getAllInfluencerWithdrawals:', error);
+      return { success: false, error: 'Failed to fetch influencer withdrawals' };
+    }
+  }
+
+  async approveInfluencerWithdrawal(transactionId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Get the transaction
+      const { data: transaction, error: fetchError } = await supabase
+        .from('influencers_wallet_transactions')
+        .select('*')
+        .eq('transaction_id', transactionId)
+        .eq('type', 'withdrawal')
+        .eq('status', 'pending')
+        .single();
+      if (fetchError || !transaction) {
+        return { success: false, error: 'Withdrawal transaction not found or already processed' };
+      }
+      // Update transaction status to completed
+      const { error: updateError } = await supabase
+        .from('influencers_wallet_transactions')
+        .update({
+          status: 'completed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('transaction_id', transactionId);
+      if (updateError) {
+        console.error('Error approving influencer withdrawal:', updateError);
+        return { success: false, error: updateError.message };
+      }
+      // No further wallet update needed (balance already deducted on request)
+      return { success: true };
+    } catch (error) {
+      console.error('Error in approveInfluencerWithdrawal:', error);
+      return { success: false, error: 'Failed to approve influencer withdrawal' };
+    }
+  }
+
+  async rejectInfluencerWithdrawal(transactionId: string, reason?: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Get the transaction
+      const { data: transaction, error: fetchError } = await supabase
+        .from('influencers_wallet_transactions')
+        .select('*')
+        .eq('transaction_id', transactionId)
+        .eq('type', 'withdrawal')
+        .eq('status', 'pending')
+        .single();
+      if (fetchError || !transaction) {
+        return { success: false, error: 'Withdrawal transaction not found or already processed' };
+      }
+      // Update transaction status to failed with reason
+      const { error: updateError } = await supabase
+        .from('influencers_wallet_transactions')
+        .update({
+          status: 'failed',
+          description: reason ? `${transaction.description} - Rejected: ${reason}` : `${transaction.description} - Rejected`,
+          updated_at: new Date().toISOString()
+        })
+        .eq('transaction_id', transactionId);
+      if (updateError) {
+        console.error('Error rejecting influencer withdrawal:', updateError);
+        return { success: false, error: updateError.message };
+      }
+      // Return money to influencer's balance
+      const withdrawalAmount = Math.abs(transaction.amount);
+      const { data: wallet, error: walletFetchError } = await supabase
+        .from('influencers_wallets')
+        .select('balance')
+        .eq('tiktok_open_id', transaction.tiktok_open_id)
+        .single();
+      if (walletFetchError) {
+        console.error('Error fetching influencer wallet for rejection:', walletFetchError);
+        return { success: false, error: 'Failed to fetch influencer wallet' };
+      }
+      const { error: walletError } = await supabase
+        .from('influencers_wallets')
+        .update({
+          balance: (parseFloat(wallet.balance) + withdrawalAmount).toFixed(2),
+          updated_at: new Date().toISOString()
+        })
+        .eq('tiktok_open_id', transaction.tiktok_open_id);
+      if (walletError) {
+        console.error('Error updating influencer wallet after withdrawal rejection:', walletError);
+        return { success: false, error: 'Failed to return funds to influencer balance' };
+      }
+      return { success: true };
+    } catch (error) {
+      console.error('Error in rejectInfluencerWithdrawal:', error);
+      return { success: false, error: 'Failed to reject influencer withdrawal' };
+    }
+  }
 }
 
 export const adminService = new AdminService(); 
