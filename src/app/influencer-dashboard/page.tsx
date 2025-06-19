@@ -362,7 +362,7 @@ function InfluencerDashboardContent() {
               </button>
               <h3 className="text-2xl font-bold mb-4">How It Works</h3>
               <p className="text-zinc-400 text-base">
-                Share any product on your account and get up to <span className="text-green-400 font-bold">15% commission</span> on the product sale straight to your wallet!
+                Share any product on your account and get up to <span className="text-green-400 font-bold">10% commission</span> on the product sale straight to your wallet!
               </p>
             </div>
           </div>
@@ -555,6 +555,24 @@ function InfluencerDashboardContent() {
                         <div className="text-zinc-400 text-xs truncate">Delivery: {req.delivery_address?.text || JSON.stringify(req.delivery_address)}</div>
                       </div>
                       <div className={`font-bold text-sm ${statusColor}`}>{statusLabel}</div>
+                      {req.status === 'pending' && influencer?.tiktok_open_id && (
+                        <button
+                          className="ml-4 px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-medium transition"
+                          onClick={async () => {
+                            await fetch('/api/influencer/item-request', {
+                              method: 'DELETE',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ requestId: req.id, tiktokOpenId: influencer.tiktok_open_id })
+                            });
+                            // Refresh requests
+                            const res = await fetch(`/api/influencer/item-request?tiktokOpenId=${influencer.tiktok_open_id}`);
+                            const data = await res.json();
+                            setItemRequests(data.requests || []);
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      )}
                     </div>
                   );
                 })}
