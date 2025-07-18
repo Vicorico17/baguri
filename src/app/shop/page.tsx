@@ -10,6 +10,13 @@ import { TierBadge, getTierBySalesTotal, COMMISSION_TIERS } from '@/lib/tierUtil
 import { useDesignerAuth } from '@/contexts/DesignerAuthContext';
 import { supabase } from '@/lib/supabase';
 import { ScarcityNotifications } from '@/components/ui/scarcity-notifications';
+import { 
+  FadeInUp, 
+  AnimatedContainer, 
+  AnimatedItem,
+  AnimatedCard,
+  AnimatedButton 
+} from '@/components/ui/AnimatedComponents';
 
 // Placeholder component for images
 // Stock status display component
@@ -484,6 +491,13 @@ function ShopContent() {
 
       {/* Products Grid */}
       <main className="max-w-7xl mx-auto px-4 py-8 pt-44 safe-area-bottom">
+        {/* Header Section */}
+        <FadeInUp className="text-center mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">Shop Romanian Fashion</h1>
+          <p className="text-zinc-400 max-w-2xl mx-auto">
+            Discover unique pieces from talented Romanian designers. Each item tells a story of creativity and craftsmanship.
+          </p>
+        </FadeInUp>
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
@@ -517,7 +531,7 @@ function ShopContent() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+          <AnimatedContainer className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
             {filteredProducts.map((product) => {
               // Handle colors - it might be a string or already an object
               let colors = [];
@@ -538,16 +552,16 @@ function ShopContent() {
               const firstImage = firstColor?.images?.[0];
               
               return (
-                <div 
-                  key={product.id} 
-                  className="group cursor-pointer mobile-fade-in" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('Product clicked:', product);
-                    setSelectedProduct(product);
-                  }}
-                >
+                <AnimatedItem key={product.id}>
+                  <div 
+                    className="group cursor-pointer mobile-fade-in" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Product clicked:', product);
+                      setSelectedProduct(product);
+                    }}
+                  >
                   <div className="relative aspect-[3/4] bg-zinc-800 rounded-lg overflow-hidden mb-3">
                     <div className="absolute top-2 right-2 z-10">
                       <button 
@@ -619,10 +633,11 @@ function ShopContent() {
                       <StockStatusBadge stockStatus={product.stock_status || 'in_stock'} />
                     </div>
                   </div>
-                </div>
+                  </div>
+                </AnimatedItem>
               );
             })}
-          </div>
+          </AnimatedContainer>
         )}
       </main>
 

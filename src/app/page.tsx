@@ -6,6 +6,15 @@ import { useState, useRef, useEffect } from "react";
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { TextLoop } from "@/components/ui/text-loop";
 import { ScarcityNotifications } from "@/components/ui/scarcity-notifications";
+import { 
+  FadeInUp, 
+  FadeInLeft, 
+  FadeInRight, 
+  ScaleIn, 
+  AnimatedContainer, 
+  AnimatedItem,
+  AnimatedButton 
+} from "@/components/ui/AnimatedComponents";
 
 function WaitlistModal({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess?: () => void }) {
   const [email, setEmail] = useState("");
@@ -122,88 +131,100 @@ export default function Home() {
       <div className="relative z-10">
         {/* Main content (z-10 to be above background) */}
         <section className="flex flex-col items-center text-center px-4 mt-4 mb-2 md:mb-6 gap-y-4">
-          <Image
-            src="/wlogo.png"
-            alt="Baguri.ro written logo"
-            width={240}
-            height={60}
-            className="mx-auto mb-4 w-full max-w-[220px] md:max-w-[320px] h-12 md:h-16 object-contain"
-            style={{ filter: "invert(1) brightness(2)" }}
-            priority
-          />
-          <h2 className="text-base md:text-2xl text-neutral-300 mb-0 font-semibold">
-            Romanian{" "}
-            <TextLoop
-              interval={2}
-              className="text-amber-200"
-              transition={{ duration: 0.5 }}
-            >
-              {["fashion", "retail", "products", "designers"].map((text) => (
-                <span key={text}>{text}</span>
-              ))}
-            </TextLoop>
-            , reimagined.
-          </h2>
-          <p className="mb-6 md:mb-8 text-sm md:text-lg text-neutral-400 px-2">
-            Join the waitlist for an exclusive
-            <span className="inline-block ml-2 px-3 py-1 rounded-full bg-amber-200 text-zinc-900 font-semibold text-xs md:text-sm align-middle shadow-sm">lifetime discount</span>
-          </p>
+          <ScaleIn>
+            <Image
+              src="/wlogo.png"
+              alt="Baguri.ro written logo"
+              width={240}
+              height={60}
+              className="mx-auto mb-4 w-full max-w-[220px] md:max-w-[320px] h-12 md:h-16 object-contain"
+              style={{ filter: "invert(1) brightness(2)" }}
+              priority
+            />
+          </ScaleIn>
+          <FadeInUp delay={0.2}>
+            <h2 className="text-base md:text-2xl text-neutral-300 mb-0 font-semibold">
+              Romanian{" "}
+              <TextLoop
+                interval={2}
+                className="text-amber-200"
+                transition={{ duration: 0.5 }}
+              >
+                {["fashion", "retail", "products", "designers"].map((text) => (
+                  <span key={text}>{text}</span>
+                ))}
+              </TextLoop>
+              , reimagined.
+            </h2>
+          </FadeInUp>
+          <FadeInUp delay={0.4}>
+            <p className="mb-6 md:mb-8 text-sm md:text-lg text-neutral-400 px-2">
+              Join the waitlist for an exclusive
+              <span className="inline-block ml-2 px-3 py-1 rounded-full bg-amber-200 text-zinc-900 font-semibold text-xs md:text-sm align-middle shadow-sm">lifetime discount</span>
+            </p>
+          </FadeInUp>
         </section>
         {/* Mobile-only Join Waitlist button or success message (moved up, less margin) */}
         {/* (Temporarily removed as per user request) */}
 
         {/* For Shoppers & Designers */}
-        <section className="flex flex-col md:flex-row gap-8 justify-center items-start px-4 mb-16 w-full max-w-3xl mx-auto">
-          <div className="flex-1 bg-zinc-900 rounded-xl p-5 md:p-6 mb-4 md:mb-0">
-            <h2 className="text-base md:text-lg font-semibold mb-3 text-neutral-200">🛍️ For Shoppers</h2>
-            <ul className="space-y-3 text-neutral-300 text-sm md:text-base">
-              <li>Discover and shop limited drops from independent designers</li>
-              <li>Unique shopping experience</li>
-              <li>Win free clothes through special events</li>
-            </ul>
-          </div>
-          <div className="flex-1 bg-zinc-900 rounded-xl p-5 md:p-6">
-            <h2 className="text-base md:text-lg font-semibold mb-3 text-neutral-200">🎨 For Designers</h2>
-            <ul className="space-y-3 text-neutral-300 text-sm md:text-base">
-              <li>Focus on your brand, we handle everything else</li>
-              <li>Instant payments, no upfront fees</li>
-              <li>Get your fashion art seen </li>
-            </ul>
-          </div>
-        </section>
+        <AnimatedContainer className="flex flex-col md:flex-row gap-8 justify-center items-start px-4 mb-16 w-full max-w-3xl mx-auto">
+          <AnimatedItem>
+            <div className="flex-1 bg-zinc-900 rounded-xl p-5 md:p-6 mb-4 md:mb-0">
+              <h2 className="text-base md:text-lg font-semibold mb-3 text-neutral-200">🛍️ For Shoppers</h2>
+              <ul className="space-y-3 text-neutral-300 text-sm md:text-base">
+                <li>Discover and shop limited drops from independent designers</li>
+                <li>Unique shopping experience</li>
+                <li>Win free clothes through special events</li>
+              </ul>
+            </div>
+          </AnimatedItem>
+          <AnimatedItem>
+            <div className="flex-1 bg-zinc-900 rounded-xl p-5 md:p-6">
+              <h2 className="text-base md:text-lg font-semibold mb-3 text-neutral-200">🎨 For Designers</h2>
+              <ul className="space-y-3 text-neutral-300 text-sm md:text-base">
+                <li>Focus on your brand, we handle everything else</li>
+                <li>Instant payments, no upfront fees</li>
+                <li>Get your fashion art seen </li>
+              </ul>
+            </div>
+          </AnimatedItem>
+        </AnimatedContainer>
 
         {/* Closing CTA */}
         <section className="flex flex-col items-center text-center px-4 mb-16 md:mb-20 gap-y-4">
-          <h3 className="text-base md:text-2xl font-medium mb-2 md:mb-3 text-neutral-200">Be the first to experience the future of Romanian fashion.</h3>
+          <FadeInUp>
+            <h3 className="text-base md:text-2xl font-medium mb-2 md:mb-3 text-neutral-200">Be the first to experience the future of Romanian fashion.</h3>
+          </FadeInUp>
           {/* Mobile-only Join Waitlist button or success message under CTA */}
-          <div className="w-full flex justify-center mb-2 md:hidden">
+          <FadeInUp delay={0.2} className="w-full flex justify-center mb-2 md:hidden">
             {waitlistJoined ? (
               <div className="text-center text-green-400 font-semibold">
                 Awesome!<br />We will reach out at launch :)
               </div>
             ) : (
-              <button
+              <AnimatedButton
                 className="inline-block w-full max-w-xs bg-neutral-100 text-zinc-950 font-medium rounded-full px-8 py-3 text-base shadow-sm hover:bg-neutral-200 transition"
                 onClick={() => setModalOpen(true)}
               >
                 Join Waitlist
-              </button>
+              </AnimatedButton>
             )}
-          </div>
-          <div className="w-full justify-center hidden md:flex">
+          </FadeInUp>
+          <FadeInUp delay={0.2} className="w-full justify-center hidden md:flex">
             {waitlistJoined ? (
               <div className="text-center text-green-400 font-semibold w-full max-w-xs mx-auto">
                 Awesome!<br />We will reach out at launch :)
               </div>
             ) : (
-              <button
+              <AnimatedButton
                 className="inline-block w-full max-w-xs bg-neutral-100 text-zinc-950 font-medium rounded-full px-8 py-3 text-base md:text-lg shadow-sm hover:bg-neutral-200 transition"
                 onClick={() => setModalOpen(true)}
               >
                 Join Waitlist
-              </button>
+              </AnimatedButton>
             )}
-          </div>
+          </FadeInUp>
           
           {/* Early Access Link */}
           <div className="mt-6 flex justify-center">
@@ -218,17 +239,21 @@ export default function Home() {
 
         {/* Footer */}
         <footer className="mt-auto w-full py-4 px-4 flex flex-col items-center gap-4">
-          <div className="flex flex-col items-center gap-2 mb-2">
-            <span className="text-xs text-neutral-500">Coming soon on</span>
-            <div className="flex gap-2 flex-wrap justify-center">
-              <AppStoreBadge small />
-              <GooglePlayBadge small />
+          <FadeInUp>
+            <div className="flex flex-col items-center gap-2 mb-2">
+              <span className="text-xs text-neutral-500">Coming soon on</span>
+              <div className="flex gap-2 flex-wrap justify-center">
+                <AppStoreBadge small />
+                <GooglePlayBadge small />
+              </div>
             </div>
-          </div>
-          <div className="flex gap-4 mt-2 justify-center">
-            <SocialIcon type="instagram" url="https://www.instagram.com/baguri.ro" />
-            <SocialIcon type="tiktok" url="https://www.tiktok.com/@baguri.ro" />
-          </div>
+          </FadeInUp>
+          <FadeInUp delay={0.2}>
+            <div className="flex gap-4 mt-2 justify-center">
+              <SocialIcon type="instagram" url="https://www.instagram.com/baguri.ro" />
+              <SocialIcon type="tiktok" url="https://www.tiktok.com/@baguri.ro" />
+            </div>
+          </FadeInUp>
         </footer>
 
         <WaitlistModal open={modalOpen} onClose={() => setModalOpen(false)} onSuccess={() => setWaitlistJoined(true)} />

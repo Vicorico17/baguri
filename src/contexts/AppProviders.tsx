@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { CartProvider, useCart } from './CartContext';
 import { ToastProvider, useToast } from './ToastContext';
 import { DesignerAuthProvider } from './DesignerAuthContext';
+import { AnimationProvider } from './AnimationContext';
 import { ToastContainer } from '@/components/Toast';
 
 // Inner component that connects cart events to toast notifications
@@ -30,15 +31,17 @@ function CartToastConnector({ children }: { children: React.ReactNode }) {
 // Combined provider that sets up all the necessary context providers
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
-    <ToastProvider>
-      <CartProvider>
-        <DesignerAuthProvider>
-          <CartToastConnector>
-            {children}
-            <ToastContainer />
-          </CartToastConnector>
-        </DesignerAuthProvider>
-      </CartProvider>
-    </ToastProvider>
+    <AnimationProvider>
+      <ToastProvider>
+        <CartProvider>
+          <DesignerAuthProvider>
+            <CartToastConnector>
+              {children}
+              <ToastContainer />
+            </CartToastConnector>
+          </DesignerAuthProvider>
+        </CartProvider>
+      </ToastProvider>
+    </AnimationProvider>
   );
 } 
