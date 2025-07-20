@@ -319,8 +319,8 @@ function DesignerAuthForm() {
                 className="text-zinc-400 hover:text-white transition"
               >
                 {isLogin 
-                  ? "Don't have an account? Sign up" 
-                  : "Already have an account? Sign in"
+                  ? `Don't have an account? Sign up`
+                  : `Already have an account? Sign in`
                 }
               </button>
             </div>

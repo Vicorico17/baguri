@@ -132,7 +132,7 @@ export default function CommissionLevelsPage() {
               Level up your earnings as you grow your business
             </p>
             <p className="text-zinc-500">
-                              The more you sell, the more you keep. It's that simple.
+                              {`The more you sell, the more you keep. It's that simple.`}
             </p>
           </div>
         </div>
