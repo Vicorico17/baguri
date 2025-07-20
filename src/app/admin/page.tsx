@@ -59,6 +59,18 @@ export default function AdminDashboard() {
   const [rejectionModal, setRejectionModal] = useState<{ designer: DesignerApplication; isOpen: boolean } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
+  
+  // Analytics state
+  const [analytics, setAnalytics] = useState({
+    totalOrders: 0,
+    totalVolume: 0,
+    totalWithdrawn: 0,
+    totalProfit: 0,
+    totalDesigners: 0,
+    totalInfluencers: 0,
+    totalProducts: 0,
+    loading: true
+  });
   const router = useRouter();
 
   useEffect(() => {
@@ -67,6 +79,7 @@ export default function AdminDashboard() {
     if (adminSession === 'authenticated') {
       setIsAuthenticated(true);
       loadDesignerApplications();
+      loadAnalytics();
       
       // Set up real-time subscription for designer changes
       const subscription = supabase
@@ -79,8 +92,9 @@ export default function AdminDashboard() {
           }, 
           (payload) => {
             console.log('Designer data changed:', payload);
-            // Reload applications when any designer data changes
+            // Reload applications and analytics when any designer data changes
             loadDesignerApplications();
+            loadAnalytics();
           }
         )
         .subscribe();
@@ -93,6 +107,90 @@ export default function AdminDashboard() {
       router.push('/admin/login');
     }
   }, [router]);
+
+  // Load analytics data
+  const loadAnalytics = async () => {
+    try {
+      setAnalytics(prev => ({ ...prev, loading: true }));
+      
+      console.log('📊 Loading analytics data...');
+      
+      // Get total orders and volume
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select('total_amount, status')
+        .eq('status', 'completed');
+      
+      if (ordersError) {
+        console.error('Error fetching orders:', ordersError);
+      }
+      
+      const totalOrders = ordersData?.length || 0;
+      const totalVolume = ordersData?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+      
+      // Get total withdrawn from wallet transactions
+      const { data: withdrawalsData, error: withdrawalsError } = await supabase
+        .from('wallet_transactions')
+        .select('amount')
+        .eq('type', 'withdrawal')
+        .eq('status', 'completed');
+      
+      if (withdrawalsError) {
+        console.error('Error fetching withdrawals:', withdrawalsError);
+      }
+      
+      const totalWithdrawn = withdrawalsData?.reduce((sum, transaction) => sum + (transaction.amount || 0), 0) || 0;
+      
+      // Calculate total profit (volume - withdrawn)
+      const totalProfit = totalVolume - totalWithdrawn;
+      
+      // Get total designers
+      const { count: totalDesigners, error: designersError } = await supabase
+        .from('designers')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'approved');
+      
+      if (designersError) {
+        console.error('Error fetching designers count:', designersError);
+      }
+      
+      // Get total influencers
+      const { count: totalInfluencers, error: influencersError } = await supabase
+        .from('influencers')
+        .select('*', { count: 'exact', head: true });
+      
+      if (influencersError) {
+        console.error('Error fetching influencers count:', influencersError);
+      }
+      
+      // Get total products
+      const { count: totalProducts, error: productsError } = await supabase
+        .from('designer_products')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true);
+      
+      if (productsError) {
+        console.error('Error fetching products count:', productsError);
+      }
+      
+      setAnalytics({
+        totalOrders,
+        totalVolume,
+        totalWithdrawn,
+        totalProfit,
+        totalDesigners: totalDesigners || 0,
+        totalInfluencers: totalInfluencers || 0,
+        totalProducts: totalProducts || 0,
+        loading: false
+      });
+      
+      console.log('✅ Analytics loaded successfully');
+      
+    } catch (error) {
+      console.error('Error loading analytics:', error);
+      setAnalytics(prev => ({ ...prev, loading: false }));
+    }
+  };
 
   const loadDesignerApplications = async () => {
     try {
@@ -377,7 +475,10 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold">Designer Applications</h1>
             <button
-              onClick={loadDesignerApplications}
+              onClick={() => {
+                loadDesignerApplications();
+                loadAnalytics();
+              }}
               disabled={loading}
               className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm font-medium transition disabled:opacity-50"
             >
@@ -385,6 +486,77 @@ export default function AdminDashboard() {
               Refresh
             </button>
           </div>
+          {/* Analytics Dashboard */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white">Platform Analytics</h2>
+              <button
+                onClick={loadAnalytics}
+                disabled={analytics.loading}
+                className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition disabled:opacity-50"
+              >
+                {analytics.loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                Refresh Analytics
+              </button>
+            </div>
+            
+            {/* Main Analytics Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-gradient-to-br from-green-600/20 to-green-800/20 border border-green-600/30 rounded-xl p-6 text-center">
+                <div className="text-2xl font-bold text-green-400 mb-2">
+                  {analytics.loading ? <Loader2 size={20} className="animate-spin mx-auto" /> : analytics.totalOrders}
+                </div>
+                <div className="text-zinc-300 text-sm">Total Orders</div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 border border-blue-600/30 rounded-xl p-6 text-center">
+                <div className="text-2xl font-bold text-blue-400 mb-2">
+                  {analytics.loading ? <Loader2 size={20} className="animate-spin mx-auto" /> : `${analytics.totalVolume.toFixed(2)} RON`}
+                </div>
+                <div className="text-zinc-300 text-sm">Total Volume</div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-red-600/20 to-red-800/20 border border-red-600/30 rounded-xl p-6 text-center">
+                <div className="text-2xl font-bold text-red-400 mb-2">
+                  {analytics.loading ? <Loader2 size={20} className="animate-spin mx-auto" /> : `${analytics.totalWithdrawn.toFixed(2)} RON`}
+                </div>
+                <div className="text-zinc-300 text-sm">Total Withdrawn</div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-purple-600/20 to-purple-800/20 border border-purple-600/30 rounded-xl p-6 text-center">
+                <div className="text-2xl font-bold text-purple-400 mb-2">
+                  {analytics.loading ? <Loader2 size={20} className="animate-spin mx-auto" /> : `${analytics.totalProfit.toFixed(2)} RON`}
+                </div>
+                <div className="text-zinc-300 text-sm">Total Profit</div>
+              </div>
+            </div>
+            
+            {/* Secondary Analytics Grid */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="bg-gradient-to-br from-amber-600/20 to-amber-800/20 border border-amber-600/30 rounded-xl p-6 text-center">
+                <div className="text-3xl font-bold text-amber-400 mb-2">
+                  {analytics.loading ? <Loader2 size={24} className="animate-spin mx-auto" /> : analytics.totalDesigners}
+                </div>
+                <div className="text-zinc-300">Total Designers</div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-emerald-600/20 to-emerald-800/20 border border-emerald-600/30 rounded-xl p-6 text-center">
+                <div className="text-3xl font-bold text-emerald-400 mb-2">
+                  {analytics.loading ? <Loader2 size={24} className="animate-spin mx-auto" /> : analytics.totalInfluencers}
+                </div>
+                <div className="text-zinc-300">Total Influencers</div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-cyan-600/20 to-cyan-800/20 border border-cyan-600/30 rounded-xl p-6 text-center">
+                <div className="text-3xl font-bold text-cyan-400 mb-2">
+                  {analytics.loading ? <Loader2 size={24} className="animate-spin mx-auto" /> : analytics.totalProducts}
+                </div>
+                <div className="text-zinc-300">Total Products</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Designer Applications Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-zinc-800/50 rounded-xl p-6 text-center">
               <div className="text-3xl font-bold text-amber-400 mb-2">{pendingCount}</div>
