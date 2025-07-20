@@ -151,7 +151,7 @@ export default function PrivacyPolicy() {
             <div className="grid md:grid-cols-2 gap-4 mb-6">
               <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
                 <h4 className="font-semibold text-white mb-2">📋 Right of Access</h4>
-                <p className="text-zinc-300 text-sm">Request a copy of all personal data we hold about you, including how it's used.</p>
+                <p className="text-zinc-300 text-sm">Request a copy of all personal data we hold about you, including how it&apos;s used.</p>
               </div>
               <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
                 <h4 className="font-semibold text-white mb-2">✏️ Right to Rectification</h4>
@@ -180,7 +180,7 @@ export default function PrivacyPolicy() {
               <p className="text-zinc-300 mb-2">To exercise any of these rights, contact us at:</p>
               <ul className="list-disc list-inside text-zinc-300 space-y-1 ml-4">
                 <li><strong>Email:</strong> privacy@baguri.ro</li>
-                <li><strong>Subject Line:</strong> "GDPR Data Request - [Your Request Type]"</li>
+                <li><strong>Subject Line:</strong> &quot;GDPR Data Request - [Your Request Type]&quot;</li>
                 <li><strong>Include:</strong> Your account email and specific request details</li>
               </ul>
               <p className="text-zinc-300 mt-2 text-sm">
@@ -296,7 +296,7 @@ export default function PrivacyPolicy() {
             <div className="bg-amber-900/20 border border-amber-600/30 rounded-lg p-4 mb-4">
               <p className="text-amber-200 font-semibold mb-2">Cookie Consent Management</p>
               <p className="text-zinc-300 text-sm">
-                You can manage your cookie preferences at any time by clicking the "Cookie Settings" link in our footer 
+                You can manage your cookie preferences at any time by clicking the &quot;Cookie Settings&quot; link in our footer 
                 or by adjusting your browser settings.
               </p>
             </div>

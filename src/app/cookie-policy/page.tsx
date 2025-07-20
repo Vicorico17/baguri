@@ -42,7 +42,7 @@ export default function CookiePolicy() {
                 Cookie Policy
               </h1>
               <p className="text-zinc-400 text-lg leading-relaxed">
-                Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                Last updated: {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
               </p>
               <div className="mt-6 p-6 bg-zinc-900 border border-zinc-800 rounded-lg">
                 <p className="text-zinc-300 leading-relaxed">
@@ -282,7 +282,7 @@ export default function CookiePolicy() {
                   or for other operational, legal, or regulatory reasons.
                 </p>
                 <p>
-                  When we make changes, we will update the "Last updated" date at the top of this policy 
+                  When we make changes, we will update the &quot;Last updated&quot; date at the top of this policy 
                   and notify users through prominent notices on our website.
                 </p>
               </div>
