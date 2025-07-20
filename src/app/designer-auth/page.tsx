@@ -26,6 +26,14 @@ function DesignerAuthForm() {
   const router = useRouter();
   const { signIn, signUp, signOut, loading, user, designerProfile, initialized } = useDesignerAuth();
 
+  // Check localStorage for previously entered secret code
+  useEffect(() => {
+    const hasSecretCodeAccess = localStorage.getItem('baguri-designer-secret-access');
+    if (hasSecretCodeAccess === 'true') {
+      setSecretCodePassed(true);
+    }
+  }, []);
+
   // Optimized redirect logic - immediate redirect when user is authenticated
   useEffect(() => {
     console.log('🔐 Auth page check:', { 
@@ -65,6 +73,7 @@ function DesignerAuthForm() {
     if (gateSecretCode === '$baguri$') {
       setSecretCodePassed(true);
       setGateSecretCode(''); // Clear the code for security
+      localStorage.setItem('baguri-designer-secret-access', 'true'); // Remember for this browser
     } else {
       setGateError('Invalid secret code. Please contact admin for access.');
     }
