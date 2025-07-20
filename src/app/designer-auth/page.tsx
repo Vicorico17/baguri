@@ -18,7 +18,8 @@ function DesignerAuthForm() {
     email: '',
     password: '',
     fullName: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    secretCode: ''
   });
   const router = useRouter();
   const { signIn, signUp, signOut, loading, user, designerProfile, initialized } = useDesignerAuth();
@@ -70,6 +71,11 @@ function DesignerAuthForm() {
         // Router redirect is handled in useEffect
       } else {
         // Signup validation
+        if (formData.secretCode !== '$baguri$') {
+          setError('Invalid secret code. Please contact admin for access.');
+          return;
+        }
+        
         if (formData.password !== formData.confirmPassword) {
           setError('Passwords do not match');
           return;
@@ -97,7 +103,8 @@ function DesignerAuthForm() {
             email: formData.email, // Keep email for convenience
             password: '',
             fullName: '',
-            confirmPassword: ''
+            confirmPassword: '',
+            secretCode: ''
           });
         }
       }
@@ -213,6 +220,25 @@ function DesignerAuthForm() {
                 </div>
               )}
 
+              {!isLogin && (
+                <div>
+                  <label htmlFor="secretCode" className="block text-sm font-medium mb-2">
+                    Secret Code <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    id="secretCode"
+                    name="secretCode"
+                    value={formData.secretCode}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent transition"
+                    placeholder="Enter secret code to create designer account"
+                    required
+                  />
+                  <p className="text-xs text-zinc-500 mt-1">Contact admin for the secret code</p>
+                </div>
+              )}
+
               <div>
                 <label htmlFor="email" className="block text-sm font-medium mb-2">
                   Email Address
@@ -313,7 +339,8 @@ function DesignerAuthForm() {
                     email: '',
                     password: '',
                     fullName: '',
-                    confirmPassword: ''
+                    confirmPassword: '',
+                    secretCode: ''
                   });
                 }}
                 className="text-zinc-400 hover:text-white transition"
