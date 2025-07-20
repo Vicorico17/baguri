@@ -212,7 +212,7 @@ export default function DesignersPage() {
         <div className="max-w-4xl mx-auto px-4">
           <h1 className="text-4xl md:text-5xl font-bold mb-6">Designers</h1>
           <p className="text-xl text-zinc-400 mb-8">
-            Meet the talented creators behind Romania&apos;s most innovative fashion brands
+            Meet the talented creators behind Romania's most innovative fashion brands
           </p>
         </div>
       </section>
@@ -231,7 +231,7 @@ export default function DesignersPage() {
                 <User size={48} className="mx-auto mb-4 text-zinc-400" />
                 <h3 className="text-xl font-semibold mb-2">No Designers Yet</h3>
                 <p className="text-zinc-400 mb-4">
-                  We&apos;re currently reviewing applications from talented Romanian designers. 
+                  We're currently reviewing applications from talented Romanian designers. 
                   Check back soon to discover amazing brands!
                 </p>
                 {!(authUser || cachedUser) && (

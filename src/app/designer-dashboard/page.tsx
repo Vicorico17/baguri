@@ -1355,7 +1355,7 @@ function ActionCard({ status, canSubmit, onSubmit, completionPercentage, setIsEd
               <Clock size={16} className="text-amber-400" />
               <p className="text-amber-400 text-sm font-medium">Under Review</p>
             </div>
-            <p className="text-amber-300 text-xs">Your application is being reviewed. We&apos;ll notify you within 24 hours via email.</p>
+                            <p className="text-amber-300 text-xs">Your application is being reviewed. We'll notify you within 24 hours via email.</p>
           </div>
           
           <div className="pt-2 border-t border-zinc-800">
