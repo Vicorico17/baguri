@@ -13,13 +13,15 @@ function DesignerAuthForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [secretCodePassed, setSecretCodePassed] = useState(false);
+  const [gateSecretCode, setGateSecretCode] = useState('');
+  const [gateError, setGateError] = useState('');
   const [redirecting, setRedirecting] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     fullName: '',
-    confirmPassword: '',
-    secretCode: ''
+    confirmPassword: ''
   });
   const router = useRouter();
   const { signIn, signUp, signOut, loading, user, designerProfile, initialized } = useDesignerAuth();
@@ -56,6 +58,18 @@ function DesignerAuthForm() {
     }));
   };
 
+  const handleSecretCodeGate = (e: React.FormEvent) => {
+    e.preventDefault();
+    setGateError('');
+    
+    if (gateSecretCode === '$baguri$') {
+      setSecretCodePassed(true);
+      setGateSecretCode(''); // Clear the code for security
+    } else {
+      setGateError('Invalid secret code. Please contact admin for access.');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -70,12 +84,7 @@ function DesignerAuthForm() {
         }
         // Router redirect is handled in useEffect
       } else {
-        // Signup validation
-        if (formData.secretCode !== '$baguri$') {
-          setError('Invalid secret code. Please contact admin for access.');
-          return;
-        }
-        
+        // Signup validation        
         if (formData.password !== formData.confirmPassword) {
           setError('Passwords do not match');
           return;
@@ -103,8 +112,7 @@ function DesignerAuthForm() {
             email: formData.email, // Keep email for convenience
             password: '',
             fullName: '',
-            confirmPassword: '',
-            secretCode: ''
+            confirmPassword: ''
           });
         }
       }
@@ -183,8 +191,60 @@ function DesignerAuthForm() {
       {/* Auth Form */}
       <div className="relative z-10 flex items-center justify-center min-h-[80vh] px-4 pt-20">
         <div className="w-full max-w-md">
-          {/* Only show auth form if user is not authenticated */}
-          {!user && (
+          {/* Secret Code Gate - Show first */}
+          {!user && !secretCodePassed && (
+            <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl p-8">
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 bg-amber-500/20 border border-amber-500/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Lock size={24} className="text-amber-400" />
+                </div>
+                <h1 className="text-2xl font-bold mb-2 text-white">Access Required</h1>
+                <p className="text-zinc-400">
+                  {`Enter the secret code to access designer authentication`}
+                </p>
+              </div>
+
+              <form onSubmit={handleSecretCodeGate} className="space-y-6">
+                <div>
+                  <label htmlFor="gateSecretCode" className="block text-sm font-medium mb-2 text-white">
+                    Secret Code <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    id="gateSecretCode"
+                    value={gateSecretCode}
+                    onChange={(e) => setGateSecretCode(e.target.value)}
+                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition text-white"
+                    placeholder="Enter secret code to continue"
+                    required
+                  />
+                  <p className="text-xs text-zinc-500 mt-1">Contact admin for the secret code</p>
+                </div>
+
+                {gateError && (
+                  <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-sm">
+                    {gateError}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-zinc-900 rounded-lg font-medium transition"
+                >
+                  Continue
+                </button>
+              </form>
+
+              <div className="mt-6 text-center">
+                <p className="text-xs text-zinc-500">
+                  Only authorized users can access the designer portal
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Only show auth form if user is not authenticated AND secret code passed */}
+          {!user && secretCodePassed && (
             <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl p-8">
               <div className="text-center mb-8">
               <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -220,24 +280,7 @@ function DesignerAuthForm() {
                 </div>
               )}
 
-              {!isLogin && (
-                <div>
-                  <label htmlFor="secretCode" className="block text-sm font-medium mb-2">
-                    Secret Code <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="password"
-                    id="secretCode"
-                    name="secretCode"
-                    value={formData.secretCode}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent transition"
-                    placeholder="Enter secret code to create designer account"
-                    required
-                  />
-                  <p className="text-xs text-zinc-500 mt-1">Contact admin for the secret code</p>
-                </div>
-              )}
+
 
               <div>
                 <label htmlFor="email" className="block text-sm font-medium mb-2">
@@ -339,8 +382,7 @@ function DesignerAuthForm() {
                     email: '',
                     password: '',
                     fullName: '',
-                    confirmPassword: '',
-                    secretCode: ''
+                    confirmPassword: ''
                   });
                 }}
                 className="text-zinc-400 hover:text-white transition"
