@@ -17,6 +17,7 @@ function DesignerAuthForm() {
   const [gateSecretCode, setGateSecretCode] = useState('');
   const [gateError, setGateError] = useState('');
   const [redirecting, setRedirecting] = useState(false);
+  const [localLoading, setLocalLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -83,6 +84,7 @@ function DesignerAuthForm() {
     e.preventDefault();
     setError('');
     setSuccessMessage('');
+    setLocalLoading(true);
 
     try {
       if (isLogin) {
@@ -90,8 +92,9 @@ function DesignerAuthForm() {
         const { error: signInError } = await signIn(formData.email, formData.password);
         if (signInError) {
           setError(signInError);
+          setLocalLoading(false);
         }
-        // Router redirect is handled in useEffect
+        // Router redirect is handled in useEffect, don't reset loading here
       } else {
         // Signup validation        
         if (formData.password !== formData.confirmPassword) {
@@ -113,20 +116,26 @@ function DesignerAuthForm() {
         const { error: signUpError } = await signUp(formData.email, formData.password, formData.fullName);
         if (signUpError) {
           setError(signUpError);
+          setLocalLoading(false);
         } else {
           // Show success message and switch to login
           setSuccessMessage('Account created successfully! Please check your email to verify your account, then sign in.');
-          setIsLogin(true);
-          setFormData({
-            email: formData.email, // Keep email for convenience
-            password: '',
-            fullName: '',
-            confirmPassword: ''
-          });
+          setLocalLoading(false);
+          // Small delay to ensure clean state transition
+          setTimeout(() => {
+            setIsLogin(true);
+            setFormData({
+              email: formData.email, // Keep email for convenience
+              password: '',
+              fullName: '',
+              confirmPassword: ''
+            });
+          }, 100);
         }
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
+      setLocalLoading(false);
     }
   };
 
@@ -371,10 +380,10 @@ function DesignerAuthForm() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || localLoading}
                 className="w-full py-3 bg-white text-zinc-900 rounded-lg font-medium hover:bg-zinc-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading 
+                {(loading || localLoading)
                   ? (isLogin ? 'Signing In...' : 'Creating Account...') 
                   : (isLogin ? 'Sign In' : 'Create Account')
                 }
@@ -387,6 +396,7 @@ function DesignerAuthForm() {
                   setIsLogin(!isLogin);
                   setError('');
                   setSuccessMessage('');
+                  setLocalLoading(false); // Reset local loading when switching modes
                   setFormData({
                     email: '',
                     password: '',
