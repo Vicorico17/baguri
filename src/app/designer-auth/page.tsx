@@ -99,16 +99,19 @@ function DesignerAuthForm() {
         // Signup validation        
         if (formData.password !== formData.confirmPassword) {
           setError('Passwords do not match');
+          setLocalLoading(false);
           return;
         }
         
         if (formData.password.length < 6) {
           setError('Password must be at least 6 characters');
+          setLocalLoading(false);
           return;
         }
 
         if (!formData.fullName.trim()) {
           setError('Full name is required');
+          setLocalLoading(false);
           return;
         }
 
