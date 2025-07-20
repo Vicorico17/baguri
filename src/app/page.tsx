@@ -238,10 +238,10 @@ export default function Home() {
         </section>
 
         {/* Footer */}
-        <footer className="mt-auto w-full py-4 px-4 flex flex-col items-center gap-4">
+        <footer className="mt-auto w-full py-8 px-4 flex flex-col items-center gap-4 border-t border-neutral-800">
           <FadeInUp>
             <div className="flex flex-col items-center gap-2 mb-2">
-              <span className="text-xs text-neutral-500">Coming soon on</span>
+              <span className="text-xs text-neutral-300">Coming soon on</span>
               <div className="flex gap-2 flex-wrap justify-center">
                 <AppStoreBadge small />
                 <GooglePlayBadge small />
@@ -255,6 +255,54 @@ export default function Home() {
             </div>
           </FadeInUp>
         </footer>
+
+        {/* Legal/Company Information - Bottom corner */}
+        <div className="w-full px-4 pb-4">
+          <FadeInUp delay={0.5}>
+            <div className="flex justify-end">
+              <div className="flex flex-col items-end gap-1 text-right">
+                {/* Legal Links */}
+                <div className="flex gap-2 text-[10px] text-neutral-300 mb-1">
+                  <Link href="/terms-of-service" className="hover:text-neutral-100 transition underline">
+                    Terms & Conditions
+                  </Link>
+                  <span>|</span>
+                  <Link href="/privacy" className="hover:text-neutral-100 transition underline">
+                    Privacy Policy
+                  </Link>
+                  <span>|</span>
+                  <Link href="/cookie-policy" className="hover:text-neutral-100 transition underline">
+                    Cookie Policy
+                  </Link>
+                </div>
+                
+                {/* Company Information */}
+                <div className="text-[10px] text-neutral-300 leading-tight space-y-0.5 mb-1">
+                  <div>BAGURICO ENTERPRISE SRL</div>
+                  <div>CUI: 42743310 | Reg. Com. J40/7675/2020</div>
+                </div>
+                
+                {/* ANPC Compliance Links */}
+                <div className="flex gap-1">
+                  <a href="https://anpc.ro/ce-este-sal/" target="_blank" rel="nofollow" className="opacity-80 hover:opacity-100 transition">
+                    <img 
+                      src="/anpc-sal.png" 
+                      alt="ANPC SAL"
+                      className="w-12 h-auto"
+                    />
+                  </a>
+                  <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="nofollow" className="opacity-80 hover:opacity-100 transition">
+                    <img 
+                      src="/anpc-sol.png" 
+                      alt="ANPC SOL"
+                      className="w-12 h-auto"
+                    />
+                  </a>
+                </div>
+              </div>
+            </div>
+          </FadeInUp>
+        </div>
 
         <WaitlistModal open={modalOpen} onClose={() => setModalOpen(false)} onSuccess={() => setWaitlistJoined(true)} />
       </div>

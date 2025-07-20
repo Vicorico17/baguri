@@ -21,21 +21,30 @@ export default function PrivacyPolicy() {
             <h2 className="text-2xl font-semibold mb-4 text-white">2. Information We Collect</h2>
             
             <h3 className="text-xl font-medium mb-3 text-white">2.1 Information You Provide Directly</h3>
-            <ul className="list-disc list-inside text-zinc-300 space-y-2 ml-4">
-              <li><strong>Account Information:</strong> Email address, password, name, and profile details</li>
-              <li><strong>Designer Profiles:</strong> Business information, portfolio images, social media handles, bio, and verification documents</li>
-              <li><strong>Payment Information:</strong> Billing address and payment method details (processed securely by Stripe)</li>
-              <li><strong>Communications:</strong> Messages sent through our platform, customer support inquiries, and email correspondence</li>
-              <li><strong>Product Information:</strong> Product descriptions, images, pricing, and inventory details (for designers)</li>
-            </ul>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 mb-4">
+              <h4 className="font-semibold text-white mb-2">Personal Data Categories:</h4>
+              <ul className="list-disc list-inside text-zinc-300 space-y-1 ml-4">
+                <li><strong>Account Information:</strong> Email address, password, name, and profile details</li>
+                <li><strong>Contact Data:</strong> Phone number, billing address, shipping address</li>
+                <li><strong>Designer Profiles:</strong> Business information, portfolio images, social media handles, bio, and verification documents</li>
+                <li><strong>Payment Information:</strong> Billing address and payment method details (processed securely by Stripe)</li>
+                <li><strong>Communications:</strong> Messages sent through our platform, customer support inquiries, and email correspondence</li>
+                <li><strong>Product Information:</strong> Product descriptions, images, pricing, and inventory details (for designers)</li>
+                <li><strong>Transaction Data:</strong> Purchase history, order details, refund requests</li>
+              </ul>
+            </div>
 
-            <h3 className="text-xl font-medium mb-3 text-white mt-6">2.2 Information Collected Automatically</h3>
-            <ul className="list-disc list-inside text-zinc-300 space-y-2 ml-4">
-              <li><strong>Usage Data:</strong> Pages visited, time spent on site, click patterns, and feature usage</li>
-              <li><strong>Device Information:</strong> IP address, browser type, device type, operating system, and unique identifiers</li>
-              <li><strong>Analytics Data:</strong> Website performance metrics collected through Google Analytics and Microsoft Clarity</li>
-              <li><strong>Cookies and Tracking:</strong> Session data, preferences, and authentication tokens</li>
-            </ul>
+            <h3 className="text-xl font-medium mb-3 text-white">2.2 Information Collected Automatically</h3>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 mb-4">
+              <h4 className="font-semibold text-white mb-2">Technical Data:</h4>
+              <ul className="list-disc list-inside text-zinc-300 space-y-1 ml-4">
+                <li><strong>Usage Data:</strong> Pages visited, time spent on site, click patterns, and feature usage</li>
+                <li><strong>Device Information:</strong> IP address, browser type, device type, operating system, screen resolution</li>
+                <li><strong>Analytics Data:</strong> Website performance metrics collected through Google Analytics and Microsoft Clarity</li>
+                <li><strong>Cookies and Tracking:</strong> Session data, preferences, authentication tokens, advertising IDs</li>
+                <li><strong>Location Data:</strong> General location based on IP address (country/city level)</li>
+              </ul>
+            </div>
 
             <h3 className="text-xl font-medium mb-3 text-white mt-6">2.3 Third-Party Information</h3>
             <ul className="list-disc list-inside text-zinc-300 space-y-2 ml-4">
@@ -129,47 +138,200 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold mb-4 text-white">6. Your Rights and Choices</h2>
+            <h2 className="text-2xl font-semibold mb-4 text-white">6. Your Rights and Choices (GDPR Compliance)</h2>
             
-            <h3 className="text-xl font-medium mb-3 text-white">6.1 Account Management</h3>
-            <ul className="list-disc list-inside text-zinc-300 space-y-2 ml-4">
-              <li>Update your profile information and preferences</li>
-              <li>Change your email address and password</li>
-              <li>Manage your notification settings</li>
-              <li>Delete your account and associated data</li>
-            </ul>
+            <div className="bg-blue-900/20 border border-blue-600/30 rounded-lg p-4 mb-6">
+              <h3 className="text-blue-200 font-semibold mb-2">🇪🇺 EU Data Protection Rights</h3>
+              <p className="text-zinc-300 text-sm">
+                Under the General Data Protection Regulation (GDPR), EU residents have specific rights regarding their personal data.
+              </p>
+            </div>
 
-            <h3 className="text-xl font-medium mb-3 text-white mt-6">6.2 Data Rights (GDPR/CCPA)</h3>
-            <p className="text-zinc-300 mb-2">Depending on your location, you may have additional rights:</p>
-            <ul className="list-disc list-inside text-zinc-300 space-y-2 ml-4">
-              <li><strong>Access:</strong> Request a copy of your personal data</li>
-              <li><strong>Rectification:</strong> Correct inaccurate or incomplete information</li>
-              <li><strong>Erasure:</strong> Request deletion of your personal data</li>
-              <li><strong>Portability:</strong> Export your data in a machine-readable format</li>
-              <li><strong>Objection:</strong> Object to certain types of data processing</li>
-              <li><strong>Restriction:</strong> Request limitations on data processing</li>
-            </ul>
+            <h3 className="text-xl font-medium mb-3 text-white">6.1 Your GDPR Rights</h3>
+            <div className="grid md:grid-cols-2 gap-4 mb-6">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+                <h4 className="font-semibold text-white mb-2">📋 Right of Access</h4>
+                <p className="text-zinc-300 text-sm">Request a copy of all personal data we hold about you, including how it's used.</p>
+              </div>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+                <h4 className="font-semibold text-white mb-2">✏️ Right to Rectification</h4>
+                <p className="text-zinc-300 text-sm">Correct any inaccurate or incomplete personal information.</p>
+              </div>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+                <h4 className="font-semibold text-white mb-2">🗑️ Right to Erasure</h4>
+                <p className="text-zinc-300 text-sm">Request deletion of your personal data (subject to legal obligations).</p>
+              </div>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+                <h4 className="font-semibold text-white mb-2">📦 Right to Data Portability</h4>
+                <p className="text-zinc-300 text-sm">Export your data in a structured, machine-readable format.</p>
+              </div>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+                <h4 className="font-semibold text-white mb-2">⛔ Right to Object</h4>
+                <p className="text-zinc-300 text-sm">Object to processing based on legitimate interests or direct marketing.</p>
+              </div>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+                <h4 className="font-semibold text-white mb-2">⏸️ Right to Restriction</h4>
+                <p className="text-zinc-300 text-sm">Request limitation of data processing in certain circumstances.</p>
+              </div>
+            </div>
 
-            <h3 className="text-xl font-medium mb-3 text-white mt-6">6.3 Marketing Communications</h3>
+            <h3 className="text-xl font-medium mb-3 text-white">6.2 How to Exercise Your Rights</h3>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 mb-4">
+              <p className="text-zinc-300 mb-2">To exercise any of these rights, contact us at:</p>
+              <ul className="list-disc list-inside text-zinc-300 space-y-1 ml-4">
+                <li><strong>Email:</strong> privacy@baguri.ro</li>
+                <li><strong>Subject Line:</strong> "GDPR Data Request - [Your Request Type]"</li>
+                <li><strong>Include:</strong> Your account email and specific request details</li>
+              </ul>
+              <p className="text-zinc-300 mt-2 text-sm">
+                We will respond to your request within 30 days. Some requests may require identity verification.
+              </p>
+            </div>
+
+            <h3 className="text-xl font-medium mb-3 text-white">6.3 Data Protection Officer</h3>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 mb-4">
+              <p className="text-zinc-300 mb-2">
+                For data protection matters, you can contact our Data Protection Officer:
+              </p>
+              <p className="text-zinc-300">
+                <strong>Email:</strong> dpo@baguri.ro<br/>
+                <strong>Company:</strong> BAGURICO ENTERPRISE SRL<br/>
+                <strong>Address:</strong> Romania
+              </p>
+            </div>
+
+            <h3 className="text-xl font-medium mb-3 text-white">6.4 Supervisory Authority</h3>
+            <p className="text-zinc-300 mb-4">
+              If you believe we have not handled your data properly, you have the right to lodge a complaint with:
+            </p>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 mb-4">
+              <p className="text-zinc-300">
+                <strong>National Supervisory Authority for Personal Data Processing (ANSPDCP)</strong><br/>
+                Website: www.dataprotection.ro<br/>
+                Email: anspdcp@dataprotection.ro
+              </p>
+            </div>
+
+            <h3 className="text-xl font-medium mb-3 text-white">6.5 Marketing Communications</h3>
             <p className="text-zinc-300">
-              You can opt out of promotional emails by clicking the unsubscribe link in any marketing email or by updating your account preferences.
+              You can opt out of promotional emails by clicking the unsubscribe link in any marketing email, 
+              updating your account preferences, or contacting us directly at privacy@baguri.ro.
             </p>
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold mb-4 text-white">7. Cookies and Tracking Technologies</h2>
+            <h2 className="text-2xl font-semibold mb-4 text-white">7. Cookie Policy</h2>
+            <p className="text-zinc-300 mb-6">
+              This Cookie Policy explains how we use cookies and similar tracking technologies on our website. 
+              By using our site, you consent to our use of cookies in accordance with this policy.
+            </p>
+
+            <h3 className="text-xl font-medium mb-3 text-white">7.1 What Are Cookies?</h3>
             <p className="text-zinc-300 mb-4">
-              We use cookies and similar technologies to:
+              Cookies are small text files stored on your device when you visit a website. They help websites remember 
+              information about your visit, making your next visit easier and the site more useful to you.
             </p>
-            <ul className="list-disc list-inside text-zinc-300 space-y-2 ml-4">
-              <li>Maintain your login session and preferences</li>
-              <li>Analyze website traffic and user behavior</li>
-              <li>Improve our services and user experience</li>
-              <li>Provide targeted content and recommendations</li>
+
+            <h3 className="text-xl font-medium mb-3 text-white">7.2 Types of Cookies We Use</h3>
+            
+            <div className="space-y-4 mb-6">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+                <h4 className="font-semibold text-white mb-2">🔧 Essential Cookies (Always Active)</h4>
+                <p className="text-zinc-300 text-sm mb-2">These cookies are necessary for the website to function properly and cannot be switched off.</p>
+                <ul className="list-disc list-inside text-zinc-300 text-sm space-y-1 ml-4">
+                  <li>Authentication and session management</li>
+                  <li>Security and fraud prevention</li>
+                  <li>Load balancing and site functionality</li>
+                  <li>Shopping cart and checkout process</li>
+                </ul>
+              </div>
+
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+                <h4 className="font-semibold text-white mb-2">📊 Analytics Cookies</h4>
+                <p className="text-zinc-300 text-sm mb-2">Help us understand how visitors interact with our website by collecting information anonymously.</p>
+                <ul className="list-disc list-inside text-zinc-300 text-sm space-y-1 ml-4">
+                  <li>Google Analytics - Website traffic and user behavior</li>
+                  <li>Microsoft Clarity - User session recordings and heatmaps</li>
+                  <li>Performance monitoring and error tracking</li>
+                  <li>A/B testing and optimization</li>
+                </ul>
+              </div>
+
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+                <h4 className="font-semibold text-white mb-2">🎯 Marketing Cookies</h4>
+                <p className="text-zinc-300 text-sm mb-2">Used to track visitors across websites and show relevant advertisements.</p>
+                <ul className="list-disc list-inside text-zinc-300 text-sm space-y-1 ml-4">
+                  <li>Social media integration (Instagram, TikTok)</li>
+                  <li>Advertising campaign tracking</li>
+                  <li>Retargeting and remarketing</li>
+                  <li>Conversion tracking</li>
+                </ul>
+              </div>
+
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+                <h4 className="font-semibold text-white mb-2">⚙️ Functional Cookies</h4>
+                <p className="text-zinc-300 text-sm mb-2">Enable enhanced functionality and personalization.</p>
+                <ul className="list-disc list-inside text-zinc-300 text-sm space-y-1 ml-4">
+                  <li>Language and region preferences</li>
+                  <li>Theme and display preferences</li>
+                  <li>Personalized content recommendations</li>
+                  <li>User interface customizations</li>
+                </ul>
+              </div>
+            </div>
+
+            <h3 className="text-xl font-medium mb-3 text-white">7.3 Cookie Duration</h3>
+            <div className="grid md:grid-cols-2 gap-4 mb-6">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+                <h4 className="font-semibold text-white mb-2">Session Cookies</h4>
+                <p className="text-zinc-300 text-sm">Temporary cookies that expire when you close your browser.</p>
+              </div>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+                <h4 className="font-semibold text-white mb-2">Persistent Cookies</h4>
+                <p className="text-zinc-300 text-sm">Remain on your device for a set period (typically 30 days to 2 years).</p>
+              </div>
+            </div>
+
+            <h3 className="text-xl font-medium mb-3 text-white">7.4 Managing Your Cookie Preferences</h3>
+            <div className="bg-amber-900/20 border border-amber-600/30 rounded-lg p-4 mb-4">
+              <p className="text-amber-200 font-semibold mb-2">Cookie Consent Management</p>
+              <p className="text-zinc-300 text-sm">
+                You can manage your cookie preferences at any time by clicking the "Cookie Settings" link in our footer 
+                or by adjusting your browser settings.
+              </p>
+            </div>
+            
+            <h4 className="font-semibold text-white mb-2">Browser Settings</h4>
+            <p className="text-zinc-300 mb-4">You can control cookies through your browser settings:</p>
+            <ul className="list-disc list-inside text-zinc-300 space-y-1 ml-4 mb-4">
+              <li><strong>Chrome:</strong> Settings {`>`} Privacy and Security {`>`} Cookies and other site data</li>
+              <li><strong>Firefox:</strong> Preferences {`>`} Privacy & Security {`>`} Cookies and Site Data</li>
+              <li><strong>Safari:</strong> Preferences {`>`} Privacy {`>`} Manage Website Data</li>
+              <li><strong>Edge:</strong> Settings {`>`} Cookies and site permissions</li>
             </ul>
-            <p className="text-zinc-300 mt-4">
-              You can control cookies through your browser settings, but disabling certain cookies may affect platform functionality.
+
+            <h3 className="text-xl font-medium mb-3 text-white">7.5 Third-Party Cookies</h3>
+            <p className="text-zinc-300 mb-4">
+              Some cookies are set by third-party services that appear on our pages:
             </p>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+                <h4 className="font-semibold text-white mb-2">Google Services</h4>
+                <ul className="list-disc list-inside text-zinc-300 text-sm space-y-1 ml-4">
+                  <li>Google Analytics</li>
+                  <li>Google Fonts</li>
+                  <li>Google Maps (if used)</li>
+                </ul>
+              </div>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+                <h4 className="font-semibold text-white mb-2">Other Services</h4>
+                <ul className="list-disc list-inside text-zinc-300 text-sm space-y-1 ml-4">
+                  <li>Microsoft Clarity</li>
+                  <li>Stripe (payment processing)</li>
+                  <li>Social media platforms</li>
+                </ul>
+              </div>
+            </div>
           </section>
 
           <section>
@@ -214,10 +376,24 @@ export default function PrivacyPolicy() {
             <p className="text-zinc-300 mb-4">
               If you have questions about this Privacy Policy or our data practices, please contact us:
             </p>
-            <div className="bg-zinc-900 p-6 rounded-lg">
-              <p className="text-zinc-300 mb-2"><strong>Email:</strong> privacy@baguri.ro</p>
-              <p className="text-zinc-300 mb-2"><strong>Support:</strong> support@baguri.ro</p>
-              <p className="text-zinc-300"><strong>Instagram:</strong> @baguri.ro</p>
+            <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-lg">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="font-semibold text-white mb-3">Data Protection Contacts</h3>
+                  <p className="text-zinc-300 mb-2"><strong>Privacy:</strong> privacy@baguri.ro</p>
+                  <p className="text-zinc-300 mb-2"><strong>Data Protection Officer:</strong> dpo@baguri.ro</p>
+                  <p className="text-zinc-300 mb-2"><strong>Support:</strong> support@baguri.ro</p>
+                  <p className="text-zinc-300"><strong>Legal:</strong> legal@baguri.ro</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white mb-3">Company Information</h3>
+                  <p className="text-zinc-300 mb-2"><strong>Company:</strong> BAGURICO ENTERPRISE SRL</p>
+                  <p className="text-zinc-300 mb-2"><strong>CUI:</strong> 42743310</p>
+                  <p className="text-zinc-300 mb-2"><strong>Reg. Com.:</strong> J40/7675/2020</p>
+                  <p className="text-zinc-300 mb-2"><strong>Address:</strong> Romania</p>
+                  <p className="text-zinc-300"><strong>Instagram:</strong> @baguri.ro</p>
+                </div>
+              </div>
             </div>
           </section>
 
