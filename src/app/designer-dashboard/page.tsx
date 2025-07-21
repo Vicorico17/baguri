@@ -70,7 +70,10 @@ function DesignerDashboardContent() {
     instagramVerified: false,
     tiktokHandle: '',
     website: '',
-    specialties: []
+    specialties: [],
+    cui: '',
+    tags: [],
+    currentTier: 'bronze'
   });
 
   const [status, setStatus] = useState<'draft' | 'submitted' | 'approved' | 'rejected'>('draft');
@@ -181,7 +184,10 @@ function DesignerDashboardContent() {
             instagramVerified: false,
             tiktokHandle: '',
             website: '',
-            specialties: []
+            specialties: [],
+            cui: '',
+            tags: [],
+            currentTier: 'bronze'
           });
           setStatus('draft');
           setSubmittedAt(null);
@@ -994,6 +1000,126 @@ function DesignerDashboardContent() {
                               )}
                             </div>
                           </div>
+                          
+                          {/* CUI Field - Always visible, mandatory for Silver+ tier & withdrawals */}
+                          <div>
+                            <div>
+                                                              <label className="text-sm font-medium mb-2 flex items-center gap-2">
+                                  <ProgressCircle isComplete={!!profile.cui?.trim()} />
+                                  Romanian Fiscal Code (CUI)
+                                  {salesSummary?.currentTier.name !== 'Bronze' ? (
+                                    <span className="text-red-400 text-xs font-semibold">✨ MANDATORY for your tier</span>
+                                  ) : (
+                                    <span className="text-amber-400 text-xs">Required for Silver+ tier & withdrawals</span>
+                                  )}
+                                </label>
+                              {!isEditMode && profile.cui ? (
+                                <div className="px-4 py-3 text-zinc-300">
+                                  {profile.cui}
+                                </div>
+                              ) : (
+                                <>
+                                  <input
+                                    type="text"
+                                    value={profile.cui || ''}
+                                    onChange={(e) => updateProfile('cui', e.target.value)}
+                                    disabled={!isEditMode}
+                                    className={`w-full px-4 py-3 border rounded-lg transition ${
+                                      isEditMode 
+                                        ? 'bg-zinc-800 border-zinc-700 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent'
+                                        : 'bg-zinc-700/50 border-zinc-600 text-zinc-300 cursor-not-allowed'
+                                    }`}
+                                    placeholder="RO12345678"
+                                  />
+                                  {isEditMode && (
+                                    <p className="text-xs text-zinc-500 mt-1">
+                                      {salesSummary?.currentTier.name !== 'Bronze' 
+                                        ? '⚠️ Required for your current tier and withdrawals'
+                                        : 'Required for commission tiers above Bronze and withdrawals'
+                                      }
+                                    </p>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Tags Field - Only show for approved designers */}
+                          {status === 'approved' && (
+                            <div>
+                              <label className="text-sm font-medium mb-2 flex items-center gap-2">
+                                <ProgressCircle isComplete={(profile.tags || []).length > 0} />
+                                Product Tags
+                                <span className="text-green-400 text-xs">Help customers find your style</span>
+                              </label>
+                              {!isEditMode && (profile.tags || []).length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                  {(profile.tags || []).map((tag, index) => (
+                                    <span key={index} className="px-3 py-1 bg-zinc-800 text-zinc-300 rounded-full text-sm">
+                                      {tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : isEditMode ? (
+                                <>
+                                  <div className="space-y-4">
+                                    {/* Selected Tags */}
+                                    <div className="flex flex-wrap gap-2 mb-2">
+                                      {(profile.tags || []).map((tag, index) => (
+                                        <span key={index} className="px-3 py-1 bg-green-800 text-green-200 rounded-full text-sm flex items-center gap-1">
+                                          {tag}
+                                          <button
+                                            onClick={() => {
+                                              const newTags = [...(profile.tags || [])];
+                                              newTags.splice(index, 1);
+                                              updateProfile('tags', newTags);
+                                            }}
+                                            className="ml-1 text-red-400 hover:text-red-300"
+                                          >
+                                            <X size={12} />
+                                          </button>
+                                        </span>
+                                      ))}
+                                    </div>
+                                    
+                                    {/* Available Tags to Select */}
+                                    <div>
+                                      <p className="text-xs text-zinc-400 mb-2">Select tags that describe your style:</p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {[
+                                          'Streetwear', 'Minimalist', 'Vintage', 'Bohemian', 'Urban', 'Elegant', 
+                                          'Casual', 'Formal', 'Sporty', 'Edgy', 'Romantic', 'Classic',
+                                          'Modern', 'Retro', '90s', 'Y2K', 'Grunge', 'Preppy',
+                                          'Artsy', 'Avant-garde', 'Sustainable', 'Luxury', 'Affordable', 'Unisex',
+                                          'Feminine', 'Masculine', 'Colorful', 'Monochrome', 'Bold', 'Subtle'
+                                        ].filter(tag => !(profile.tags || []).includes(tag)).map((tag) => (
+                                          <button
+                                            key={tag}
+                                            onClick={() => {
+                                              const currentTags = profile.tags || [];
+                                              if (currentTags.length < 5) { // Limit to 5 tags
+                                                updateProfile('tags', [...currentTags, tag]);
+                                              }
+                                            }}
+                                            className="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-full text-sm border border-zinc-600 hover:border-zinc-500 transition-colors"
+                                          >
+                                            + {tag}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-zinc-500 mt-2">
+                                    Select up to 5 tags that best describe your design style. These help customers find you!
+                                  </p>
+                                </>
+                              ) : (
+                                <div className="px-4 py-3 text-zinc-500 italic">
+                                  No tags added yet
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
 
                         <div className="space-y-4">

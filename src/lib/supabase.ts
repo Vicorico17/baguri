@@ -28,6 +28,9 @@ export type Designer = {
   year_founded?: number
   username?: string
   specialties?: string[]
+  cui?: string // Romanian fiscal code for withdrawals and Silver+ tier
+  tags?: string[] // Product specialty tags
+  current_tier?: string // Current commission tier (bronze, silver, gold, platinum)
   email: string
   logo_url?: string
   secondary_logo_url?: string

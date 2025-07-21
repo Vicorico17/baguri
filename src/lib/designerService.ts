@@ -18,6 +18,9 @@ export type DesignerProfileForm = {
   tiktokHandle: string;
   website: string;
   specialties: string[];
+  cui?: string; // Romanian fiscal code (CUI) - required for Silver+ tier and withdrawals
+  tags?: string[]; // Product specialty tags added after approval
+  currentTier?: string; // Current tier level (bronze, silver, gold, platinum)
   fulfillment?: 'baguri' | 'designer';
   sellingAs?: 'PFA' | 'SRL' | 'not_registered';
   iban?: string;
@@ -264,6 +267,9 @@ class DesignerService {
         tiktokHandle: designerProfile.tiktok || '',
         website: designerProfile.website || '',
         specialties: designerProfile.specialties || [],
+        cui: designerProfile.cui || '',
+        tags: designerProfile.tags || [],
+        currentTier: designerProfile.current_tier || 'bronze',
         fulfillment: designerProfile.fulfillment as 'baguri' | 'designer' | undefined,
         sellingAs: designerProfile.selling_as as 'PFA' | 'SRL' | 'not_registered' | undefined,
         iban: designerProfile.iban || '',
@@ -352,6 +358,9 @@ class DesignerService {
           tiktok: profileData.tiktokHandle,
           website: profileData.website,
           specialties: profileData.specialties,
+          cui: profileData.cui,
+          tags: profileData.tags,
+          current_tier: profileData.currentTier,
           fulfillment: profileData.fulfillment,
           selling_as: profileData.sellingAs,
           iban: profileData.iban,
@@ -366,11 +375,69 @@ class DesignerService {
         return { success: false, error: updateError.message };
       }
 
+      // Check for automatic tier upgrade based on sales
+      await this.checkAndUpgradeTier(designerProfile.id, profileData.currentTier || 'bronze');
+
       return { success: true };
     } catch (error: any) {
       console.error('Error saving designer profile:', error);
       return { success: false, error: error.message };
     }
+  }
+
+  // Automatic tier upgrade based on sales total
+  async checkAndUpgradeTier(designerId: string, currentTier: string): Promise<void> {
+    try {
+      // Get current sales total for this designer
+      const { data: designerData, error } = await supabase
+        .from('designers')
+        .select('sales_total')
+        .eq('id', designerId)
+        .single();
+
+      if (error || !designerData) {
+        console.error('Error fetching designer sales:', error);
+        return;
+      }
+
+      const salesTotal = parseFloat(designerData.sales_total || '0');
+      const newTier = this.calculateTierFromSales(salesTotal);
+
+      // Only upgrade, never downgrade
+      if (this.isTierHigher(newTier, currentTier)) {
+        console.log(`🎉 Auto-upgrading designer ${designerId} from ${currentTier} to ${newTier} (${salesTotal} RON sales)`);
+        
+        const { error: updateError } = await supabase
+          .from('designers')
+          .update({ 
+            current_tier: newTier,
+            tier_upgraded_at: new Date().toISOString()
+          })
+          .eq('id', designerId);
+
+        if (updateError) {
+          console.error('Error updating tier:', updateError);
+        } else {
+          console.log(`✅ Designer ${designerId} successfully upgraded to ${newTier}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error in tier upgrade check:', error);
+    }
+  }
+
+  // Calculate tier based on sales total
+  private calculateTierFromSales(salesTotal: number): string {
+    if (salesTotal >= 25000) return 'platinum';
+    if (salesTotal >= 5000) return 'gold';
+    if (salesTotal >= 1000) return 'silver';
+    return 'bronze';
+  }
+
+  // Check if tier A is higher than tier B
+  private isTierHigher(tierA: string, tierB: string): boolean {
+    const tierOrder = { 'bronze': 1, 'silver': 2, 'gold': 3, 'platinum': 4 };
+    return (tierOrder[tierA as keyof typeof tierOrder] || 1) > (tierOrder[tierB as keyof typeof tierOrder] || 1);
   }
 
   // Save designer products
