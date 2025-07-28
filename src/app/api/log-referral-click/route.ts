@@ -1,9 +1,20 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+// Ensure environment variables are defined
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl) {
+  throw new Error('Environment variable NEXT_PUBLIC_SUPABASE_URL is not defined. Please check your .env.local file or deployment configuration.');
+}
+if (!supabaseServiceRoleKey) {
+  throw new Error('Environment variable SUPABASE_SERVICE_ROLE_KEY is not defined. Please check your .env.local file or deployment configuration.');
+}
+
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  supabaseUrl,
+  supabaseServiceRoleKey
 );
 
 export async function POST(request: Request) {
@@ -40,7 +51,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (err) {
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  } catch (err: any) {
+    return NextResponse.json({ error: 'Server error: ' + err.message }, { status: 500 });
   }
 } 

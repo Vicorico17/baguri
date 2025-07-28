@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Check, X, Eye, Instagram, Globe, MapPin, Calendar, LogOut, Loader2, RefreshCw, DollarSign } from 'lucide-react';
+import { ArrowLeft, Check, X, Eye, Instagram, Globe, MapPin, Calendar, LogOut, Loader2, RefreshCw, DollarSign, ChevronDown } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { TierBadge } from '@/lib/tierUtils';
 import { supabase } from '@/lib/supabase';
+import { designerService, CommissionTier } from '@/lib/designerService'; // Import designerService and CommissionTier
 
 // Types for designer applications
 interface DesignerApplication {
@@ -29,6 +30,7 @@ interface DesignerApplication {
   submitted_at: string | null;
   created_at: string;
   updated_at: string;
+  current_tier: string; // Add current_tier to the interface
 }
 
 // Placeholder component for images
@@ -231,7 +233,7 @@ export default function AdminDashboard() {
       // Query designers table with proper filtering for applications
       const queryPromise = supabase
         .from('designers')
-        .select('*, sales_total')
+        .select('*, sales_total, current_tier') // Select current_tier
         .not('brand_name', 'is', null) // Only get designers with brand names (actual applications)
         .order('created_at', { ascending: false });
      
@@ -397,6 +399,32 @@ export default function AdminDashboard() {
       alert('Error rejecting designer. Please try again.');
     } finally {
       setRejecting(false);
+      setActionLoading(null);
+    }
+  };
+
+  const handleChangeTier = async (designerId: string, newTier: string) => {
+    setActionLoading(designerId);
+    try {
+      const response = await fetch('/api/admin/change-tier', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ designerId, newTier }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to change tier');
+      }
+
+      alert(`Successfully changed tier for designer ${designerId} to ${newTier}`);
+      loadDesignerApplications(); // Refresh data after successful update
+    } catch (error: any) {
+      console.error('Error changing designer tier:', error);
+      alert(`Error changing designer tier: ${error.message}`);
+    } finally {
       setActionLoading(null);
     }
   };
@@ -604,6 +632,7 @@ export default function AdminDashboard() {
                   onReject={(notes) => handleReject(designer.id, notes)}
                 onView={() => setSelectedDesigner(designer)}
                   isLoading={actionLoading === designer.id}
+                  onTierChange={handleChangeTier} // Pass the new handler
               />
             ))}
             
@@ -631,6 +660,7 @@ export default function AdminDashboard() {
             setSelectedDesigner(null);
           }}
           isLoading={actionLoading === selectedDesigner.id}
+          onTierChange={handleChangeTier} // Pass the new handler to modal as well
         />
       )}
 
@@ -648,14 +678,30 @@ export default function AdminDashboard() {
   );
 }
 
-function DesignerApplicationCard({ designer, onApprove, onReject, onView, isLoading }: {
+function DesignerApplicationCard({ designer, onApprove, onReject, onView, isLoading, onTierChange }: {
   designer: DesignerApplication;
   onApprove: () => void;
   onReject: (notes?: string) => void;
   onView: () => void;
   isLoading: boolean;
+  onTierChange: (designerId: string, newTier: string) => void; // New prop
 }) {
   const [imageError, setImageError] = useState(false);
+  const [showTierDropdown, setShowTierDropdown] = useState(false); // State for dropdown visibility
+  const tierDropdownRef = useRef<HTMLDivElement>(null); // Ref for clicking outside
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (tierDropdownRef.current && !tierDropdownRef.current.contains(event.target as Node)) {
+        setShowTierDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [tierDropdownRef]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -691,6 +737,8 @@ function DesignerApplicationCard({ designer, onApprove, onReject, onView, isLoad
     !imageError &&
     designer.logo_url.startsWith('http');
 
+  const availableTiers = designerService.getCommissionTiers(); // Get tiers from service
+
   return (
     <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-xl p-6">
       <div className="flex items-start justify-between mb-4">
@@ -715,7 +763,7 @@ function DesignerApplicationCard({ designer, onApprove, onReject, onView, isLoad
             <div className="flex items-center gap-2 mb-1">
               <h3 className="text-xl font-bold">{designer.brand_name}</h3>
               {designer.status === 'approved' && (
-                <TierBadge salesTotal={designer.sales_total || 0} size="sm" />
+                <TierBadge salesTotal={designer.sales_total || 0} tierName={designer.current_tier} size="sm" />
               )}
             </div>
             <p className="text-zinc-400">{designer.short_description}</p>
@@ -755,7 +803,7 @@ function DesignerApplicationCard({ designer, onApprove, onReject, onView, isLoad
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 relative" ref={tierDropdownRef}> {/* Add ref here */}
           <button
             onClick={onView}
             className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm font-medium transition"
@@ -763,6 +811,34 @@ function DesignerApplicationCard({ designer, onApprove, onReject, onView, isLoad
             <Eye size={16} className="inline mr-1" />
             View Details
           </button>
+
+          {designer.status === 'approved' && (
+            <div className="relative">
+              <button
+                onClick={() => setShowTierDropdown(!showTierDropdown)}
+                disabled={isLoading}
+                className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+              >
+                Change Tier <ChevronDown size={16} />
+              </button>
+              {showTierDropdown && (
+                <div className="absolute right-0 mt-2 w-40 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg z-10">
+                  {availableTiers.map((tier) => (
+                    <button
+                      key={tier.name}
+                      onClick={() => {
+                        onTierChange(designer.id, tier.name.toLowerCase());
+                        setShowTierDropdown(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-700"
+                    >
+                      {tier.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           
           {designer.status === 'submitted' && (
             <>
@@ -790,13 +866,31 @@ function DesignerApplicationCard({ designer, onApprove, onReject, onView, isLoad
   );
 }
 
-function DesignerDetailModal({ designer, onClose, onApprove, onReject, isLoading }: {
+function DesignerDetailModal({ designer, onClose, onApprove, onReject, isLoading, onTierChange }: {
   designer: DesignerApplication;
   onClose: () => void;
   onApprove: () => void;
   onReject: (notes?: string) => void;
   isLoading: boolean;
+  onTierChange: (designerId: string, newTier: string) => void; // New prop
 }) {
+  const [showTierDropdown, setShowTierDropdown] = useState(false);
+  const tierDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (tierDropdownRef.current && !tierDropdownRef.current.contains(event.target as Node)) {
+        setShowTierDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [tierDropdownRef]);
+
+  const availableTiers = designerService.getCommissionTiers();
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
       <div className="bg-zinc-900 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -833,6 +927,9 @@ function DesignerDetailModal({ designer, onClose, onApprove, onReject, isLoading
                 <div>
                   <h3 className="text-2xl font-bold">{designer.brand_name}</h3>
                   <p className="text-zinc-400 text-lg">{designer.short_description}</p>
+                  {designer.status === 'approved' && (
+                    <TierBadge salesTotal={designer.sales_total || 0} tierName={designer.current_tier} size="md" />
+                  )}
                 </div>
               </div>
               
@@ -924,6 +1021,35 @@ function DesignerDetailModal({ designer, onClose, onApprove, onReject, isLoading
                   )}
                 </div>
               </div>
+
+              {designer.status === 'approved' && (
+                <div className="relative" ref={tierDropdownRef}>
+                  <h4 className="font-semibold mb-2">Current Tier: <span className="font-normal">{designer.current_tier}</span></h4>
+                  <button
+                    onClick={() => setShowTierDropdown(!showTierDropdown)}
+                    disabled={isLoading}
+                    className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                  >
+                    Change Tier <ChevronDown size={16} />
+                  </button>
+                  {showTierDropdown && (
+                    <div className="absolute left-0 mt-2 w-40 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg z-10">
+                      {availableTiers.map((tier) => (
+                        <button
+                          key={tier.name}
+                          onClick={() => {
+                            onTierChange(designer.id, tier.name.toLowerCase());
+                            setShowTierDropdown(false);
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-700"
+                        >
+                          {tier.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               
               {designer.status === 'submitted' && (
                 <div className="flex gap-3">

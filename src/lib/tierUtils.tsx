@@ -69,34 +69,50 @@ export function getTierBySalesTotal(salesTotal: number): TierData {
   return COMMISSION_TIERS[0]; // Default to Bronze
 }
 
+export function getTierByName(tierName: string): TierData {
+  const foundTier = COMMISSION_TIERS.find(tier => tier.id === tierName.toLowerCase());
+  return foundTier || COMMISSION_TIERS[0]; // Default to Bronze if not found
+}
+
 interface TierBadgeProps {
-  salesTotal: number;
+  salesTotal?: number; // Make optional
+  tierName?: string; // New optional prop
   size?: 'sm' | 'md' | 'lg';
   showLabel?: boolean;
   className?: string;
 }
 
-export function TierBadge({ 
-  salesTotal, 
-  size = 'md', 
-  showLabel = true, 
-  className = '' 
+export function TierBadge({
+  salesTotal,
+  tierName,
+  size = 'md',
+  showLabel = true,
+  className = ''
 }: TierBadgeProps) {
-  const tier = getTierBySalesTotal(salesTotal);
+  let tier: TierData;
+
+  if (tierName) {
+    tier = getTierByName(tierName);
+  } else if (salesTotal !== undefined) {
+    tier = getTierBySalesTotal(salesTotal);
+  } else {
+    tier = COMMISSION_TIERS[0]; // Default to Bronze if neither is provided
+  }
+
   const Icon = tier.icon;
-  
+
   const sizeClasses = {
     sm: 'px-2 py-1 text-xs',
     md: 'px-3 py-1.5 text-sm',
     lg: 'px-4 py-2 text-base'
   };
-  
+
   const iconSizes = {
     sm: 12,
     md: 14,
     lg: 16
   };
-  
+
   return (
     <div className={`
       inline-flex items-center gap-1.5 rounded-full border 

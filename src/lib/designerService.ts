@@ -109,7 +109,7 @@ export type InfluencerItemRequest = {
 
 class DesignerService {
   // Commission tier definitions
-  private getCommissionTiers(): CommissionTier[] {
+  public getCommissionTiers(): CommissionTier[] {
     return [
       {
         name: 'Bronze',
@@ -223,7 +223,7 @@ class DesignerService {
       // Get designer profile with sales total
       const { data: designerProfile, error: profileError } = await supabase
         .from('designers')
-        .select('*, sales_total')
+        .select('*, sales_total, current_tier')
         .eq('id', designerAuth.designer_id)
         .single();
 
@@ -245,9 +245,9 @@ class DesignerService {
       // Get wallet data
       const wallet = await this.getDesignerWallet(designerAuth.designer_id);
       
-      // Calculate commission tiers
+      // Use the current_tier from the database directly
+      const currentTier = this.getCommissionTiers().find(tier => tier.name.toLowerCase() === (designerProfile.current_tier || 'bronze').toLowerCase()) || this.getCommissionTiers()[0];
       const salesTotal = parseFloat(designerProfile.sales_total) || 0;
-      const currentTier = this.getCurrentCommissionTier(salesTotal);
       const nextTier = this.getNextCommissionTier(salesTotal);
       
       // Convert database data to form format
@@ -933,7 +933,7 @@ class DesignerService {
   }
 
   // Get designer sales and earnings summary
-  async getDesignerSalesSummary(designerId: string): Promise<{
+  async getDesignerSalesSummary(designerId: string, currentTierName: string): Promise<{
     totalSales: number;
     totalEarnings: number;
     orderCount: number;
@@ -962,8 +962,8 @@ class DesignerService {
       const orderCount = orderItems?.length || 0;
       const averageOrderValue = orderCount > 0 ? salesTotal / orderCount : 0;
       
-      // Get commission tiers
-      const currentTier = this.getCurrentCommissionTier(salesTotal);
+      // Use the provided currentTierName, and calculate next tier based on sales
+      const currentTier = this.getCommissionTiers().find(tier => tier.name.toLowerCase() === currentTierName.toLowerCase()) || this.getCommissionTiers()[0];
       const nextTier = this.getNextCommissionTier(salesTotal);
 
       return {

@@ -165,7 +165,7 @@ function DesignerDashboardContent() {
 
           // Load sales summary if designer is approved
           if (data.status === 'approved') {
-            const summary = await designerService.getDesignerSalesSummary(data.profile.brandName); // We'll need to get designer ID properly
+            const summary = await designerService.getDesignerSalesSummary(data.profile.designerId, data.profile.currentTier); // Pass designerId and currentTier
             setSalesSummary(summary);
           }
         } else {
@@ -811,17 +811,25 @@ function DesignerDashboardContent() {
             </div>
             
             <div className="flex items-center gap-4 mobile-w-full mobile-justify-between mobile-bg-zinc-800/50 mobile-p-3 mobile-rounded-lg">
-              <div className="text-right mobile-text-left">
-                <div className="text-sm text-zinc-400 mobile-text-xs">Profile Completion</div>
-                <div className="text-xl font-bold mobile-text-lg">{completionPercentage}%</div>
-              </div>
-              <div className="w-32 h-2 bg-zinc-800 rounded-full overflow-hidden mobile-flex-1 mobile-ml-4">
-                <div 
-                  className="h-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-500"
-                  style={{ width: `${completionPercentage}%` }}
-                />
-              </div>
+            <div className="text-right mobile-text-left">
+              <div className="text-sm text-zinc-400 mobile-text-xs">Profile Completion</div>
+              <div className="text-xl font-bold mobile-text-lg">{completionPercentage}%</div>
             </div>
+            <div className="w-32 h-2 bg-zinc-800 rounded-full overflow-hidden mobile-flex-1 mobile-ml-4">
+              <div 
+                className="h-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-500"
+                style={{ width: `${completionPercentage}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Tier Badge */}
+          {status === 'approved' && salesSummary && (
+            <div className="flex items-center gap-2 mt-4">
+              <TierBadge tierName={salesSummary.currentTier.name} size="md" />
+              <span className="text-zinc-400 text-sm">({salesSummary.currentTier.designerEarningsPct}% earnings)</span>
+            </div>
+          )}
           </div>
         </div>
       </section>
