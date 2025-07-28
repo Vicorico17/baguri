@@ -232,6 +232,8 @@ class DesignerService {
         return null;
       }
 
+      console.log('Fetched designerProfile from DB:', designerProfile);
+
       // Get designer products
       const { data: products, error: productsError } = await supabase
         .from('designer_products')
@@ -250,6 +252,8 @@ class DesignerService {
       const salesTotal = parseFloat(designerProfile.sales_total) || 0;
       const nextTier = this.getNextCommissionTier(salesTotal);
       
+      console.log('Calculated currentTier object:', currentTier);
+
       // Convert database data to form format
       const profile: DesignerProfileForm = {
         brandName: designerProfile.brand_name || '',
@@ -272,7 +276,7 @@ class DesignerService {
         currentTier: designerProfile.current_tier || 'bronze',
         fulfillment: designerProfile.fulfillment as 'baguri' | 'designer' | undefined,
         sellingAs: designerProfile.selling_as as 'PFA' | 'SRL' | 'not_registered' | undefined,
-        iban: designerProfile.iban || '',
+        iban: designerProfile.iban,
         ownsRights: designerProfile.owns_rights || false,
         acceptTerms: designerProfile.accept_terms || false,
         wantsAiPhotos: designerProfile.wants_ai_photos || false,
@@ -296,7 +300,7 @@ class DesignerService {
       // Calculate completion percentage
       const completionPercentage = this.calculateCompletionPercentage(profile, dashboardProducts);
 
-      return {
+      const finalDashboardData = {
         profile,
         products: dashboardProducts,
         wallet,
@@ -307,6 +311,9 @@ class DesignerService {
         submittedAt: designerProfile.submitted_at,
         completionPercentage,
       };
+
+      console.log('Final dashboard data before returning:', finalDashboardData);
+      return finalDashboardData;
     } catch (error: any) {
       console.error('Error getting dashboard data:', error);
       return null;
@@ -347,7 +354,7 @@ class DesignerService {
           long_description: profileData.longDescription,
           description: profileData.longDescription, // Keep for backward compatibility
           city: profileData.city,
-          year_founded: profileData.yearFounded,
+          yearFounded: profileData.yearFounded,
           email: user.email, // Always sync with auth user's email
           logo_url: profileData.logoUrl,
           secondary_logo_url: profileData.secondaryLogoUrl,
@@ -364,9 +371,9 @@ class DesignerService {
           fulfillment: profileData.fulfillment,
           selling_as: profileData.sellingAs,
           iban: profileData.iban,
-          owns_rights: profileData.ownsRights,
-          accept_terms: profileData.acceptTerms,
-          wants_ai_photos: profileData.wantsAiPhotos,
+          ownsRights: profileData.ownsRights,
+          acceptTerms: profileData.acceptTerms,
+          wantsAiPhotos: profileData.wantsAiPhotos,
         })
         .eq('id', designerProfile.id);
 
@@ -1193,4 +1200,4 @@ class DesignerService {
   }
 }
 
-export const designerService = new DesignerService(); 
+export const designerService = new DesignerService();

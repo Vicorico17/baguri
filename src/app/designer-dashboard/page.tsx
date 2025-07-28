@@ -8,6 +8,7 @@ import { ArrowLeft, Edit, Send, CheckCircle, Clock, XCircle, Upload, Plus, X, In
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { BrandShowcase } from "@/components/ui/brand-showcase";
 import { ProgressCircle } from "@/components/ui/progress-circle";
+import { TierBadge } from '@/lib/tierUtils'; // Import TierBadge
 import { useDesignerAuth } from '@/contexts/DesignerAuthContext';
 import { designerService, type DesignerDashboardData, type DesignerProfileForm, type CommissionTier } from '@/lib/designerService';
 import { ChangeEmailModal } from '@/components/modals/ChangeEmailModal';
@@ -164,8 +165,8 @@ function DesignerDashboardContent() {
           setDashboardReady(true);
 
           // Load sales summary if designer is approved
-          if (data.status === 'approved') {
-            const summary = await designerService.getDesignerSalesSummary(data.profile.designerId, data.profile.currentTier); // Pass designerId and currentTier
+          if (data.status === 'approved' && data.wallet) {
+            const summary = await designerService.getDesignerSalesSummary(data.wallet.designerId, data.profile.currentTier || 'bronze'); // Pass designerId and currentTier
             setSalesSummary(summary);
           }
         } else {
