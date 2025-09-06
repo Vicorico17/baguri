@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-02-24.acacia',
-});
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+let stripe: Stripe | null = null;
+if (stripeSecretKey) {
+  stripe = new Stripe(stripeSecretKey, {
+    apiVersion: '2025-02-24.acacia',
+  });
+}
 
 export async function GET(
   request: NextRequest,
@@ -42,6 +46,10 @@ export async function GET(
         console.log('Order not found in database, fetching from Stripe...');
         
         // Get session from Stripe to show basic info even if webhook hasn't processed yet
+        if (!stripe) {
+          return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+        }
+
         const stripeSession = await stripe.checkout.sessions.retrieve(sessionId, {
           expand: ['line_items', 'line_items.data.price.product']
         });

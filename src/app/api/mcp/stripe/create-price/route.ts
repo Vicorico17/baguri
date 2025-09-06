@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-02-24.acacia',
-});
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+let stripe: Stripe | null = null;
+if (stripeSecretKey) {
+  stripe = new Stripe(stripeSecretKey, {
+    apiVersion: '2025-02-24.acacia',
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,6 +21,11 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('🚀 Creating Stripe price:', { product, unit_amount, currency });
+
+    if (!stripe) {
+      console.error('Stripe configuration missing');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
 
     // Create Stripe price using official SDK
     const stripePrice = await stripe.prices.create({

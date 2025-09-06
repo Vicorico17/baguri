@@ -114,6 +114,7 @@ export default function DesignersPage() {
           yearFounded: designer.year_founded || new Date().getFullYear(),
           specialties: designer.specialties || ['Fashion Design'],
           salesTotal: parseFloat(designer.sales_total) || 0,
+          currentTier: designer.current_tier || null,
           socialLinks: {
             instagram: designer.instagram || '',
             website: designer.website || ''
@@ -308,7 +309,11 @@ function DesignerCard({ designer }: { designer: any }) {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <h3 className="text-xl font-bold text-white">{designer.brandName}</h3>
-                <TierBadge salesTotal={designer.salesTotal} size="sm" />
+                {designer.currentTier ? (
+                  <TierBadge tierName={designer.currentTier} size="sm" />
+                ) : (
+                  <TierBadge salesTotal={designer.salesTotal} size="sm" />
+                )}
               </div>
               <p className="text-gray-400 text-sm">{designer.location}</p>
             </div>

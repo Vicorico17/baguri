@@ -1,6 +1,9 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend: Resend | null = null;
+if (process.env.RESEND_API_KEY) {
+  resend = new Resend(process.env.RESEND_API_KEY);
+}
 
 export type EmailTemplate = 'designer-review-submitted' | 'designer-approved' | 'designer-rejected';
 
@@ -269,6 +272,11 @@ export class EmailService {
         html: templateConfig.getHtml(data),
         text: templateConfig.getText(data),
       };
+
+      if (!resend) {
+        console.error('Resend client not initialized');
+        return { success: false, error: 'Email service not configured' };
+      }
 
       const result = await resend.emails.send(emailData);
 

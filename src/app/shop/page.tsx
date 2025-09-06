@@ -169,7 +169,8 @@ function ShopContent() {
               id,
               brand_name,
               logo_url,
-              sales_total
+              sales_total,
+              current_tier
             )
           `)
           .eq('is_live', true);
@@ -252,12 +253,17 @@ function ShopContent() {
   const filteredProducts = products.filter(product => {
     const designerFilter = selectedDesigner === null || product.designers?.id === selectedDesigner;
     
-    // Tier filter
+    // Tier filter using explicit current_tier when available
     let tierFilter = true;
     if (selectedTier !== null && product.designers) {
-      const designerSalesTotal = parseFloat(product.designers.sales_total) || 0;
-      const designerTier = getTierBySalesTotal(designerSalesTotal);
-      tierFilter = designerTier.id === selectedTier;
+      const currentTierName = product.designers.current_tier as string | undefined;
+      if (currentTierName) {
+        tierFilter = currentTierName.toLowerCase() === selectedTier.toLowerCase();
+      } else {
+        const designerSalesTotal = parseFloat(product.designers.sales_total) || 0;
+        const fallbackTier = getTierBySalesTotal(designerSalesTotal);
+        tierFilter = fallbackTier.id === selectedTier;
+      }
     }
     
     return designerFilter && tierFilter;
@@ -473,7 +479,11 @@ function ShopContent() {
                     />
                   )}
                   <span className="mobile-text-sm">{designer.brand_name}</span>
-                  <TierBadge salesTotal={parseFloat(designer.sales_total) || 0} size="sm" showLabel={false} />
+                  {designer.current_tier ? (
+                    <TierBadge tierName={designer.current_tier} size="sm" showLabel={false} />
+                  ) : (
+                    <TierBadge salesTotal={parseFloat(designer.sales_total) || 0} size="sm" showLabel={false} />
+                  )}
                 </button>
               ))}
             

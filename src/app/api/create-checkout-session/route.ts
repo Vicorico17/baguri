@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { supabase } from '@/lib/supabase';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-02-24.acacia',
-});
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+let stripe: Stripe | null = null;
+if (stripeSecretKey) {
+  stripe = new Stripe(stripeSecretKey, {
+    apiVersion: '2025-02-24.acacia',
+  });
+}
 
 export async function POST(request: NextRequest) {
   console.log('=== CREATE CHECKOUT SESSION API CALLED ===');
@@ -94,6 +98,11 @@ export async function POST(request: NextRequest) {
     // Create line items for Stripe Checkout Session
     // Product images will automatically display in Stripe checkout because
     // we now add images to Stripe products when they're created live
+    if (!stripe) {
+      console.error('Stripe configuration missing');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const lineItems = items.map((item: any) => ({
       price: item.priceId,
       quantity: item.quantity,

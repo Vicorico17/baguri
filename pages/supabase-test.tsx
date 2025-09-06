@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../src/lib/supabaseClient';
+import { supabase } from '@/lib/supabase';
 
 export default function SupabaseTest() {
   const [hunters, setHunters] = useState<any[]>([]);

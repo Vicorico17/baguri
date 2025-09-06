@@ -740,7 +740,7 @@ function DesignerApplicationCard({ designer, onApprove, onReject, onView, isLoad
   const availableTiers = designerService.getCommissionTiers(); // Get tiers from service
 
   return (
-    <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-xl p-6">
+    <div className={`relative ${showTierDropdown ? 'z-50' : ''} bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-xl p-6`}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-4">
           {shouldShowImage ? (
@@ -822,7 +822,7 @@ function DesignerApplicationCard({ designer, onApprove, onReject, onView, isLoad
                 Change Tier <ChevronDown size={16} />
               </button>
               {showTierDropdown && (
-                <div className="absolute right-0 mt-2 w-40 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg z-10">
+                <div className="absolute right-0 mt-2 w-40 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg z-50">
                   {availableTiers.map((tier) => (
                     <button
                       key={tier.name}
@@ -1033,7 +1033,7 @@ function DesignerDetailModal({ designer, onClose, onApprove, onReject, isLoading
                     Change Tier <ChevronDown size={16} />
                   </button>
                   {showTierDropdown && (
-                    <div className="absolute left-0 mt-2 w-40 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg z-10">
+                    <div className="absolute left-0 mt-2 w-40 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg z-50">
                       {availableTiers.map((tier) => (
                         <button
                           key={tier.name}

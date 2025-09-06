@@ -1,21 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Ensure environment variables are defined
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl) {
-  throw new Error('Environment variable NEXT_PUBLIC_SUPABASE_URL is not defined. Please check your .env.local file or deployment configuration.');
-}
-if (!supabaseServiceRoleKey) {
-  throw new Error('Environment variable SUPABASE_SERVICE_ROLE_KEY is not defined. Please check your .env.local file or deployment configuration.');
-}
-
-const supabase = createClient(
-  supabaseUrl,
-  supabaseServiceRoleKey
-);
+import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
