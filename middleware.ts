@@ -1,7 +1,27 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { ADMIN_SESSION_COOKIE } from '@/lib/adminAuth'
 
 export function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname
+
+  if (path.startsWith('/admin') && path !== '/admin/login') {
+    const hasAdminSession = request.cookies.get(ADMIN_SESSION_COOKIE)?.value === 'authenticated'
+    if (!hasAdminSession) {
+      return NextResponse.redirect(new URL('/admin/login', request.url))
+    }
+  }
+
+  if (path.startsWith('/api/test') || path.startsWith('/api/test-')) {
+    const debugToken = process.env.DEBUG_API_TOKEN
+    const isAllowedDevRequest = process.env.NODE_ENV !== 'production' && !debugToken
+    const providedToken = request.headers.get('x-debug-token')
+
+    if (!isAllowedDevRequest && (!debugToken || providedToken !== debugToken)) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+  }
+
   // Get the response
   const response = NextResponse.next()
 
@@ -44,6 +64,6 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 } 

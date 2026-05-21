@@ -1,12 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = 'https://tmedcnvojgviuwrprykx.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtZWRjbnZvamd2aXV3cnByeWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY5NTE2ODMsImV4cCI6MjA2MjUyNzY4M30.BMhJD37n2YFacQsR2aMfkHRL4_kiVV5Q2Se2vvD-Q_Q'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY')
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Service role client for admin operations (webhooks, etc.)
-// Falls back to anon client if service role key is not available
+// Service role client for admin operations (webhooks, etc.).
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 export const supabaseAdmin = serviceRoleKey 
   ? createClient(supabaseUrl, serviceRoleKey, {
@@ -15,7 +18,7 @@ export const supabaseAdmin = serviceRoleKey
         persistSession: false
       }
     })
-  : supabase; // Fallback to anon client
+  : null as unknown as ReturnType<typeof createClient>;
 
 // Types for our database
 export type Designer = {

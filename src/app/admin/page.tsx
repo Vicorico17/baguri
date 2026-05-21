@@ -76,15 +76,23 @@ export default function AdminDashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if admin is authenticated
-    const adminSession = localStorage.getItem('baguri-admin-session');
-    if (adminSession === 'authenticated') {
+    let subscription: ReturnType<typeof supabase.channel> | null = null;
+
+    async function initializeAdmin() {
+      const response = await fetch('/api/admin/session');
+      const data = await response.json().catch(() => ({ authenticated: false }));
+
+      if (!data.authenticated) {
+        router.push('/admin/login');
+        return;
+      }
+
       setIsAuthenticated(true);
       loadDesignerApplications();
       loadAnalytics();
       
       // Set up real-time subscription for designer changes
-      const subscription = supabase
+      subscription = supabase
         .channel('designer-changes')
         .on('postgres_changes', 
           { 
@@ -100,14 +108,15 @@ export default function AdminDashboard() {
           }
         )
         .subscribe();
-
-      // Cleanup subscription on unmount
-      return () => {
-        subscription.unsubscribe();
-      };
-    } else {
-      router.push('/admin/login');
     }
+
+    initializeAdmin();
+
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
   }, [router]);
 
   // Load analytics data
@@ -278,8 +287,8 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('baguri-admin-session');
+  const handleLogout = async () => {
+    await fetch('/api/admin/login', { method: 'DELETE' });
     router.push('/admin/login');
   };
 

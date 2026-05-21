@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { supabase } from '@/lib/supabase';
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const DELIVERY_FEE_RON = Number(process.env.DELIVERY_FEE_RON || 20);
 let stripe: Stripe | null = null;
 if (stripeSecretKey) {
   stripe = new Stripe(stripeSecretKey, {
@@ -128,9 +129,28 @@ export async function POST(request: NextRequest) {
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/shop`,
       metadata: sessionMetadata,
       billing_address_collection: 'auto',
-      shipping_address_collection: {
-        allowed_countries: ['RO'], // Romania only for now
+      phone_number_collection: {
+        enabled: true,
       },
+      shipping_address_collection: {
+        allowed_countries: ['RO'],
+      },
+      shipping_options: [
+        {
+          shipping_rate_data: {
+            type: 'fixed_amount',
+            fixed_amount: {
+              amount: Math.round(DELIVERY_FEE_RON * 100),
+              currency: 'ron',
+            },
+            display_name: 'Romania delivery',
+            delivery_estimate: {
+              minimum: { unit: 'business_day', value: 2 },
+              maximum: { unit: 'business_day', value: 5 },
+            },
+          },
+        },
+      ],
     });
 
     console.log('Stripe Checkout Session created:', session.id);

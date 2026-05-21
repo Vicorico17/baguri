@@ -44,6 +44,20 @@ CREATE TABLE IF NOT EXISTS orders (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- 4.1. Add delivery fields to orders for courier fulfillment
+ALTER TABLE orders
+ADD COLUMN IF NOT EXISTS customer_phone TEXT,
+ADD COLUMN IF NOT EXISTS subtotal_amount DECIMAL(10,2),
+ADD COLUMN IF NOT EXISTS shipping_amount DECIMAL(10,2) DEFAULT 0.00,
+ADD COLUMN IF NOT EXISTS shipping_name TEXT,
+ADD COLUMN IF NOT EXISTS shipping_address JSONB,
+ADD COLUMN IF NOT EXISTS delivery_status TEXT DEFAULT 'pending' CHECK (delivery_status IN ('pending', 'packed', 'shipped', 'delivered', 'returned', 'cancelled')),
+ADD COLUMN IF NOT EXISTS fulfillment_method TEXT DEFAULT 'courier',
+ADD COLUMN IF NOT EXISTS tracking_number TEXT,
+ADD COLUMN IF NOT EXISTS courier_name TEXT,
+ADD COLUMN IF NOT EXISTS shipped_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP WITH TIME ZONE;
+
 -- 5. Create order_items table to track individual products in orders
 CREATE TABLE IF NOT EXISTS order_items (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -58,6 +72,12 @@ CREATE TABLE IF NOT EXISTS order_items (
     baguri_fee_percentage DECIMAL(5,2) NOT NULL, -- Fee percentage at time of sale
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+ALTER TABLE order_items
+ADD COLUMN IF NOT EXISTS unit_price DECIMAL(10,2),
+ADD COLUMN IF NOT EXISTS total_price DECIMAL(10,2),
+ADD COLUMN IF NOT EXISTS commission_tier TEXT,
+ADD COLUMN IF NOT EXISTS commission_percentage DECIMAL(5,2);
 
 -- 6. Create designer_wallets table
 CREATE TABLE IF NOT EXISTS designer_wallets (
@@ -86,6 +106,10 @@ CREATE TABLE IF NOT EXISTS wallet_transactions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+ALTER TABLE wallet_transactions
+ADD COLUMN IF NOT EXISTS designer_id UUID REFERENCES designers(id) ON DELETE CASCADE,
+ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
 
 -- 8. Create function to calculate Baguri fee percentage based on sales total
 CREATE OR REPLACE FUNCTION get_baguri_fee_percentage(p_sales_total DECIMAL(10,2))
@@ -179,7 +203,19 @@ CREATE OR REPLACE FUNCTION process_order_earnings(
     p_earnings_amount DECIMAL(10,2),
     p_sales_amount DECIMAL(10,2)
 ) RETURNS VOID AS $$
+DECLARE
+    v_wallet_id UUID;
 BEGIN
+    SELECT id INTO v_wallet_id
+    FROM designer_wallets
+    WHERE designer_id = p_designer_id;
+
+    IF v_wallet_id IS NULL THEN
+        INSERT INTO designer_wallets (designer_id, balance, total_earnings, total_withdrawn, pending_balance)
+        VALUES (p_designer_id, 0, 0, 0, 0)
+        RETURNING id INTO v_wallet_id;
+    END IF;
+
     -- Update designer's sales total
     UPDATE designers 
     SET sales_total = COALESCE(sales_total, 0) + p_sales_amount,
@@ -195,6 +231,7 @@ BEGIN
     
     -- Create wallet transaction record
     INSERT INTO wallet_transactions (
+        wallet_id,
         designer_id,
         order_id,
         type,
@@ -202,9 +239,10 @@ BEGIN
         description,
         status
     ) VALUES (
+        v_wallet_id,
         p_designer_id,
         p_order_id,
-        'earning',
+        'sale',
         p_earnings_amount,
         'Commission from product sale',
         'completed'
@@ -220,7 +258,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION add_designer_earnings(
     p_designer_id UUID,
     p_amount DECIMAL(10,2),
-    p_order_id TEXT,
+    p_order_id UUID,
     p_description TEXT
 ) RETURNS BOOLEAN AS $$
 DECLARE
@@ -248,6 +286,7 @@ BEGIN
     -- Create transaction record
     INSERT INTO wallet_transactions (
         wallet_id, 
+        designer_id,
         type, 
         amount, 
         status, 
@@ -255,6 +294,7 @@ BEGIN
         order_id
     ) VALUES (
         v_wallet_id, 
+        p_designer_id,
         'sale', 
         p_amount, 
         'completed', 

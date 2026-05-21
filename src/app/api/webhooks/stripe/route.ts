@@ -3,9 +3,6 @@ import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 
-// Log which client we're using for debugging
-console.log('🔑 Webhook using Supabase client:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Admin (Service Role)' : 'Anonymous');
-
 // Create Stripe client with fallback for build time
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -68,6 +65,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
+    if (!supabase) {
+      console.error('Supabase service role configuration missing');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const body = await req.text();
     const sig = headers().get('stripe-signature')!;
 
@@ -105,6 +107,11 @@ export async function POST(req: NextRequest) {
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   try {
+    if (!supabase) {
+      console.error('Supabase service role configuration missing');
+      return;
+    }
+
     console.log('🎯 Processing checkout completed:', session.id);
     
     // Extract referral code from metadata if present
@@ -219,7 +226,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       return total + (item.amount_total || 0);
     }, 0);
 
-    if (Math.abs(calculatedTotal - (session.amount_total || 0)) > 1) { // Allow 1 cent difference for rounding
+    const shippingAmountCents = session.total_details?.amount_shipping || 0;
+
+    if (Math.abs(calculatedTotal + shippingAmountCents - (session.amount_total || 0)) > 1) { // Allow 1 cent difference for rounding
       console.error(`⚠️ Amount mismatch detected! Session: ${session.amount_total}, Calculated: ${calculatedTotal}`);
       return;
     }
@@ -232,9 +241,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         stripe_payment_intent_id: session.payment_intent as string,
         customer_email: session.customer_details?.email,
         customer_name: session.customer_details?.name || 'Unknown Customer',
+        customer_phone: session.customer_details?.phone,
         total_amount: session.amount_total ? session.amount_total / 100 : 0,
+        subtotal_amount: session.amount_subtotal ? session.amount_subtotal / 100 : calculatedTotal / 100,
+        shipping_amount: shippingAmountCents / 100,
+        shipping_address: session.shipping_details?.address || null,
+        shipping_name: session.shipping_details?.name || session.customer_details?.name || null,
         currency: session.currency || 'ron',
-        status: 'completed'
+        status: 'completed',
+        delivery_status: 'pending',
+        fulfillment_method: 'courier'
       })
       .select()
       .single();
@@ -359,6 +375,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
 async function addEarningsToWallet(designerId: string, earnings: number, orderId: string, productId: string) {
   try {
+    if (!supabase) {
+      console.error('Supabase service role configuration missing');
+      return;
+    }
+
     console.log(`💰 Processing earnings for designer ${designerId}: ${earnings} RON from order ${orderId}`);
     
     // Check if this order has already been processed for this designer
@@ -508,6 +529,11 @@ async function addEarningsToWallet(designerId: string, earnings: number, orderId
 
 async function updateDesignerSalesTotal(designerId: string, additionalSales: number) {
   try {
+    if (!supabase) {
+      console.error('Supabase service role configuration missing');
+      return false;
+    }
+
     console.log(`📈 [SALES UPDATE] Starting update for designer ${designerId}: +${additionalSales} RON`);
     
     // Use the stored procedure first (same pattern as wallet)
@@ -579,6 +605,11 @@ async function updateDesignerSalesTotal(designerId: string, additionalSales: num
 
 async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   try {
+    if (!supabase) {
+      console.error('Supabase service role configuration missing');
+      return;
+    }
+
     console.log('Payment succeeded:', paymentIntent.id);
     
     // Update order status if it exists
@@ -600,6 +631,11 @@ async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
 
 async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent) {
   try {
+    if (!supabase) {
+      console.error('Supabase service role configuration missing');
+      return;
+    }
+
     console.log('Payment failed:', paymentIntent.id);
     
     // Update order status if it exists

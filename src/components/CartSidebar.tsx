@@ -34,6 +34,8 @@ interface StripeDataResult {
   source: 'dynamic' | 'static' | 'none';
 }
 
+const DELIVERY_FEE_RON = 20;
+
 export function CartSidebar() {
   const { cart, isCartOpen, setIsCartOpen, updateCartItemQuantity, cartTotal } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -473,9 +475,19 @@ export function CartSidebar() {
               </div>
               
               <div className="border-t border-zinc-700 pt-4 space-y-4 mobile-pt-3 mobile-gap-3">
-                <div className="flex justify-between items-center text-lg font-bold mobile-text-base">
-                  <span>Total:</span>
-                  <span>{cartTotal} lei</span>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-sm text-zinc-300">
+                    <span>Subtotal</span>
+                    <span>{cartTotal} lei</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm text-zinc-300">
+                    <span>Romania delivery</span>
+                    <span>{DELIVERY_FEE_RON} lei</span>
+                  </div>
+                  <div className="flex justify-between items-center text-lg font-bold mobile-text-base border-t border-zinc-700 pt-2">
+                    <span>Total:</span>
+                    <span>{cartTotal + DELIVERY_FEE_RON} lei</span>
+                  </div>
                 </div>
                 
                 {error && (

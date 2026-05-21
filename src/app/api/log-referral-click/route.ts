@@ -3,6 +3,10 @@ import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
+    if (!supabase) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const { referral_code, product_id } = await request.json();
     if (!referral_code || !product_id) {
       return NextResponse.json({ error: 'Missing referral_code or product_id' }, { status: 400 });

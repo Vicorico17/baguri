@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdminSession } from '@/lib/adminAuth';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -12,6 +13,9 @@ if (supabaseUrl && supabaseServiceRoleKey) {
 
 export async function POST(request: NextRequest) {
   try {
+    const unauthorized = requireAdminSession(request);
+    if (unauthorized) return unauthorized;
+
     if (!supabase) {
       return NextResponse.json({ success: false, error: 'Server configuration error' }, { status: 500 });
     }
@@ -21,10 +25,6 @@ export async function POST(request: NextRequest) {
     if (!designerId || !newTier) {
       return NextResponse.json({ success: false, error: 'Missing designerId or newTier' }, { status: 400 });
     }
-
-    // Authenticate as service role to bypass RLS and ensure admin access
-    // In a real application, you'd want to verify the user making this request is an actual admin
-    // For now, we'll assume the service role key grants sufficient privilege for this internal API.
 
     const { error } = await supabase
       .from('designers')

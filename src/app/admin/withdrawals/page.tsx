@@ -112,17 +112,22 @@ export default function WithdrawalsAdmin() {
   }, [showAllInfluencer]);
 
   useEffect(() => {
-    // Check if admin is authenticated
-    const adminSession = localStorage.getItem('baguri-admin-session');
-    if (adminSession !== 'authenticated') {
-      router.push('/admin/login');
-      return;
+    async function initializeAdmin() {
+      const response = await fetch('/api/admin/session');
+      const data = await response.json().catch(() => ({ authenticated: false }));
+
+      if (!data.authenticated) {
+        router.push('/admin/login');
+        return;
+      }
+
+      loadWithdrawals();
+      if (tab === 'influencer') {
+        loadInfluencerWithdrawals();
+      }
     }
 
-    loadWithdrawals();
-    if (tab === 'influencer') {
-      loadInfluencerWithdrawals();
-    }
+    initializeAdmin();
   }, [router, loadWithdrawals, tab, loadInfluencerWithdrawals]);
 
   const handleApprove = async (withdrawalId: string) => {

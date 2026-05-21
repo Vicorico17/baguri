@@ -23,9 +23,24 @@ export interface Order {
   stripe_payment_intent_id: string;
   customer_email: string;
   customer_name?: string;
+  customer_phone?: string;
   total_amount: number;
+  subtotal_amount?: number;
+  shipping_amount?: number;
+  shipping_name?: string;
+  shipping_address?: {
+    line1?: string | null;
+    line2?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postal_code?: string | null;
+    country?: string | null;
+  } | null;
   currency: string;
   status: string;
+  delivery_status?: string;
+  tracking_number?: string;
+  courier_name?: string;
   created_at: string;
   order_items: OrderItem[];
   is_pending?: boolean; // Flag for orders not yet processed by webhook
@@ -101,10 +116,14 @@ export function OrderTracker({ sessionId, className }: OrderTrackerProps) {
         setOrder(orderData);
         
         // Set status based on order data
-        if (orderData.is_pending) {
-          setCurrentStatus('confirmed');
-        } else if (orderData.status === 'completed') {
+        if (orderData.delivery_status === 'delivered') {
+          setCurrentStatus('delivered');
+        } else if (orderData.delivery_status === 'shipped') {
+          setCurrentStatus('shipped');
+        } else if (orderData.delivery_status === 'packed' || orderData.status === 'completed') {
           setCurrentStatus('processing');
+        } else if (orderData.is_pending) {
+          setCurrentStatus('confirmed');
         }
         
         // Calculate estimated delivery (7-14 business days from order date)
@@ -211,6 +230,7 @@ export function OrderTracker({ sessionId, className }: OrderTrackerProps) {
             <div>
               <p className="text-white font-medium">{order.customer_name || 'Customer'}</p>
               <p className="text-zinc-400 text-sm">{order.customer_email}</p>
+              {order.customer_phone && <p className="text-zinc-500 text-xs">{order.customer_phone}</p>}
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -221,6 +241,35 @@ export function OrderTracker({ sessionId, className }: OrderTrackerProps) {
             </div>
           </div>
         </div>
+
+        {(order.shipping_address || order.shipping_amount !== undefined) && (
+          <div className="grid md:grid-cols-2 gap-4 mb-6 p-4 bg-zinc-800 rounded-lg">
+            <div className="flex items-start gap-3">
+              <MapPin className="text-purple-400 mt-0.5" size={20} />
+              <div>
+                <p className="text-white font-medium">Delivery Address</p>
+                {order.shipping_address ? (
+                  <p className="text-zinc-400 text-sm">
+                    {[order.shipping_address.line1, order.shipping_address.line2, order.shipping_address.city, order.shipping_address.postal_code, order.shipping_address.country]
+                      .filter(Boolean)
+                      .join(', ')}
+                  </p>
+                ) : (
+                  <p className="text-zinc-400 text-sm">Collected by Stripe</p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Truck className="text-blue-400 mt-0.5" size={20} />
+              <div>
+                <p className="text-white font-medium">{order.courier_name || 'Courier delivery'}</p>
+                <p className="text-zinc-400 text-sm">
+                  {order.tracking_number ? `Tracking: ${order.tracking_number}` : `Status: ${order.delivery_status || 'pending'}`}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Order Items */}
         <div className="space-y-3 mb-6">
@@ -250,6 +299,27 @@ export function OrderTracker({ sessionId, className }: OrderTrackerProps) {
             </div>
           ))}
         </div>
+
+        {(order.subtotal_amount !== undefined || order.shipping_amount !== undefined) && (
+          <div className="mb-6 rounded-lg bg-zinc-800 p-4 text-sm">
+            {order.subtotal_amount !== undefined && (
+              <div className="flex justify-between text-zinc-300">
+                <span>Subtotal</span>
+                <span>{order.subtotal_amount.toFixed(2)} {order.currency.toUpperCase()}</span>
+              </div>
+            )}
+            {order.shipping_amount !== undefined && (
+              <div className="flex justify-between text-zinc-300 mt-2">
+                <span>Delivery</span>
+                <span>{order.shipping_amount.toFixed(2)} {order.currency.toUpperCase()}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-white font-semibold mt-3 pt-3 border-t border-zinc-700">
+              <span>Total</span>
+              <span>{order.total_amount.toFixed(2)} {order.currency.toUpperCase()}</span>
+            </div>
+          </div>
+        )}
 
         {/* Order Timeline - Only show if not pending */}
         {!order.is_pending && (

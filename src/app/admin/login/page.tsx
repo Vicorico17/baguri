@@ -18,15 +18,17 @@ export default function AdminLogin() {
     setLoading(true);
     setError('');
 
-    // Simple password check - in production, use proper authentication
-    const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'baguri2024admin';
-    
-    if (password === ADMIN_PASSWORD) {
-      // Set admin session
-      localStorage.setItem('baguri-admin-session', 'authenticated');
+    const response = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+
+    if (response.ok) {
       router.push('/admin');
     } else {
-      setError('Invalid password');
+      const data = await response.json().catch(() => null);
+      setError(data?.error || 'Invalid password');
     }
     
     setLoading(false);

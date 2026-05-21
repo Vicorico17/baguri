@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = 'https://tmedcnvojgviuwrprykx.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtZWRjbnZvamd2aXV3cnByeWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY5NTE2ODMsImV4cCI6MjA2MjUyNzY4M30.BMhJD37n2YFacQsR2aMfkHRL4_kiVV5Q2Se2vvD-Q_Q';
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {

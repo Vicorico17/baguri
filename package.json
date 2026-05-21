@@ -9,7 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@google/gemini-cli-core": "^0.1.14",
     "@radix-ui/react-slot": "^1.2.2",
     "@supabase/supabase-js": "^2.49.8",
     "@types/howler": "^2.2.12",
@@ -17,7 +16,7 @@
     "framer-motion": "^12.10.5",
     "howler": "^2.2.4",
     "lucide-react": "^0.511.0",
-    "next": "14.1.0",
+    "next": "^14.2.35",
     "react": "^18.3",
     "react-dom": "^18.3",
     "resend": "^4.5.1",
@@ -30,7 +29,7 @@
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
-    "eslint-config-next": "14.1.0",
+    "eslint-config-next": "^14.2.35",
     "postcss": "^8",
     "tailwindcss": "^3.3.0",
     "typescript": "^5"
