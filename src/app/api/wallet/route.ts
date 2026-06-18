@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
+import { requireSupabaseUser } from '@/lib/apiAuth';
+import { supabaseAdmin as supabase } from '@/lib/supabase';
 
-// Create Supabase client with fallback for build time
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-let supabase: any = null;
-
-if (supabaseUrl && supabaseServiceKey) {
-  supabase = createClient(supabaseUrl, supabaseServiceKey);
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,24 +10,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const cookieStore = cookies();
-    const token = cookieStore.get('sb-access-token')?.value;
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user from token
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
+    const auth = await requireSupabaseUser(request);
+    if (auth instanceof NextResponse) return auth;
 
     // Get designer profile
     const { data: designerAuth, error: designerAuthError } = await supabase
       .from('designer_auth')
       .select('designer_id')
-      .eq('user_id', user.id)
+      .eq('user_id', auth.user.id)
       .single();
 
     if (designerAuthError || !designerAuth) {
@@ -109,18 +90,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const cookieStore = cookies();
-    const token = cookieStore.get('sb-access-token')?.value;
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user from token
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
+    const auth = await requireSupabaseUser(request);
+    if (auth instanceof NextResponse) return auth;
 
     const { action, amount } = await request.json();
 
@@ -136,7 +107,7 @@ export async function POST(request: NextRequest) {
     const { data: designerAuth, error: designerAuthError } = await supabase
       .from('designer_auth')
       .select('designer_id')
-      .eq('user_id', user.id)
+      .eq('user_id', auth.user.id)
       .single();
 
     if (designerAuthError || !designerAuth) {
@@ -202,4 +173,4 @@ export async function POST(request: NextRequest) {
     console.error('Error in wallet POST:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-} 
+}

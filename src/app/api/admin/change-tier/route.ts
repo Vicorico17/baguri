@@ -11,9 +11,11 @@ if (supabaseUrl && supabaseServiceRoleKey) {
   supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 }
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
-    const unauthorized = requireAdminSession(request);
+    const unauthorized = await requireAdminSession(request);
     if (unauthorized) return unauthorized;
 
     if (!supabase) {

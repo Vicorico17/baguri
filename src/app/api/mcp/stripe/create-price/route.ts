@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { requireDesignerUser } from '@/lib/apiAuth';
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 let stripe: Stripe | null = null;
@@ -11,12 +12,15 @@ if (stripeSecretKey) {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireDesignerUser(request);
+    if (auth instanceof NextResponse) return auth;
+
     const body = await request.json();
     const { product, unit_amount, currency } = body;
 
     if (!product || !unit_amount || !currency) {
-      return NextResponse.json({ 
-        error: 'Product ID, unit_amount, and currency are required' 
+      return NextResponse.json({
+        error: 'Product ID, unit_amount, and currency are required'
       }, { status: 400 });
     }
 
@@ -34,13 +38,14 @@ export async function POST(request: NextRequest) {
       currency,
       metadata: {
         created_via: 'baguri_automation',
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        designer_id: auth.designerId,
       }
     });
 
     console.log('✅ Stripe price created:', stripePrice.id);
     return NextResponse.json(stripePrice);
-    
+
   } catch (error) {
     console.error('Error creating Stripe price:', error);
     return NextResponse.json(
@@ -48,4 +53,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

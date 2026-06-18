@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { designerService } from '@/lib/designerService';
 
 // Force dynamic rendering for this route since it uses request.url
 export const dynamic = 'force-dynamic';
@@ -19,6 +20,17 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    if (state) {
+      const result = await designerService.verifyInstagramCallback(code, state);
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || '';
+
+      if (result.success) {
+        return NextResponse.redirect(`${baseUrl}/designer-dashboard?instagram=verified`);
+      }
+
+      return NextResponse.redirect(`${baseUrl}/designer-dashboard?instagram=error&reason=verification_failed`);
+    }
+
     // Exchange code for access token
     const tokenResponse = await fetch('https://api.instagram.com/oauth/access_token', {
       method: 'POST',
@@ -43,7 +55,7 @@ export async function GET(request: NextRequest) {
 
     // Get user profile information
     const profileResponse = await fetch(`https://graph.instagram.com/me?fields=id,username,account_type,media_count&access_token=${access_token}`);
-    
+
     if (!profileResponse.ok) {
       throw new Error('Failed to fetch user profile');
     }
@@ -66,4 +78,4 @@ export async function GET(request: NextRequest) {
     console.error('Instagram OAuth callback error:', error);
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/influencer-auth?error=callback_failed`);
   }
-} 
+}

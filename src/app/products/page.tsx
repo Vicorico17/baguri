@@ -229,6 +229,12 @@ function ProductManagement() {
       let paymentLinkUrl = null;
       
       if (newLiveStatus) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token;
+        if (!accessToken) {
+          throw new Error('Authentication token missing. Please sign in again.');
+        }
+
         const product = products.find(p => p.id === productId);
         if (!product) {
           throw new Error('Product not found');
@@ -251,6 +257,7 @@ function ProductManagement() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             name: product.name,
@@ -277,6 +284,7 @@ function ProductManagement() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             product: stripeProductId,
@@ -298,6 +306,7 @@ function ProductManagement() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             price: stripePriceId,
@@ -454,13 +463,21 @@ function ProductManagement() {
 
     console.log('Uploading file:', file.name, 'Size:', file.size, 'Type:', file.type);
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      throw new Error('Authentication token missing. Please sign in again.');
+    }
+
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('userId', user.id);
 
     try {
       const response = await fetch('/api/upload-image', {
         method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: formData,
       });
 

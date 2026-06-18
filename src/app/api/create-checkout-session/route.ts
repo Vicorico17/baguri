@@ -35,11 +35,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No items provided' }, { status: 400 });
     }
 
-    // Validate all items have price IDs and check product status
+    const validatedItems: Array<{ priceId: string; quantity: number; productName: string; productId: string }> = [];
+
+    // Validate all items and resolve trusted Stripe price IDs server-side.
     for (const item of items) {
-      if (!item.priceId) {
-        console.log('Missing price ID for item:', item);
-        return NextResponse.json({ error: `No price ID found for product: ${item.productName}` }, { status: 400 });
+      const quantity = Number(item.quantity || 1);
+      if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) {
+        return NextResponse.json({ error: `Invalid quantity for product: ${item.productName}` }, { status: 400 });
       }
 
       // Server-side validation: Check product status and designer approval
@@ -91,10 +93,21 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
       }
 
+      if (!product.stripe_price_id) {
+        console.log('Missing trusted Stripe price ID for product:', item.productId);
+        return NextResponse.json({ error: `No checkout price found for product: ${item.productName}` }, { status: 400 });
+      }
+
       console.log(`✅ Product validated: ${item.productName} (ID: ${item.productId})`);
+      validatedItems.push({
+        priceId: product.stripe_price_id,
+        quantity,
+        productName: product.name || item.productName,
+        productId: product.id,
+      });
     }
 
-    console.log('Creating Stripe Checkout Session for', items.length, 'items');
+    console.log('Creating Stripe Checkout Session for', validatedItems.length, 'items');
 
     // Create line items for Stripe Checkout Session
     // Product images will automatically display in Stripe checkout because
@@ -104,7 +117,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const lineItems = items.map((item: any) => ({
+    const lineItems = validatedItems.map((item) => ({
       price: item.priceId,
       quantity: item.quantity,
     }));
@@ -114,8 +127,8 @@ export async function POST(request: NextRequest) {
     const sessionMetadata = {
       created_via: 'baguri_cart_checkout',
       created_at: new Date().toISOString(),
-      product_count: items.length.toString(),
-      product_names: items.map((item: any) => item.productName).join(', '),
+      product_count: validatedItems.length.toString(),
+      product_names: validatedItems.map((item) => item.productName).join(', '),
       ...(referralCode ? { referral_code: referralCode } : {})
     };
     console.log('Session metadata to be sent to Stripe:', sessionMetadata);

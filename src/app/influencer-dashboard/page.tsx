@@ -8,7 +8,6 @@ import { BackgroundPaths } from "@/components/ui/background-paths";
 import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
 import { influencerService, type InfluencerWallet } from '@/lib/influencerService';
-import { useAuth } from '@/hooks/useAuth';
 
 function InfluencerDashboardContent() {
   const router = useRouter();
@@ -24,7 +23,6 @@ function InfluencerDashboardContent() {
   } | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
-  const { designer } = useAuth();
   const [influencer, setInfluencer] = useState<any>(null);
   const [wallet, setWallet] = useState<InfluencerWallet | null>(null);
   const [walletLoading, setWalletLoading] = useState(true);
@@ -104,32 +102,19 @@ function InfluencerDashboardContent() {
     };
     fetchProducts();
 
-    if (!designer?.id) return;
     // Fetch influencer record
     const fetchInfluencer = async () => {
       let data = null;
       let error = null;
-      if (designer?.id) {
+      const openId = searchParams?.get('open_id');
+      if (openId) {
         const res = await supabase
           .from('influencers')
           .select('*')
-          .eq('user_id', designer.id)
+          .eq('tiktok_open_id', openId)
           .single();
         data = res.data;
         error = res.error;
-      }
-      // Fallback: if not found by user_id, try by tiktok_open_id from URL
-      if ((!data || error) && searchParams) {
-        const openId = searchParams.get('open_id');
-        if (openId) {
-          const res2 = await supabase
-            .from('influencers')
-            .select('*')
-            .eq('tiktok_open_id', openId)
-            .single();
-          data = res2.data;
-          error = res2.error;
-        }
       }
       if (!error && data) {
         setInfluencer(data);
@@ -172,7 +157,7 @@ function InfluencerDashboardContent() {
     };
     fetchRequests();
     fetchAddresses();
-  }, [searchParams, router, designer?.id, influencer?.tiktok_open_id]);
+  }, [searchParams, router, influencer?.tiktok_open_id]);
 
   const getPlatformIcon = (platform: string) => {
     switch (platform) {

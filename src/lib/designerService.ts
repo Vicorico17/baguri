@@ -435,9 +435,9 @@ class DesignerService {
 
   // Calculate tier based on sales total
   private calculateTierFromSales(salesTotal: number): string {
-    if (salesTotal >= 25000) return 'platinum';
-    if (salesTotal >= 5000) return 'gold';
-    if (salesTotal >= 1000) return 'silver';
+    if (salesTotal >= 10000) return 'platinum';
+    if (salesTotal >= 1000) return 'gold';
+    if (salesTotal >= 100) return 'silver';
     return 'bronze';
   }
 
@@ -558,10 +558,17 @@ class DesignerService {
 
       // Send email notification
       try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token;
+        if (!accessToken) {
+          throw new Error('Missing auth token for notification');
+        }
+
         const emailResponse = await fetch('/api/send-email', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             template: 'designer-review-submitted',

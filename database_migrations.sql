@@ -2,32 +2,32 @@
 -- Run these migrations in your Supabase SQL editor
 
 -- 1. Add stock_quantity column to designer_products table
-ALTER TABLE designer_products 
+ALTER TABLE designer_products
 ADD COLUMN IF NOT EXISTS stock_quantity TEXT DEFAULT '0';
 
 -- 1.1. Add is_live column to designer_products table (for Go Live functionality)
-ALTER TABLE designer_products 
+ALTER TABLE designer_products
 ADD COLUMN IF NOT EXISTS is_live BOOLEAN DEFAULT FALSE;
 
 -- 1.2. Add is_active column to designer_products table (for active/inactive status)
-ALTER TABLE designer_products 
+ALTER TABLE designer_products
 ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
 
 -- 2. Remove affiliate_fee_percentage and add sales_total to designers table
-ALTER TABLE designers 
+ALTER TABLE designers
 DROP COLUMN IF EXISTS affiliate_fee_percentage;
 
-ALTER TABLE designers 
+ALTER TABLE designers
 ADD COLUMN IF NOT EXISTS sales_total DECIMAL(10,2) DEFAULT 0.00 NOT NULL;
 
 -- 3. Add Instagram verification columns to designers table
-ALTER TABLE designers 
+ALTER TABLE designers
 ADD COLUMN IF NOT EXISTS instagram_verified BOOLEAN DEFAULT FALSE;
 
-ALTER TABLE designers 
+ALTER TABLE designers
 ADD COLUMN IF NOT EXISTS instagram_user_id TEXT;
 
-ALTER TABLE designers 
+ALTER TABLE designers
 ADD COLUMN IF NOT EXISTS instagram_access_token TEXT;
 
 -- 4. Create orders table to track sales and calculate earnings
@@ -116,16 +116,19 @@ CREATE OR REPLACE FUNCTION get_baguri_fee_percentage(p_sales_total DECIMAL(10,2)
 RETURNS DECIMAL(5,2) AS $$
 BEGIN
     -- Tiered commission structure:
-    -- 50% until 1000 RON
-    -- 40% until 10000 RON  
-    -- 30% after 10000 RON
-    
-    IF p_sales_total < 1000 THEN
-        RETURN 50.00;
-    ELSIF p_sales_total < 10000 THEN
-        RETURN 40.00;
-    ELSE
+    -- Bronze: 30% platform fee from 0 RON
+    -- Silver: 25% platform fee from 100 RON
+    -- Gold: 20% platform fee from 1000 RON
+    -- Platinum: 17% platform fee from 10000 RON
+
+    IF p_sales_total < 100 THEN
         RETURN 30.00;
+    ELSIF p_sales_total < 1000 THEN
+        RETURN 25.00;
+    ELSIF p_sales_total < 10000 THEN
+        RETURN 20.00;
+    ELSE
+        RETURN 17.00;
     END IF;
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
@@ -139,11 +142,20 @@ END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
 -- 10. Create indexes for better performance
+CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_stripe_checkout_session_unique
+ON orders(stripe_checkout_session_id)
+WHERE stripe_checkout_session_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_orders_stripe_payment_intent ON orders(stripe_payment_intent_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_order_items_order_designer_product_unique
+ON order_items(order_id, designer_id, product_id)
+WHERE product_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_designer_id ON order_items(designer_id);
 CREATE INDEX IF NOT EXISTS idx_designer_wallets_designer_id ON designer_wallets(designer_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_wallet_transactions_order_item_sale_unique
+ON wallet_transactions(order_item_id)
+WHERE order_item_id IS NOT NULL AND type = 'sale';
 CREATE INDEX IF NOT EXISTS idx_wallet_transactions_wallet_id ON wallet_transactions(wallet_id);
 CREATE INDEX IF NOT EXISTS idx_wallet_transactions_type ON wallet_transactions(type);
 CREATE INDEX IF NOT EXISTS idx_wallet_transactions_status ON wallet_transactions(status);
@@ -151,12 +163,139 @@ CREATE INDEX IF NOT EXISTS idx_wallet_transactions_order_id ON wallet_transactio
 CREATE INDEX IF NOT EXISTS idx_designers_sales_total ON designers(sales_total);
 
 -- 11. Create RLS (Row Level Security) policies
+ALTER TABLE designers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE designer_auth ENABLE ROW LEVEL SECURITY;
+ALTER TABLE designer_products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE designer_wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wallet_transactions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public can view approved designers" ON designers;
+CREATE POLICY "Public can view approved designers" ON designers
+    FOR SELECT USING (
+        status = 'approved'
+        OR EXISTS (
+            SELECT 1 FROM designer_auth da
+            WHERE da.designer_id = designers.id
+              AND da.user_id = auth.uid()
+        )
+        OR EXISTS (
+            SELECT 1 FROM designer_auth da
+            WHERE da.user_id = auth.uid() AND da.role = 'admin'
+        )
+    );
+
+DROP POLICY IF EXISTS "Authenticated users can create draft designer profiles" ON designers;
+CREATE POLICY "Authenticated users can create draft designer profiles" ON designers
+    FOR INSERT WITH CHECK (
+        auth.uid() IS NOT NULL
+        AND status = 'draft'
+        AND email = auth.email()
+    );
+
+DROP POLICY IF EXISTS "Designers can update their own profiles" ON designers;
+CREATE POLICY "Designers can update their own profiles" ON designers
+    FOR UPDATE USING (
+        EXISTS (
+            SELECT 1 FROM designer_auth da
+            WHERE da.designer_id = designers.id
+              AND da.user_id = auth.uid()
+        )
+    ) WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM designer_auth da
+            WHERE da.designer_id = designers.id
+              AND da.user_id = auth.uid()
+        )
+    );
+
+DROP POLICY IF EXISTS "Designers can delete their own draft profiles" ON designers;
+CREATE POLICY "Designers can delete their own draft profiles" ON designers
+    FOR DELETE USING (
+        status = 'draft'
+        AND EXISTS (
+            SELECT 1 FROM designer_auth da
+            WHERE da.designer_id = designers.id
+              AND da.user_id = auth.uid()
+        )
+    );
+
+DROP POLICY IF EXISTS "Users can view their own designer auth" ON designer_auth;
+CREATE POLICY "Users can view their own designer auth" ON designer_auth
+    FOR SELECT USING (
+        user_id = auth.uid()
+    );
+
+DROP POLICY IF EXISTS "Users can create their own designer auth" ON designer_auth;
+CREATE POLICY "Users can create their own designer auth" ON designer_auth
+    FOR INSERT WITH CHECK (
+        user_id = auth.uid()
+        AND role = 'designer'
+        AND EXISTS (
+            SELECT 1 FROM designers d
+            WHERE d.id = designer_auth.designer_id
+              AND d.email = auth.email()
+        )
+    );
+
+DROP POLICY IF EXISTS "Public can view live products" ON designer_products;
+CREATE POLICY "Public can view live products" ON designer_products
+    FOR SELECT USING (
+        (
+            is_active = TRUE
+            AND is_live = TRUE
+            AND EXISTS (
+                SELECT 1 FROM designers d
+                WHERE d.id = designer_products.designer_id
+                  AND d.status = 'approved'
+            )
+        )
+        OR EXISTS (
+            SELECT 1 FROM designer_auth da
+            WHERE da.designer_id = designer_products.designer_id
+              AND da.user_id = auth.uid()
+        )
+    );
+
+DROP POLICY IF EXISTS "Designers can insert their own products" ON designer_products;
+CREATE POLICY "Designers can insert their own products" ON designer_products
+    FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM designer_auth da
+            WHERE da.designer_id = designer_products.designer_id
+              AND da.user_id = auth.uid()
+        )
+    );
+
+DROP POLICY IF EXISTS "Designers can update their own products" ON designer_products;
+CREATE POLICY "Designers can update their own products" ON designer_products
+    FOR UPDATE USING (
+        EXISTS (
+            SELECT 1 FROM designer_auth da
+            WHERE da.designer_id = designer_products.designer_id
+              AND da.user_id = auth.uid()
+        )
+    ) WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM designer_auth da
+            WHERE da.designer_id = designer_products.designer_id
+              AND da.user_id = auth.uid()
+        )
+    );
+
+DROP POLICY IF EXISTS "Designers can delete their own products" ON designer_products;
+CREATE POLICY "Designers can delete their own products" ON designer_products
+    FOR DELETE USING (
+        EXISTS (
+            SELECT 1 FROM designer_auth da
+            WHERE da.designer_id = designer_products.designer_id
+              AND da.user_id = auth.uid()
+        )
+    );
+
 -- Policy for orders: only admins can see all orders
+DROP POLICY IF EXISTS "Admins can view all orders" ON orders;
 CREATE POLICY "Admins can view all orders" ON orders
     FOR SELECT USING (
         EXISTS (
@@ -166,6 +305,7 @@ CREATE POLICY "Admins can view all orders" ON orders
     );
 
 -- Policy for order_items: designers can see their own order items
+DROP POLICY IF EXISTS "Designers can view their own order items" ON order_items;
 CREATE POLICY "Designers can view their own order items" ON order_items
     FOR SELECT USING (
         designer_id IN (
@@ -176,6 +316,7 @@ CREATE POLICY "Designers can view their own order items" ON order_items
     );
 
 -- Policy for designer_wallets: designers can only see their own wallet
+DROP POLICY IF EXISTS "Designers can view their own wallet" ON designer_wallets;
 CREATE POLICY "Designers can view their own wallet" ON designer_wallets
     FOR SELECT USING (
         designer_id IN (
@@ -186,6 +327,7 @@ CREATE POLICY "Designers can view their own wallet" ON designer_wallets
     );
 
 -- Policy for wallet_transactions: designers can only see their own transactions
+DROP POLICY IF EXISTS "Designers can view their own transactions" ON wallet_transactions;
 CREATE POLICY "Designers can view their own transactions" ON wallet_transactions
     FOR SELECT USING (
         wallet_id IN (
@@ -217,18 +359,18 @@ BEGIN
     END IF;
 
     -- Update designer's sales total
-    UPDATE designers 
+    UPDATE designers
     SET sales_total = COALESCE(sales_total, 0) + p_sales_amount,
         updated_at = NOW()
     WHERE id = p_designer_id;
-    
+
     -- Update designer's wallet balance
-    UPDATE designer_wallets 
+    UPDATE designer_wallets
     SET balance = COALESCE(balance, 0) + p_earnings_amount,
         total_earnings = COALESCE(total_earnings, 0) + p_earnings_amount,
         updated_at = NOW()
     WHERE designer_id = p_designer_id;
-    
+
     -- Create wallet transaction record
     INSERT INTO wallet_transactions (
         wallet_id,
@@ -247,9 +389,9 @@ BEGIN
         'Commission from product sale',
         'completed'
     );
-    
+
     -- Log the transaction
-    RAISE NOTICE 'Processed earnings for designer %: % RON from order %', 
+    RAISE NOTICE 'Processed earnings for designer %: % RON from order %',
         p_designer_id, p_earnings_amount, p_order_id;
 END;
 $$ LANGUAGE plpgsql;
@@ -265,44 +407,136 @@ DECLARE
     v_wallet_id UUID;
 BEGIN
     -- Get or create wallet
-    SELECT id INTO v_wallet_id 
-    FROM designer_wallets 
+    SELECT id INTO v_wallet_id
+    FROM designer_wallets
     WHERE designer_id = p_designer_id;
-    
+
     IF v_wallet_id IS NULL THEN
         INSERT INTO designer_wallets (designer_id, balance, total_earnings, total_withdrawn, pending_balance)
         VALUES (p_designer_id, 0, 0, 0, 0)
         RETURNING id INTO v_wallet_id;
     END IF;
-    
+
     -- Add earnings to wallet
-    UPDATE designer_wallets 
-    SET 
+    UPDATE designer_wallets
+    SET
         balance = balance + p_amount,
         total_earnings = total_earnings + p_amount,
         updated_at = NOW()
     WHERE id = v_wallet_id;
-    
+
     -- Create transaction record
     INSERT INTO wallet_transactions (
-        wallet_id, 
+        wallet_id,
         designer_id,
-        type, 
-        amount, 
-        status, 
-        description, 
+        type,
+        amount,
+        status,
+        description,
         order_id
     ) VALUES (
-        v_wallet_id, 
+        v_wallet_id,
         p_designer_id,
-        'sale', 
-        p_amount, 
-        'completed', 
-        p_description, 
+        'sale',
+        p_amount,
+        'completed',
+        p_description,
         p_order_id
     );
-    
+
     RETURN TRUE;
+EXCEPTION
+    WHEN OTHERS THEN
+        RETURN FALSE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 13.1. Create stored procedure for adding earnings once per order item
+CREATE OR REPLACE FUNCTION add_designer_earnings_for_order_item(
+    p_designer_id UUID,
+    p_amount DECIMAL(10,2),
+    p_order_id UUID,
+    p_order_item_id UUID,
+    p_description TEXT
+) RETURNS BOOLEAN AS $$
+DECLARE
+    v_wallet_id UUID;
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM wallet_transactions
+        WHERE order_item_id = p_order_item_id
+          AND type = 'sale'
+          AND status = 'completed'
+    ) THEN
+        RETURN TRUE;
+    END IF;
+
+    SELECT id INTO v_wallet_id
+    FROM designer_wallets
+    WHERE designer_id = p_designer_id;
+
+    IF v_wallet_id IS NULL THEN
+        INSERT INTO designer_wallets (designer_id, balance, total_earnings, total_withdrawn, pending_balance)
+        VALUES (p_designer_id, 0, 0, 0, 0)
+        RETURNING id INTO v_wallet_id;
+    END IF;
+
+    UPDATE designer_wallets
+    SET
+        balance = balance + p_amount,
+        total_earnings = total_earnings + p_amount,
+        updated_at = NOW()
+    WHERE id = v_wallet_id;
+
+    INSERT INTO wallet_transactions (
+        wallet_id,
+        designer_id,
+        type,
+        amount,
+        status,
+        description,
+        order_id,
+        order_item_id,
+        metadata
+    ) VALUES (
+        v_wallet_id,
+        p_designer_id,
+        'sale',
+        p_amount,
+        'completed',
+        p_description,
+        p_order_id,
+        p_order_item_id,
+        jsonb_build_object(
+            'order_id', p_order_id,
+            'order_item_id', p_order_item_id,
+            'processed_via', 'stored_procedure',
+            'processed_at', NOW()
+        )
+    );
+
+    RETURN TRUE;
+EXCEPTION
+    WHEN unique_violation THEN
+        RETURN TRUE;
+    WHEN OTHERS THEN
+        RETURN FALSE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 14. Create stored procedure for processing withdrawals
+CREATE OR REPLACE FUNCTION increment_designer_sales(
+    p_designer_id UUID,
+    p_amount DECIMAL(10,2)
+) RETURNS BOOLEAN AS $$
+BEGIN
+    UPDATE designers
+    SET sales_total = COALESCE(sales_total, 0) + p_amount,
+        updated_at = NOW()
+    WHERE id = p_designer_id;
+
+    RETURN FOUND;
 EXCEPTION
     WHEN OTHERS THEN
         RETURN FALSE;
@@ -321,37 +555,37 @@ DECLARE
 BEGIN
     -- Get wallet and current balance
     SELECT id, balance INTO v_wallet_id, v_current_balance
-    FROM designer_wallets 
+    FROM designer_wallets
     WHERE designer_id = p_designer_id;
-    
+
     IF v_wallet_id IS NULL THEN
         RAISE EXCEPTION 'Wallet not found for designer %', p_designer_id;
     END IF;
-    
+
     IF v_current_balance < p_amount THEN
         RAISE EXCEPTION 'Insufficient balance. Current: %, Requested: %', v_current_balance, p_amount;
     END IF;
-    
+
     -- Deduct from wallet
-    UPDATE designer_wallets 
-    SET 
+    UPDATE designer_wallets
+    SET
         balance = balance - p_amount,
         total_withdrawn = total_withdrawn + p_amount,
         updated_at = NOW()
     WHERE id = v_wallet_id;
-    
+
     -- Update transaction status
-    UPDATE wallet_transactions 
-    SET 
+    UPDATE wallet_transactions
+    SET
         status = 'completed',
         stripe_transfer_id = p_stripe_transfer_id,
         updated_at = NOW()
-    WHERE wallet_id = v_wallet_id 
-        AND type = 'withdrawal' 
-        AND amount = -p_amount 
+    WHERE wallet_id = v_wallet_id
+        AND type = 'withdrawal'
+        AND amount = -p_amount
         AND status = 'pending'
         AND stripe_transfer_id IS NULL;
-    
+
     RETURN TRUE;
 EXCEPTION
     WHEN OTHERS THEN
@@ -368,37 +602,39 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER update_orders_updated_at 
-    BEFORE UPDATE ON orders 
+CREATE TRIGGER update_orders_updated_at
+    BEFORE UPDATE ON orders
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_designer_wallets_updated_at 
-    BEFORE UPDATE ON designer_wallets 
+CREATE TRIGGER update_designer_wallets_updated_at
+    BEFORE UPDATE ON designer_wallets
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_wallet_transactions_updated_at 
-    BEFORE UPDATE ON wallet_transactions 
+CREATE TRIGGER update_wallet_transactions_updated_at
+    BEFORE UPDATE ON wallet_transactions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- 16. Initialize existing designers with default sales total (0)
-UPDATE designers 
-SET sales_total = 0.00 
+UPDATE designers
+SET sales_total = 0.00
 WHERE sales_total IS NULL;
 
 -- 17. Create view for designer commission tiers (helpful for analytics)
 CREATE OR REPLACE VIEW designer_commission_tiers AS
-SELECT 
+SELECT
     d.id,
     d.brand_name,
     d.sales_total,
     get_baguri_fee_percentage(d.sales_total) as current_baguri_fee_percentage,
     get_designer_earnings_percentage(d.sales_total) as current_designer_percentage,
-    CASE 
-        WHEN d.sales_total < 1000 THEN 'Bronze (50% fee)'
-        WHEN d.sales_total < 10000 THEN 'Silver (40% fee)'
-        ELSE 'Gold (30% fee)'
+    CASE
+        WHEN d.sales_total < 100 THEN 'Bronze (30% fee)'
+        WHEN d.sales_total < 1000 THEN 'Silver (25% fee)'
+        WHEN d.sales_total < 10000 THEN 'Gold (20% fee)'
+        ELSE 'Platinum (17% fee)'
     END as tier_name,
-    CASE 
+    CASE
+        WHEN d.sales_total < 100 THEN 100 - d.sales_total
         WHEN d.sales_total < 1000 THEN 1000 - d.sales_total
         WHEN d.sales_total < 10000 THEN 10000 - d.sales_total
         ELSE 0
@@ -412,25 +648,25 @@ WHERE d.status = 'approved';
 /*
 -- Add sample earnings for existing designers with different tiers
 INSERT INTO designer_wallets (designer_id, balance, total_earnings, total_withdrawn, pending_balance)
-SELECT 
+SELECT
     id as designer_id,
-    CASE 
+    CASE
         WHEN sales_total < 1000 THEN 150.00
         WHEN sales_total < 10000 THEN 600.00
         ELSE 1400.00
     END as balance,
-    CASE 
+    CASE
         WHEN sales_total < 1000 THEN 300.00
         WHEN sales_total < 10000 THEN 1200.00
         ELSE 2800.00
     END as total_earnings,
-    CASE 
+    CASE
         WHEN sales_total < 1000 THEN 150.00
         WHEN sales_total < 10000 THEN 600.00
         ELSE 1400.00
     END as total_withdrawn,
     0.00 as pending_balance
-FROM designers 
+FROM designers
 WHERE status = 'approved'
 ON CONFLICT (designer_id) DO NOTHING;
 
@@ -465,4 +701,4 @@ CREATE TABLE IF NOT EXISTS influencer_item_requests (
 -- Indexes for fast lookup
 CREATE INDEX IF NOT EXISTS idx_influencer_item_requests_influencer ON influencer_item_requests(influencer_open_id);
 CREATE INDEX IF NOT EXISTS idx_influencer_item_requests_designer ON influencer_item_requests(designer_id);
-CREATE INDEX IF NOT EXISTS idx_influencer_item_requests_product ON influencer_item_requests(product_id); 
+CREATE INDEX IF NOT EXISTS idx_influencer_item_requests_product ON influencer_item_requests(product_id);

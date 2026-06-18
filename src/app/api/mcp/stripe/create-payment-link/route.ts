@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { requireDesignerUser } from '@/lib/apiAuth';
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 let stripe: Stripe | null = null;
@@ -11,12 +12,15 @@ if (stripeSecretKey) {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireDesignerUser(request);
+    if (auth instanceof NextResponse) return auth;
+
     const body = await request.json();
     const { price, quantity, referralCode } = body;
 
     if (!price || !quantity) {
-      return NextResponse.json({ 
-        error: 'Price ID and quantity are required' 
+      return NextResponse.json({
+        error: 'Price ID and quantity are required'
       }, { status: 400 });
     }
 
@@ -38,13 +42,14 @@ export async function POST(request: NextRequest) {
       metadata: {
         created_via: 'baguri_automation',
         created_at: new Date().toISOString(),
+        designer_id: auth.designerId,
         ...(referralCode ? { referral_code: referralCode } : {})
       }
     });
 
     console.log('✅ Stripe payment link created:', paymentLink.url);
     return NextResponse.json(paymentLink);
-    
+
   } catch (error) {
     console.error('Error creating Stripe payment link:', error);
     return NextResponse.json(
@@ -52,4 +57,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

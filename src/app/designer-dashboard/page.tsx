@@ -97,10 +97,10 @@ function DesignerDashboardContent() {
     averageOrderValue: 0,
     currentTier: {
       name: 'Bronze',
-      baguriFeePct: 50,
-      designerEarningsPct: 50,
+      baguriFeePct: 30,
+      designerEarningsPct: 70,
       minSales: 0,
-      maxSales: 999.99
+      maxSales: 99.99
     },
     nextTier: null
   });

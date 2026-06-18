@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripeDataForProductEnhanced } from '@/lib/stripe-automation';
-import { STRIPE_PRODUCT_MAPPING } from '@/lib/stripe';
 
 export async function GET(
   request: NextRequest,
@@ -20,28 +19,6 @@ export async function GET(
       });
     }
 
-    // Check static mapping (only for numeric IDs)
-    const numericId = parseInt(productId);
-    if (!isNaN(numericId)) {
-      const staticMapping = STRIPE_PRODUCT_MAPPING[numericId as keyof typeof STRIPE_PRODUCT_MAPPING];
-      if (staticMapping) {
-        const paymentUrls: Record<number, string> = {
-          1: 'https://buy.stripe.com/test_4gM8wReahgGU6L5cHV8og00',
-          2: 'https://buy.stripe.com/test_8x2aEZ4zH76k7P97nB8og01',
-          3: 'https://buy.stripe.com/test_5kQ6oJ7LT62gc5pfU78og02',
-          4: 'https://buy.stripe.com/test_bJe5kF7LT62gfhB5ft8og03',
-          5: 'https://buy.stripe.com/test_4gM8wReahgGU6L5cHV8og00',
-        };
-
-        return NextResponse.json({
-          productId: staticMapping.productId,
-          priceId: staticMapping.priceId,
-          paymentUrl: paymentUrls[numericId] || null,
-          source: 'static'
-        });
-      }
-    }
-
     // No Stripe integration found
     return NextResponse.json({
       productId: null,
@@ -57,4 +34,4 @@ export async function GET(
       { status: 500 }
     );
   }
-} 
+}

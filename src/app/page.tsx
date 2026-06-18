@@ -159,8 +159,8 @@ export default function Home() {
           </FadeInUp>
           <FadeInUp delay={0.4}>
             <p className="mb-6 md:mb-8 text-sm md:text-lg text-neutral-400 px-2">
-              Join the waitlist for an exclusive
-              <span className="inline-block ml-2 px-3 py-1 rounded-full bg-amber-200 text-zinc-900 font-semibold text-xs md:text-sm align-middle shadow-sm">lifetime discount</span>
+              Shop limited drops from independent Romanian designers
+              <span className="inline-block ml-2 px-3 py-1 rounded-full bg-amber-200 text-zinc-900 font-semibold text-xs md:text-sm align-middle shadow-sm">now live</span>
             </p>
           </FadeInUp>
         </section>
@@ -194,45 +194,38 @@ export default function Home() {
         {/* Closing CTA */}
         <section className="flex flex-col items-center text-center px-4 mb-16 md:mb-20 gap-y-4">
           <FadeInUp>
-            <h3 className="text-base md:text-2xl font-medium mb-2 md:mb-3 text-neutral-200">Be the first to experience the future of Romanian fashion.</h3>
+            <h3 className="text-base md:text-2xl font-medium mb-2 md:mb-3 text-neutral-200">Discover the future of Romanian fashion.</h3>
           </FadeInUp>
-          {/* Mobile-only Join Waitlist button or success message under CTA */}
-          <FadeInUp delay={0.2} className="w-full flex justify-center mb-2 md:hidden">
-            {waitlistJoined ? (
-              <div className="text-center text-green-400 font-semibold">
-                Awesome!<br />We will reach out at launch :)
-              </div>
-            ) : (
-              <AnimatedButton
-                className="inline-block w-full max-w-xs bg-neutral-100 text-zinc-950 font-medium rounded-full px-8 py-3 text-base shadow-sm hover:bg-neutral-200 transition"
-                onClick={() => setModalOpen(true)}
+          <FadeInUp delay={0.2} className="w-full flex justify-center mb-2">
+            <div className="flex w-full max-w-xs flex-col gap-3 sm:max-w-none sm:flex-row sm:justify-center">
+              <Link
+                href="/shop"
+                className="inline-block bg-neutral-100 text-zinc-950 font-medium rounded-full px-8 py-3 text-base md:text-lg shadow-sm hover:bg-neutral-200 transition"
               >
-                Join Waitlist
-              </AnimatedButton>
-            )}
-          </FadeInUp>
-          <FadeInUp delay={0.2} className="w-full justify-center hidden md:flex">
-            {waitlistJoined ? (
-              <div className="text-center text-green-400 font-semibold w-full max-w-xs mx-auto">
-                Awesome!<br />We will reach out at launch :)
-              </div>
-            ) : (
-              <AnimatedButton
-                className="inline-block w-full max-w-xs bg-neutral-100 text-zinc-950 font-medium rounded-full px-8 py-3 text-base md:text-lg shadow-sm hover:bg-neutral-200 transition"
-                onClick={() => setModalOpen(true)}
-              >
-                Join Waitlist
-              </AnimatedButton>
-            )}
+                Shop Now
+              </Link>
+              {waitlistJoined ? (
+                <div className="text-center text-green-400 font-semibold">
+                  Updates enabled
+                </div>
+              ) : (
+                <AnimatedButton
+                  className="inline-block border border-zinc-700 text-neutral-100 font-medium rounded-full px-8 py-3 text-base md:text-lg hover:border-zinc-500 transition"
+                  onClick={() => setModalOpen(true)}
+                >
+                  Get Updates
+                </AnimatedButton>
+              )}
+            </div>
           </FadeInUp>
           
-          {/* Early Access Link */}
+          {/* Browse Link */}
           <div className="mt-6 flex justify-center">
             <Link
-              href="/main"
+              href="/designers"
               className="inline-block bg-amber-200/10 border border-amber-200/30 text-amber-200 font-medium rounded-full px-6 py-2 text-sm hover:bg-amber-200/20 hover:border-amber-200/50 transition"
             >
-              Try Early Access →
+              Browse Designers →
             </Link>
           </div>
         </section>

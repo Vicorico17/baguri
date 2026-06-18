@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ADMIN_SESSION_COOKIE } from '@/lib/adminAuth';
+import {
+  ADMIN_SESSION_COOKIE,
+  createAdminSessionValue,
+  getAdminSessionMaxAgeSeconds,
+} from '@/lib/adminAuth';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   const configuredPassword = process.env.ADMIN_PASSWORD;
@@ -17,13 +23,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
   }
 
+  const sessionValue = await createAdminSessionValue();
+  if (!sessionValue) {
+    return NextResponse.json(
+      { error: 'Admin session is not configured' },
+      { status: 500 }
+    );
+  }
+
   const response = NextResponse.json({ ok: true });
-  response.cookies.set(ADMIN_SESSION_COOKIE, 'authenticated', {
+  response.cookies.set(ADMIN_SESSION_COOKIE, sessionValue, {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
-    maxAge: 60 * 60 * 8,
+    maxAge: getAdminSessionMaxAgeSeconds(),
   });
 
   return response;
@@ -41,4 +55,3 @@ export async function DELETE() {
 
   return response;
 }
-

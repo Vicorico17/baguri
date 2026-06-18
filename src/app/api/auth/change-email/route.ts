@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.substring(7);
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    
+
     if (userError || !user) {
       return NextResponse.json(
         { error: 'Invalid or expired token' },
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     if (updateError) {
       console.error('Error updating email:', updateError);
-      
+
       // Handle specific error cases
       if (updateError.message.includes('already registered')) {
         return NextResponse.json(
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      
+
       return NextResponse.json(
         { error: updateError.message || 'Failed to update email' },
         { status: 500 }
@@ -96,22 +96,30 @@ export async function POST(request: NextRequest) {
 
     // Update email in designer profile if exists
     try {
-      const { error: profileUpdateError } = await supabase
-        .from('designers')
-        .update({ email: newEmail })
-        .eq('id', user.id);
+      const { data: designerAuth, error: designerAuthError } = await supabase
+        .from('designer_auth')
+        .select('designer_id')
+        .eq('user_id', user.id)
+        .single();
 
-      if (profileUpdateError) {
-        console.warn('Failed to update email in designer profile:', profileUpdateError);
-        // Don't fail the request since the auth email was updated successfully
+      if (!designerAuthError && designerAuth?.designer_id) {
+        const { error: profileUpdateError } = await supabase
+          .from('designers')
+          .update({ email: newEmail })
+          .eq('id', designerAuth.designer_id);
+
+        if (profileUpdateError) {
+          console.warn('Failed to update email in designer profile:', profileUpdateError);
+          // Don't fail the request since the auth email was updated successfully
+        }
       }
     } catch (profileError) {
       console.warn('Error updating designer profile email:', profileError);
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      message: 'Email updated successfully. Please check your new email for verification.' 
+      message: 'Email updated successfully. Please check your new email for verification.'
     });
 
   } catch (error) {
@@ -121,4 +129,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

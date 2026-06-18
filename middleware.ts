@@ -1,20 +1,42 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { ADMIN_SESSION_COOKIE } from '@/lib/adminAuth'
+import { hasAdminSession } from '@/lib/adminAuth'
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
+  const isProduction = process.env.NODE_ENV === 'production'
+
+  const productionBlockedPrefixes = [
+    '/api/test',
+    '/api/test-',
+    '/api/checkout',
+    '/api/products/create',
+    '/api/stripe-mcp',
+    '/api/mcp-stripe',
+    '/api/mcp/stripe/create-payment-link-internal',
+    '/demo',
+    '/animation-demo',
+    '/checkout/demo',
+    '/test-tiktok-api',
+    '/file-upload-test',
+    '/supabase-test',
+    '/order-management',
+    '/designer-subscription',
+  ]
+
+  if (isProduction && productionBlockedPrefixes.some(prefix => path === prefix || path.startsWith(`${prefix}/`))) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
 
   if (path.startsWith('/admin') && path !== '/admin/login') {
-    const hasAdminSession = request.cookies.get(ADMIN_SESSION_COOKIE)?.value === 'authenticated'
-    if (!hasAdminSession) {
+    if (!(await hasAdminSession(request))) {
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
   }
 
   if (path.startsWith('/api/test') || path.startsWith('/api/test-')) {
     const debugToken = process.env.DEBUG_API_TOKEN
-    const isAllowedDevRequest = process.env.NODE_ENV !== 'production' && !debugToken
+    const isAllowedDevRequest = !isProduction && !debugToken
     const providedToken = request.headers.get('x-debug-token')
 
     if (!isAllowedDevRequest && (!debugToken || providedToken !== debugToken)) {

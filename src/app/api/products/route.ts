@@ -1,49 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { requireDesignerUser } from '@/lib/apiAuth';
+import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 // Force dynamic rendering for this route since it uses request.url
 export const dynamic = 'force-dynamic';
 
-// Create Supabase client with fallback for build time
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-let supabase: any = null;
-
-if (supabaseUrl && supabaseServiceKey) {
-  supabase = createClient(supabaseUrl, supabaseServiceKey);
-}
-
 export async function GET(request: NextRequest) {
   try {
-    // Check if Supabase is properly configured
     if (!supabase) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
-
-    // Get designer profile first
-    const { data: designerProfile, error: designerError } = await supabase
-      .from('designer_profiles')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
-
-    if (designerError || !designerProfile) {
-      return NextResponse.json({ error: 'Designer profile not found' }, { status: 404 });
-    }
+    const auth = await requireDesignerUser(request);
+    if (auth instanceof NextResponse) return auth;
 
     // Get products for this designer
     const { data: products, error: productsError } = await supabase
       .from('designer_products')
       .select('*')
-      .eq('designer_id', designerProfile.id)
+      .eq('designer_id', auth.designerId)
       .order('created_at', { ascending: false });
 
     if (productsError) {
@@ -60,34 +35,29 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if Supabase is properly configured
     if (!supabase) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const body = await request.json();
-    const { userId, product } = body;
+    const auth = await requireDesignerUser(request);
+    if (auth instanceof NextResponse) return auth;
 
-    if (!userId || !product) {
-      return NextResponse.json({ error: 'User ID and product data are required' }, { status: 400 });
+    const body = await request.json();
+    const { product } = body;
+
+    if (!product) {
+      return NextResponse.json({ error: 'Product data is required' }, { status: 400 });
     }
 
-    // Get designer profile first
-    const { data: designerProfile, error: designerError } = await supabase
-      .from('designer_profiles')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
-
-    if (designerError || !designerProfile) {
-      return NextResponse.json({ error: 'Designer profile not found' }, { status: 404 });
+    if (!product.name || !product.price || Number(product.price) <= 0) {
+      return NextResponse.json({ error: 'Product name and positive price are required' }, { status: 400 });
     }
 
     // Create new product
     const { data: newProduct, error: createError } = await supabase
       .from('designer_products')
       .insert({
-        designer_id: designerProfile.id,
+        designer_id: auth.designerId,
         name: product.name,
         description: product.description,
         price: product.price.toString(),
@@ -96,7 +66,8 @@ export async function POST(request: NextRequest) {
         colors: product.colors || [],
         stock_status: product.stockStatus || 'in_stock',
         stock_quantity: product.stockQuantity?.toString() || '0',
-        is_active: true
+        is_active: true,
+        is_live: false
       })
       .select()
       .single();
@@ -115,27 +86,22 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    // Check if Supabase is properly configured
     if (!supabase) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const body = await request.json();
-    const { userId, productId, product } = body;
+    const auth = await requireDesignerUser(request);
+    if (auth instanceof NextResponse) return auth;
 
-    if (!userId || !productId || !product) {
-      return NextResponse.json({ error: 'User ID, product ID, and product data are required' }, { status: 400 });
+    const body = await request.json();
+    const { productId, product } = body;
+
+    if (!productId || !product) {
+      return NextResponse.json({ error: 'Product ID and product data are required' }, { status: 400 });
     }
 
-    // Get designer profile first
-    const { data: designerProfile, error: designerError } = await supabase
-      .from('designer_profiles')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
-
-    if (designerError || !designerProfile) {
-      return NextResponse.json({ error: 'Designer profile not found' }, { status: 404 });
+    if (!product.name || !product.price || Number(product.price) <= 0) {
+      return NextResponse.json({ error: 'Product name and positive price are required' }, { status: 400 });
     }
 
     // Update product (only if it belongs to this designer)
@@ -153,7 +119,7 @@ export async function PUT(request: NextRequest) {
         updated_at: new Date().toISOString()
       })
       .eq('id', productId)
-      .eq('designer_id', designerProfile.id)
+      .eq('designer_id', auth.designerId)
       .select()
       .single();
 
@@ -171,28 +137,18 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    // Check if Supabase is properly configured
     if (!supabase) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
+    const auth = await requireDesignerUser(request);
+    if (auth instanceof NextResponse) return auth;
+
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
     const productId = searchParams.get('productId');
 
-    if (!userId || !productId) {
-      return NextResponse.json({ error: 'User ID and product ID are required' }, { status: 400 });
-    }
-
-    // Get designer profile first
-    const { data: designerProfile, error: designerError } = await supabase
-      .from('designer_profiles')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
-
-    if (designerError || !designerProfile) {
-      return NextResponse.json({ error: 'Designer profile not found' }, { status: 404 });
+    if (!productId) {
+      return NextResponse.json({ error: 'Product ID is required' }, { status: 400 });
     }
 
     // Delete product (only if it belongs to this designer)
@@ -200,7 +156,7 @@ export async function DELETE(request: NextRequest) {
       .from('designer_products')
       .delete()
       .eq('id', productId)
-      .eq('designer_id', designerProfile.id);
+      .eq('designer_id', auth.designerId);
 
     if (deleteError) {
       console.error('Error deleting product:', deleteError);
@@ -212,4 +168,4 @@ export async function DELETE(request: NextRequest) {
     console.error('Error in DELETE /api/products:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-} 
+}

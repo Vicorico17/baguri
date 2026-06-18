@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdminSession } from '@/lib/adminAuth';
+import { requireSupabaseUser } from '@/lib/apiAuth';
 import { emailService, type EmailTemplate } from '@/lib/emailService';
 
 export async function POST(req: NextRequest) {
@@ -31,8 +33,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (template === 'designer-review-submitted') {
+      const auth = await requireSupabaseUser(req);
+      if (auth instanceof NextResponse) return auth;
+
+      if (!auth.user.email || auth.user.email.toLowerCase() !== email.toLowerCase()) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    } else {
+      const unauthorized = await requireAdminSession(req);
+      if (unauthorized) return unauthorized;
+    }
+
     let result;
-    
+
     // Send appropriate email based on template
     switch (template) {
       case 'designer-review-submitted':
@@ -67,4 +81,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

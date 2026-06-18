@@ -7,8 +7,7 @@ import Link from 'next/link';
 import { ArrowLeft, Check, X, Eye, Instagram, Globe, MapPin, Calendar, LogOut, Loader2, RefreshCw, DollarSign, ChevronDown } from 'lucide-react';
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { TierBadge } from '@/lib/tierUtils';
-import { supabase } from '@/lib/supabase';
-import { designerService, CommissionTier } from '@/lib/designerService'; // Import designerService and CommissionTier
+import { designerService } from '@/lib/designerService';
 
 // Types for designer applications
 interface DesignerApplication {
@@ -39,10 +38,10 @@ function PlaceholderImage({ type, className, alt }: { type: 'product' | 'logo'; 
     product: ['bg-gradient-to-br from-amber-100 to-amber-200', 'bg-gradient-to-br from-zinc-100 to-zinc-300', 'bg-gradient-to-br from-emerald-100 to-emerald-200', 'bg-gradient-to-br from-rose-100 to-rose-200'],
     logo: ['bg-amber-500', 'bg-emerald-500', 'bg-blue-500', 'bg-purple-500']
   };
-  
+
   const colorIndex = alt.length % colors[type].length;
   const bgColor = colors[type][colorIndex];
-  
+
   return (
     <div className={`${bgColor} flex items-center justify-center ${className}`}>
       <span className="text-zinc-600 text-xs font-bold opacity-50">
@@ -61,7 +60,7 @@ export default function AdminDashboard() {
   const [rejectionModal, setRejectionModal] = useState<{ designer: DesignerApplication; isOpen: boolean } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
-  
+
   // Analytics state
   const [analytics, setAnalytics] = useState({
     totalOrders: 0,
@@ -76,8 +75,6 @@ export default function AdminDashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    let subscription: ReturnType<typeof supabase.channel> | null = null;
-
     async function initializeAdmin() {
       const response = await fetch('/api/admin/session');
       const data = await response.json().catch(() => ({ authenticated: false }));
@@ -90,113 +87,38 @@ export default function AdminDashboard() {
       setIsAuthenticated(true);
       loadDesignerApplications();
       loadAnalytics();
-      
-      // Set up real-time subscription for designer changes
-      subscription = supabase
-        .channel('designer-changes')
-        .on('postgres_changes', 
-          { 
-            event: '*', 
-            schema: 'public', 
-            table: 'designers' 
-          }, 
-          (payload) => {
-            console.log('Designer data changed:', payload);
-            // Reload applications and analytics when any designer data changes
-            loadDesignerApplications();
-            loadAnalytics();
-          }
-        )
-        .subscribe();
     }
 
     initializeAdmin();
-
-    return () => {
-      if (subscription) {
-        subscription.unsubscribe();
-      }
-    };
   }, [router]);
 
   // Load analytics data
   const loadAnalytics = async () => {
     try {
       setAnalytics(prev => ({ ...prev, loading: true }));
-      
+
       console.log('📊 Loading analytics data...');
-      
-      // Get total orders and volume
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('orders')
-        .select('total_amount, status')
-        .eq('status', 'completed');
-      
-      if (ordersError) {
-        console.error('Error fetching orders:', ordersError);
+
+      const response = await fetch('/api/admin/dashboard');
+      const data = await response.json().catch(() => ({ error: 'Failed to load analytics' }));
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load analytics');
       }
-      
-      const totalOrders = ordersData?.length || 0;
-      const totalVolume = ordersData?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
-      
-      // Get total withdrawn from wallet transactions
-      const { data: withdrawalsData, error: withdrawalsError } = await supabase
-        .from('wallet_transactions')
-        .select('amount')
-        .eq('type', 'withdrawal')
-        .eq('status', 'completed');
-      
-      if (withdrawalsError) {
-        console.error('Error fetching withdrawals:', withdrawalsError);
-      }
-      
-      const totalWithdrawn = withdrawalsData?.reduce((sum, transaction) => sum + (transaction.amount || 0), 0) || 0;
-      
-      // Calculate total profit (volume - withdrawn)
-      const totalProfit = totalVolume - totalWithdrawn;
-      
-      // Get total designers
-      const { count: totalDesigners, error: designersError } = await supabase
-        .from('designers')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'approved');
-      
-      if (designersError) {
-        console.error('Error fetching designers count:', designersError);
-      }
-      
-      // Get total influencers
-      const { count: totalInfluencers, error: influencersError } = await supabase
-        .from('influencers')
-        .select('*', { count: 'exact', head: true });
-      
-      if (influencersError) {
-        console.error('Error fetching influencers count:', influencersError);
-      }
-      
-      // Get total products
-      const { count: totalProducts, error: productsError } = await supabase
-        .from('designer_products')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', true);
-      
-      if (productsError) {
-        console.error('Error fetching products count:', productsError);
-      }
-      
+
       setAnalytics({
-        totalOrders,
-        totalVolume,
-        totalWithdrawn,
-        totalProfit,
-        totalDesigners: totalDesigners || 0,
-        totalInfluencers: totalInfluencers || 0,
-        totalProducts: totalProducts || 0,
+        totalOrders: data.analytics.totalOrders,
+        totalVolume: data.analytics.totalVolume,
+        totalWithdrawn: data.analytics.totalWithdrawn,
+        totalProfit: data.analytics.totalProfit,
+        totalDesigners: data.analytics.totalDesigners,
+        totalInfluencers: data.analytics.totalInfluencers,
+        totalProducts: data.analytics.totalProducts,
         loading: false
       });
-      
+
       console.log('✅ Analytics loaded successfully');
-      
+
     } catch (error) {
       console.error('Error loading analytics:', error);
       setAnalytics(prev => ({ ...prev, loading: false }));
@@ -207,61 +129,32 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       console.log('🔍 Loading designer applications...');
-      
+
       // Create a timeout promise to prevent hanging
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error('Admin data loading timeout')), 15000); // 15 second timeout
       });
-      
-      // First, let's check what tables exist and have data
-      console.log('📊 Checking database tables...');
-      
-      // Check designer_auth table
-      const authCheckPromise = supabase
-        .from('designer_auth')
-        .select('*')
-        .limit(5);
-      
-      // Check designers table  
-      const designersCheckPromise = supabase
-        .from('designers')
-        .select('*')
-        .limit(5);
-      
-      const [authResult, designersResult] = await Promise.all([
-        authCheckPromise,
-        designersCheckPromise
-      ]);
-      
-      console.log('📋 Database check results:', {
-        designer_auth: { count: authResult.data?.length || 0, error: authResult.error?.message },
-        designers: { count: designersResult.data?.length || 0, error: designersResult.error?.message }
-      });
-      
-      // Now try to get the actual applications data
-      // Query designers table with proper filtering for applications
-      const queryPromise = supabase
-        .from('designers')
-        .select('*, sales_total, current_tier') // Select current_tier
-        .not('brand_name', 'is', null) // Only get designers with brand names (actual applications)
-        .order('created_at', { ascending: false });
-     
+
+      const queryPromise = fetch('/api/admin/dashboard')
+        .then(async response => {
+          const data = await response.json().catch(() => ({ error: 'Failed to load applications' }));
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to load applications');
+          }
+          return data;
+        });
+
       console.log('🔌 Executing applications query with timeout...');
-      
+
       // Race between the query and timeout
-      const { data: applications, error } = await Promise.race([queryPromise, timeoutPromise]);
-      
-      console.log('📊 Applications query result:', { 
-        hasData: !!applications, 
+      const data = await Promise.race([queryPromise, timeoutPromise]);
+      const applications = data.applications as DesignerApplication[];
+
+      console.log('📊 Applications query result:', {
+        hasData: !!applications,
         count: applications?.length || 0,
-        error: error?.message 
+        error: null
       });
-      
-      if (error) {
-        console.error('💥 Database error:', error);
-        setError(`Database error: ${error.message}`);
-        return;
-      }
 
       if (!applications) {
         console.log('❌ No applications data returned');
@@ -292,65 +185,37 @@ export default function AdminDashboard() {
     router.push('/admin/login');
   };
 
-  const sendEmailNotification = async (email: string, brandName: string, template: 'designer-approved' | 'designer-rejected', rejectionReason?: string) => {
-    try {
-      const response = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          template,
-          email,
-          brandName,
-          rejectionReason,
-        }),
-      });
-
-      if (!response.ok) {
-        console.error('Failed to send email notification');
-      } else {
-        console.log('Email notification sent successfully');
-      }
-    } catch (error) {
-      console.error('Error sending email notification:', error);
-    }
-  };
-
   const handleApprove = async (designerId: string) => {
     const designer = designers.find(d => d.id === designerId);
     if (!designer) return;
 
     setActionLoading(designerId);
     try {
-      const { error } = await supabase
-        .from('designers')
-        .update({ 
-          status: 'approved',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', designerId);
+      const response = await fetch('/api/admin/designer-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ designerId, status: 'approved' }),
+      });
 
-      if (error) {
-        console.error('Error approving designer:', error);
-        alert('Error approving designer. Please try again.');
+      const result = await response.json().catch(() => ({ error: 'Failed to approve designer' }));
+
+      if (!response.ok) {
+        console.error('Error approving designer:', result.error);
+        alert(result.error || 'Error approving designer. Please try again.');
         return;
       }
 
-      // Send approval email
-      await sendEmailNotification(designer.email, designer.brand_name, 'designer-approved');
-
       // Update local state
-      setDesigners(prev => 
-        prev.map(d => 
-          d.id === designerId 
+      setDesigners(prev =>
+        prev.map(d =>
+          d.id === designerId
             ? { ...d, status: 'approved' as const, updated_at: new Date().toISOString() }
             : d
         )
       );
 
       console.log(`Designer ${designerId} approved`);
-      alert(`${designer.brand_name} has been approved! An email notification has been sent.`);
+      alert(`${designer.brand_name} has been approved!${result.emailSent ? ' An email notification has been sent.' : ''}`);
     } catch (error) {
       console.error('Error approving designer:', error);
       alert('Error approving designer. Please try again.');
@@ -368,39 +233,36 @@ export default function AdminDashboard() {
       setRejectionModal({ designer, isOpen: true });
       return;
     }
-    
+
     setRejecting(true);
     setActionLoading(designerId);
     try {
-      const { error } = await supabase
-        .from('designers')
-        .update({ 
-          status: 'rejected',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', designerId);
+      const response = await fetch('/api/admin/designer-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ designerId, status: 'rejected', rejectionReason: rejectionNotes }),
+      });
 
-      if (error) {
-        console.error('Error rejecting designer:', error);
-        alert('Error rejecting designer. Please try again.');
+      const result = await response.json().catch(() => ({ error: 'Failed to reject designer' }));
+
+      if (!response.ok) {
+        console.error('Error rejecting designer:', result.error);
+        alert(result.error || 'Error rejecting designer. Please try again.');
         return;
       }
 
-      // Send rejection email with notes
-      await sendEmailNotification(designer.email, designer.brand_name, 'designer-rejected', rejectionNotes);
-
       // Update local state
-      setDesigners(prev => 
-        prev.map(d => 
-          d.id === designerId 
+      setDesigners(prev =>
+        prev.map(d =>
+          d.id === designerId
             ? { ...d, status: 'rejected' as const, updated_at: new Date().toISOString() }
             : d
         )
       );
 
       console.log(`Designer ${designerId} rejected`);
-      alert(`${designer.brand_name} has been rejected. An email notification with feedback has been sent.`);
-      
+      alert(`${designer.brand_name} has been rejected.${result.emailSent ? ' An email notification with feedback has been sent.' : ''}`);
+
       // Close rejection modal
       setRejectionModal(null);
     } catch (error) {
@@ -455,7 +317,7 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <BackgroundPaths />
-      
+
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-40 border-b border-zinc-800 bg-zinc-900/95 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -464,7 +326,7 @@ export default function AdminDashboard() {
               <ArrowLeft size={20} />
               Back to Shop
             </Link>
-            
+
             <Link href="/">
               <Image
                 src="/wlogo.png"
@@ -475,7 +337,7 @@ export default function AdminDashboard() {
                 style={{ filter: "invert(1) brightness(2)" }}
               />
             </Link>
-            
+
             <div className="flex items-center gap-4">
               <Link
                 href="/admin/withdrawals"
@@ -484,7 +346,7 @@ export default function AdminDashboard() {
                 <DollarSign size={16} />
                 Withdrawals
               </Link>
-              
+
               <button
                 onClick={loadDesignerApplications}
                 disabled={loading}
@@ -493,7 +355,7 @@ export default function AdminDashboard() {
                 <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
                 Refresh
               </button>
-              
+
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-2 text-zinc-400 hover:text-white transition"
@@ -536,7 +398,7 @@ export default function AdminDashboard() {
                 Refresh Analytics
               </button>
             </div>
-            
+
             {/* Main Analytics Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <div className="bg-gradient-to-br from-green-600/20 to-green-800/20 border border-green-600/30 rounded-xl p-6 text-center">
@@ -545,21 +407,21 @@ export default function AdminDashboard() {
                 </div>
                 <div className="text-zinc-300 text-sm">Total Orders</div>
               </div>
-              
+
               <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 border border-blue-600/30 rounded-xl p-6 text-center">
                 <div className="text-2xl font-bold text-blue-400 mb-2">
                   {analytics.loading ? <Loader2 size={20} className="animate-spin mx-auto" /> : `${analytics.totalVolume.toFixed(2)} RON`}
                 </div>
                 <div className="text-zinc-300 text-sm">Total Volume</div>
               </div>
-              
+
               <div className="bg-gradient-to-br from-red-600/20 to-red-800/20 border border-red-600/30 rounded-xl p-6 text-center">
                 <div className="text-2xl font-bold text-red-400 mb-2">
                   {analytics.loading ? <Loader2 size={20} className="animate-spin mx-auto" /> : `${analytics.totalWithdrawn.toFixed(2)} RON`}
                 </div>
                 <div className="text-zinc-300 text-sm">Total Withdrawn</div>
               </div>
-              
+
               <div className="bg-gradient-to-br from-purple-600/20 to-purple-800/20 border border-purple-600/30 rounded-xl p-6 text-center">
                 <div className="text-2xl font-bold text-purple-400 mb-2">
                   {analytics.loading ? <Loader2 size={20} className="animate-spin mx-auto" /> : `${analytics.totalProfit.toFixed(2)} RON`}
@@ -567,7 +429,7 @@ export default function AdminDashboard() {
                 <div className="text-zinc-300 text-sm">Total Profit</div>
               </div>
             </div>
-            
+
             {/* Secondary Analytics Grid */}
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="bg-gradient-to-br from-amber-600/20 to-amber-800/20 border border-amber-600/30 rounded-xl p-6 text-center">
@@ -576,14 +438,14 @@ export default function AdminDashboard() {
                 </div>
                 <div className="text-zinc-300">Total Designers</div>
               </div>
-              
+
               <div className="bg-gradient-to-br from-emerald-600/20 to-emerald-800/20 border border-emerald-600/30 rounded-xl p-6 text-center">
                 <div className="text-3xl font-bold text-emerald-400 mb-2">
                   {analytics.loading ? <Loader2 size={24} className="animate-spin mx-auto" /> : analytics.totalInfluencers}
                 </div>
                 <div className="text-zinc-300">Total Influencers</div>
               </div>
-              
+
               <div className="bg-gradient-to-br from-cyan-600/20 to-cyan-800/20 border border-cyan-600/30 rounded-xl p-6 text-center">
                 <div className="text-3xl font-bold text-cyan-400 mb-2">
                   {analytics.loading ? <Loader2 size={24} className="animate-spin mx-auto" /> : analytics.totalProducts}
@@ -644,7 +506,7 @@ export default function AdminDashboard() {
                   onTierChange={handleChangeTier} // Pass the new handler
               />
             ))}
-            
+
               {designers.length === 0 && (
               <div className="text-center py-12 text-zinc-400">
                   No designer applications found
@@ -741,8 +603,8 @@ function DesignerApplicationCard({ designer, onApprove, onReject, onView, isLoad
   };
 
   // Check if image URL is valid and not from example.com
-  const shouldShowImage = designer.logo_url && 
-    !designer.logo_url.includes('example.com') && 
+  const shouldShowImage = designer.logo_url &&
+    !designer.logo_url.includes('example.com') &&
     !imageError &&
     designer.logo_url.startsWith('http');
 
@@ -762,8 +624,8 @@ function DesignerApplicationCard({ designer, onApprove, onReject, onView, isLoad
               onError={() => setImageError(true)}
             />
           ) : (
-          <PlaceholderImage 
-            type="logo" 
+          <PlaceholderImage
+            type="logo"
               alt={designer.brand_name}
             className="w-16 h-16 rounded-xl"
           />
@@ -792,16 +654,16 @@ function DesignerApplicationCard({ designer, onApprove, onReject, onView, isLoad
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(designer.status)}`}>
             {getStatusText(designer.status)}
           </span>
         </div>
       </div>
-      
+
       <p className="text-zinc-300 mb-4 line-clamp-2">{designer.long_description}</p>
-      
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 text-sm text-zinc-400">
           <span>Applied {formatDate(designer.submitted_at)}</span>
@@ -811,7 +673,7 @@ function DesignerApplicationCard({ designer, onApprove, onReject, onView, isLoad
             {designer.website && <Globe size={14} />}
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2 relative" ref={tierDropdownRef}> {/* Add ref here */}
           <button
             onClick={onView}
@@ -848,7 +710,7 @@ function DesignerApplicationCard({ designer, onApprove, onReject, onView, isLoad
               )}
             </div>
           )}
-          
+
           {designer.status === 'submitted' && (
             <>
               <button
@@ -910,7 +772,7 @@ function DesignerDetailModal({ designer, onClose, onApprove, onReject, isLoading
               <X size={20} />
             </button>
           </div>
-          
+
           <div className="grid md:grid-cols-2 gap-8">
             <div className="space-y-6">
               <div className="flex items-center gap-4">
@@ -927,8 +789,8 @@ function DesignerDetailModal({ designer, onClose, onApprove, onReject, isLoading
                     }}
                   />
                 ) : (
-                <PlaceholderImage 
-                  type="logo" 
+                <PlaceholderImage
+                  type="logo"
                     alt={designer.brand_name}
                   className="w-20 h-20 rounded-xl"
                 />
@@ -941,12 +803,12 @@ function DesignerDetailModal({ designer, onClose, onApprove, onReject, isLoading
                   )}
                 </div>
               </div>
-              
+
               <div>
                 <h4 className="font-semibold mb-2">Description</h4>
                 <p className="text-zinc-300">{designer.long_description}</p>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <h4 className="font-semibold mb-2">Location</h4>
@@ -957,12 +819,12 @@ function DesignerDetailModal({ designer, onClose, onApprove, onReject, isLoading
                   <p className="text-zinc-300">{designer.year_founded || 'Not specified'}</p>
                 </div>
               </div>
-              
+
               <div>
                 <h4 className="font-semibold mb-2">Contact</h4>
                 <p className="text-zinc-300">{designer.email}</p>
             </div>
-            
+
               <div>
                 <h4 className="font-semibold mb-2">Social Media</h4>
                 <div className="space-y-1">
@@ -994,7 +856,7 @@ function DesignerDetailModal({ designer, onClose, onApprove, onReject, isLoading
               </div>
               )}
             </div>
-            
+
             <div className="space-y-6">
               {designer.secondary_logo_url && !designer.secondary_logo_url.includes('example.com') && designer.secondary_logo_url.startsWith('http') && (
                 <div>
@@ -1012,7 +874,7 @@ function DesignerDetailModal({ designer, onClose, onApprove, onReject, isLoading
                   />
                 </div>
               )}
-              
+
               <div>
                 <h4 className="font-semibold mb-2">Application Status</h4>
                 <div className="space-y-2">
@@ -1059,7 +921,7 @@ function DesignerDetailModal({ designer, onClose, onApprove, onReject, isLoading
                   )}
                 </div>
               )}
-              
+
               {designer.status === 'submitted' && (
                 <div className="flex gap-3">
                   <button
@@ -1110,8 +972,8 @@ function RejectionModal({ designer, isOpen, onClose, onReject, rejecting }: {
   ];
 
   const toggleReason = (reason: string) => {
-    setSelectedReasons(prev => 
-      prev.includes(reason) 
+    setSelectedReasons(prev =>
+      prev.includes(reason)
         ? prev.filter(r => r !== reason)
         : [...prev, reason]
     );
@@ -1119,12 +981,12 @@ function RejectionModal({ designer, isOpen, onClose, onReject, rejecting }: {
 
   const handleSubmit = () => {
     let finalNotes = '';
-    
+
     if (selectedReasons.length > 0) {
       finalNotes = selectedReasons.join('\n• ');
       finalNotes = '• ' + finalNotes;
     }
-    
+
     if (rejectionNotes.trim()) {
       if (finalNotes) {
         finalNotes += '\n\nAdditional notes:\n' + rejectionNotes.trim();
@@ -1151,7 +1013,7 @@ function RejectionModal({ designer, isOpen, onClose, onReject, rejecting }: {
               <X size={20} />
             </button>
           </div>
-          
+
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-semibold text-white mb-3">Common Issues (select all that apply):</h3>
@@ -1187,7 +1049,7 @@ function RejectionModal({ designer, isOpen, onClose, onReject, rejecting }: {
               </p>
             </div>
           </div>
-          
+
           <div className="flex gap-3 mt-6 pt-6 border-t border-zinc-700">
               <button
               onClick={onClose}
@@ -1215,4 +1077,4 @@ function RejectionModal({ designer, isOpen, onClose, onReject, rejecting }: {
       </div>
     </div>
   );
-} 
+}

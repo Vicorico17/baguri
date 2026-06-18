@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { requireDesignerUser } from '@/lib/apiAuth';
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 let stripe: Stripe | null = null;
@@ -11,11 +12,18 @@ if (stripeSecretKey) {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireDesignerUser(request);
+    if (auth instanceof NextResponse) return auth;
+
     const body = await request.json();
     const { name, description, images, metadata } = body;
 
     if (!name) {
       return NextResponse.json({ error: 'Product name is required' }, { status: 400 });
+    }
+
+    if (metadata?.designer_id && metadata.designer_id !== auth.designerId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     console.log('🚀 Creating Stripe product:', { name, description, images, metadata });
@@ -27,7 +35,8 @@ export async function POST(request: NextRequest) {
       metadata: {
         created_via: 'baguri_automation',
         created_at: new Date().toISOString(),
-        ...metadata // Include any additional metadata passed from the request
+        ...metadata,
+        designer_id: auth.designerId,
       }
     };
 
@@ -37,7 +46,7 @@ export async function POST(request: NextRequest) {
       const validImages = images
         .filter(img => typeof img === 'string' && img.trim().length > 0)
         .slice(0, 8);
-      
+
       if (validImages.length > 0) {
         productData.images = validImages;
         console.log(`📸 Adding ${validImages.length} images to Stripe product`);
@@ -54,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Stripe product created:', stripeProduct.id);
     return NextResponse.json(stripeProduct);
-    
+
   } catch (error) {
     console.error('Error creating Stripe product:', error);
     return NextResponse.json(
@@ -62,4 +71,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}
