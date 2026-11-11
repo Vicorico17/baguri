@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireDesignerUser } from '@/lib/apiAuth';
-import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { supabaseAdmin as supabase } from '@/lib/server/supabase';
 
 // Force dynamic rendering for this route since it uses request.url
 export const dynamic = 'force-dynamic';

@@ -1,3 +1,4 @@
+import {designerFetch} from './designerFetch';
 import { supabase } from './supabase';
 import type { Designer, DesignerAuth, DesignerProfile } from './supabase';
 
@@ -393,61 +394,11 @@ class DesignerService {
   }
 
   // Automatic tier upgrade based on sales total
-  async checkAndUpgradeTier(designerId: string, currentTier: string): Promise<void> {
-    try {
-      // Get current sales total for this designer
-      const { data: designerData, error } = await supabase
-        .from('designers')
-        .select('sales_total')
-        .eq('id', designerId)
-        .single();
-
-      if (error || !designerData) {
-        console.error('Error fetching designer sales:', error);
-        return;
-      }
-
-      const salesTotal = parseFloat(designerData.sales_total || '0');
-      const newTier = this.calculateTierFromSales(salesTotal);
-
-      // Only upgrade, never downgrade
-      if (this.isTierHigher(newTier, currentTier)) {
-        console.log(`🎉 Auto-upgrading designer ${designerId} from ${currentTier} to ${newTier} (${salesTotal} RON sales)`);
-        
-        const { error: updateError } = await supabase
-          .from('designers')
-          .update({ 
-            current_tier: newTier,
-            tier_upgraded_at: new Date().toISOString()
-          })
-          .eq('id', designerId);
-
-        if (updateError) {
-          console.error('Error updating tier:', updateError);
-        } else {
-          console.log(`✅ Designer ${designerId} successfully upgraded to ${newTier}`);
-        }
-      }
-    } catch (error) {
-      console.error('Error in tier upgrade check:', error);
-    }
+  async checkAndUpgradeTier(_designerId:string,_currentTier:string):Promise<void>{
+    // Tier and sales mutations belong to the server's sale transaction.
   }
 
-  // Calculate tier based on sales total
-  private calculateTierFromSales(salesTotal: number): string {
-    if (salesTotal >= 10000) return 'platinum';
-    if (salesTotal >= 1000) return 'gold';
-    if (salesTotal >= 100) return 'silver';
-    return 'bronze';
-  }
 
-  // Check if tier A is higher than tier B
-  private isTierHigher(tierA: string, tierB: string): boolean {
-    const tierOrder = { 'bronze': 1, 'silver': 2, 'gold': 3, 'platinum': 4 };
-    return (tierOrder[tierA as keyof typeof tierOrder] || 1) > (tierOrder[tierB as keyof typeof tierOrder] || 1);
-  }
-
-  // Save designer products
   async saveDesignerProducts(userId: string, products: DesignerProduct[]): Promise<{ success: boolean; error?: string }> {
     try {
       const designerProfile = await this.getDesignerByUserId(userId);
@@ -695,237 +646,31 @@ class DesignerService {
   }
 
   // Get designer wallet
-  async getDesignerWallet(designerId: string): Promise<DesignerWallet | null> {
-    try {
-      const { data: wallet, error } = await supabase
-        .from('designer_wallets')
-        .select('*')
-        .eq('designer_id', designerId)
-        .single();
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // No wallet found, create one
-          return await this.createDesignerWallet(designerId);
-        }
-        console.error('Error fetching designer wallet:', error);
-        return null;
-      }
-
-      return {
-        id: wallet.id,
-        designerId: wallet.designer_id,
-        balance: parseFloat(wallet.balance) || 0,
-        totalEarnings: parseFloat(wallet.total_earnings) || 0,
-        totalWithdrawn: parseFloat(wallet.total_withdrawn) || 0,
-        pendingBalance: parseFloat(wallet.pending_balance) || 0,
-        createdAt: wallet.created_at,
-        updatedAt: wallet.updated_at,
-      };
-    } catch (error) {
-      console.error('Error getting designer wallet:', error);
-      return null;
-    }
+  async getDesignerWallet(_designerId:string):Promise<DesignerWallet|null>{
+    const response=await designerFetch('/api/wallet');const result=await response.json();if(!response.ok)throw new Error(result.error);return result.wallet;
   }
 
-  // Create designer wallet
-  async createDesignerWallet(designerId: string): Promise<DesignerWallet | null> {
-    try {
-      const { data: wallet, error } = await supabase
-        .from('designer_wallets')
-        .insert({
-          designer_id: designerId,
-          balance: 0,
-          total_earnings: 0,
-          total_withdrawn: 0,
-          pending_balance: 0,
-        })
-        .select()
-        .single();
 
-      if (error) {
-        console.error('Error creating designer wallet:', error);
-        return null;
-      }
+  async createDesignerWallet(designerId:string):Promise<DesignerWallet|null>{return this.getDesignerWallet(designerId);}
 
-      return {
-        id: wallet.id,
-        designerId: wallet.designer_id,
-        balance: parseFloat(wallet.balance) || 0,
-        totalEarnings: parseFloat(wallet.total_earnings) || 0,
-        totalWithdrawn: parseFloat(wallet.total_withdrawn) || 0,
-        pendingBalance: parseFloat(wallet.pending_balance) || 0,
-        createdAt: wallet.created_at,
-        updatedAt: wallet.updated_at,
-      };
-    } catch (error) {
-      console.error('Error creating designer wallet:', error);
-      return null;
-    }
+
+  async requestWithdrawal(designerId: string, amount: number): Promise<{success:boolean;error?:string}> {
+    const {data}=await supabase.auth.getSession();
+    const keyName=`withdrawal:${designerId}:${amount}`;
+    const key=sessionStorage.getItem(keyName)||crypto.randomUUID();sessionStorage.setItem(keyName,key);
+    const response=await fetch('/api/wallet',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${data.session?.access_token}`},body:JSON.stringify({action:'withdrawal',amount,idempotencyKey:key})});
+    const result=await response.json();if(response.ok)sessionStorage.removeItem(keyName);return result;
   }
 
-  // Add earnings to designer wallet (called when a product is sold)
-  async addEarnings(designerId: string, amount: number, orderId: string, description: string): Promise<{ success: boolean; error?: string }> {
-    try {
-      // Get or create wallet
-      let wallet = await this.getDesignerWallet(designerId);
-      if (!wallet) {
-        wallet = await this.createDesignerWallet(designerId);
-        if (!wallet) {
-          return { success: false, error: 'Failed to create wallet' };
-        }
-      }
 
-      // Start a transaction
-      const { data, error } = await supabase.rpc('add_designer_earnings', {
-        p_designer_id: designerId,
-        p_amount: amount,
-        p_order_id: orderId,
-        p_description: description
-      });
-
-      if (error) {
-        console.error('Error adding earnings:', error);
-        return { success: false, error: error.message };
-      }
-
-      return { success: true };
-    } catch (error: any) {
-      console.error('Error adding earnings:', error);
-      return { success: false, error: error.message };
-    }
+  async getWalletTransactions(_designerId:string,limit=100):Promise<WalletTransaction[]> {
+    const {data}=await supabase.auth.getSession();
+    const response=await fetch('/api/wallet/transactions',{headers:{Authorization:`Bearer ${data.session?.access_token}`}});
+    const result=await response.json();if(!response.ok)throw new Error(result.error);return result.transactions.slice(0,limit);
   }
 
-  // Request withdrawal with IBAN information
-  async requestWithdrawal(designerId: string, amount: number): Promise<{ success: boolean; error?: string }> {
-    try {
-      const wallet = await this.getDesignerWallet(designerId);
-      if (!wallet) {
-        return { success: false, error: 'Wallet not found' };
-      }
 
-      if (amount > wallet.balance) {
-        return { success: false, error: 'Insufficient balance' };
-      }
 
-      if (amount < 50) {
-        return { success: false, error: 'Minimum withdrawal amount is 50 RON' };
-      }
-
-      // Get designer info for IBAN
-      const { data: designer, error: designerError } = await supabase
-        .from('designers')
-        .select('brand_name, email, iban')
-        .eq('id', designerId)
-        .single();
-
-      if (designerError || !designer) {
-        return { success: false, error: 'Designer information not found' };
-      }
-
-      if (!designer.iban) {
-        return { success: false, error: 'IBAN not found. Please add your IBAN before requesting withdrawal.' };
-      }
-
-      // Create withdrawal transaction with metadata
-      const { error } = await supabase
-        .from('wallet_transactions')
-        .insert({
-          wallet_id: wallet.id,
-          designer_id: designerId,
-          type: 'withdrawal',
-          amount: -amount, // Negative for withdrawal
-          status: 'pending',
-          description: `Withdrawal request of ${amount} RON to ${designer.iban.slice(-4)}`,
-        });
-
-      if (error) {
-        console.error('Error creating withdrawal request:', error);
-        return { success: false, error: error.message };
-      }
-
-      // Update wallet balance - move money from balance to pending_balance
-      const { error: walletUpdateError } = await supabase
-        .from('designer_wallets')
-        .update({
-          balance: (wallet.balance - amount).toFixed(2),
-          pending_balance: (wallet.pendingBalance + amount).toFixed(2),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', wallet.id);
-
-      if (walletUpdateError) {
-        console.error('Error updating wallet for withdrawal:', walletUpdateError);
-        return { success: false, error: 'Failed to update wallet balance' };
-      }
-
-      return { success: true };
-    } catch (error: any) {
-      console.error('Error requesting withdrawal:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Get wallet transactions
-  async getWalletTransactions(designerId: string, limit: number = 50): Promise<WalletTransaction[]> {
-    try {
-      const wallet = await this.getDesignerWallet(designerId);
-      if (!wallet) {
-        return [];
-      }
-
-      const { data: transactions, error } = await supabase
-        .from('wallet_transactions')
-        .select('*')
-        .eq('wallet_id', wallet.id)
-        .order('created_at', { ascending: false })
-        .limit(limit);
-
-      if (error) {
-        console.error('Error fetching wallet transactions:', error);
-        return [];
-      }
-
-      return (transactions || []).map(t => ({
-        id: t.id,
-        walletId: t.wallet_id,
-        type: t.type as 'sale' | 'withdrawal' | 'refund' | 'adjustment',
-        amount: parseFloat(t.amount) || 0,
-        status: t.status as 'pending' | 'completed' | 'failed',
-        description: t.description || '',
-        orderId: t.order_id,
-        stripeTransferId: t.stripe_transfer_id,
-        createdAt: t.created_at,
-        updatedAt: t.updated_at,
-      }));
-    } catch (error) {
-      console.error('Error getting wallet transactions:', error);
-      return [];
-    }
-  }
-
-  // Process withdrawal
-  async processWithdrawal(designerId: string, amount: number, stripeTransferId?: string): Promise<{ success: boolean; error?: string }> {
-    try {
-      const { data, error } = await supabase.rpc('process_withdrawal', {
-        p_designer_id: designerId,
-        p_amount: amount,
-        p_stripe_transfer_id: stripeTransferId
-      });
-
-      if (error) {
-        console.error('Error processing withdrawal:', error);
-        return { success: false, error: error.message };
-      }
-
-      return { success: true };
-    } catch (error: any) {
-      console.error('Error processing withdrawal:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Get designer sales total
   async getDesignerSalesTotal(designerId: string): Promise<number> {
     try {
       const { data: designer, error } = await supabase
@@ -962,18 +707,9 @@ class DesignerService {
       // Get wallet data
       const wallet = await this.getDesignerWallet(designerId);
       
-      // Get order count from order_items
-      const { data: orderItems, error: orderError } = await supabase
-        .from('order_items')
-        .select('total_price')
-        .eq('designer_id', designerId);
-
-      if (orderError) {
-        console.error('Error fetching order items:', orderError);
-        throw orderError;
-      }
-
-      const orderCount = orderItems?.length || 0;
+      const response=await designerFetch('/api/designer/sales');const result=await response.json();
+      if(!response.ok)throw new Error(result.error);
+      const orderCount=result.orderCount;
       const averageOrderValue = orderCount > 0 ? salesTotal / orderCount : 0;
       
       // Use the provided currentTierName, and calculate next tier based on sales
@@ -995,145 +731,10 @@ class DesignerService {
   }
 
   // Instagram OAuth verification methods
-  async initiateInstagramOAuth(userId: string): Promise<{ success: boolean; authUrl?: string; error?: string }> {
-    try {
-      const instagramAppId = process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID;
-      const instagramAppSecret = process.env.INSTAGRAM_APP_SECRET;
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-      
-      // Check if Instagram OAuth is properly configured
-      if (!instagramAppId || !instagramAppSecret || !appUrl) {
-        console.error('Instagram OAuth not configured. Missing environment variables:', {
-          hasAppId: !!instagramAppId,
-          hasAppSecret: !!instagramAppSecret,
-          hasAppUrl: !!appUrl
-        });
-        
-        return { 
-          success: false, 
-          error: 'Instagram verification is not currently available. Please contact support for assistance.' 
-        };
-      }
 
-      const redirectUri = `${appUrl}/api/auth/instagram/callback`;
-      
-      // Store user ID in session/state for callback verification
-      const state = btoa(JSON.stringify({ userId, timestamp: Date.now() }));
-      
-      const authUrl = `https://api.instagram.com/oauth/authorize?` +
-        `client_id=${instagramAppId}&` +
-        `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-        `scope=user_profile,user_media&` +
-        `response_type=code&` +
-        `state=${state}`;
 
-      return { success: true, authUrl };
-    } catch (error) {
-      console.error('Error initiating Instagram OAuth:', error);
-      return { 
-        success: false, 
-        error: 'Failed to initiate Instagram verification. Please try again later.' 
-      };
-    }
-  }
+  async revokeInstagramVerification(_userId:string):Promise<{success:boolean;error?:string}>{const response=await designerFetch('/api/auth/instagram/revoke',{method:'POST'});return response.json();}
 
-  async verifyInstagramCallback(code: string, state: string): Promise<{ success: boolean; error?: string; instagramData?: any }> {
-    try {
-      // Decode and verify state
-      const stateData = JSON.parse(atob(state));
-      const { userId } = stateData;
-
-      // Exchange code for access token
-      const tokenResponse = await fetch('https://api.instagram.com/oauth/access_token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          client_id: process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID!,
-          client_secret: process.env.INSTAGRAM_APP_SECRET!,
-          grant_type: 'authorization_code',
-          redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/instagram/callback`,
-          code
-        })
-      });
-
-      if (!tokenResponse.ok) {
-        throw new Error('Failed to exchange code for token');
-      }
-
-      const tokenData = await tokenResponse.json();
-      const { access_token, user_id } = tokenData;
-
-      // Get user profile from Instagram
-      const profileResponse = await fetch(
-        `https://graph.instagram.com/me?fields=id,username&access_token=${access_token}`
-      );
-
-      if (!profileResponse.ok) {
-        throw new Error('Failed to fetch Instagram profile');
-      }
-
-      const profileData = await profileResponse.json();
-
-      // Update designer profile with verified Instagram data
-      const { error: updateError } = await supabase
-        .from('designers')
-        .update({
-          instagram: `@${profileData.username}`,
-          instagram_verified: true,
-          instagram_user_id: user_id.toString(),
-          instagram_access_token: access_token,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', (await this.getDesignerByUserId(userId))?.id);
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      return {
-        success: true,
-        instagramData: {
-          username: profileData.username,
-          userId: user_id,
-          verified: true
-        }
-      };
-    } catch (error) {
-      console.error('Error verifying Instagram callback:', error);
-      return { success: false, error: 'Failed to verify Instagram account' };
-    }
-  }
-
-  async revokeInstagramVerification(userId: string): Promise<{ success: boolean; error?: string }> {
-    try {
-      const designer = await this.getDesignerByUserId(userId);
-      if (!designer) {
-        return { success: false, error: 'Designer not found' };
-      }
-
-      // Clear Instagram verification data
-      const { error: updateError } = await supabase
-        .from('designers')
-        .update({
-          instagram_verified: false,
-          instagram_user_id: null,
-          instagram_access_token: null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', designer.id);
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('Error revoking Instagram verification:', error);
-      return { success: false, error: 'Failed to revoke Instagram verification' };
-    }
-  }
 
   async checkInstagramVerification(userId: string, instagramHandle: string): Promise<{ success: boolean; verified: boolean; error?: string }> {
     try {
@@ -1158,53 +759,15 @@ class DesignerService {
   }
 
   // Get all influencer item requests for this designer (with influencer and product info)
-  async getInfluencerItemRequests(designerId: string): Promise<InfluencerItemRequest[]> {
-    try {
-      const { data, error } = await supabase
-        .from('influencer_item_requests')
-        .select(`*, influencer:influencer_open_id(*), product:product_id(*)`)
-        .eq('designer_id', designerId)
-        .order('created_at', { ascending: false });
-      if (error) return [];
-      return data || [];
-    } catch {
-      return [];
-    }
-  }
+  async getInfluencerItemRequests(_designerId:string):Promise<InfluencerItemRequest[]>{const response=await designerFetch('/api/designer/influencer-item-requests');const data=await response.json();if(!response.ok)throw new Error(data.error);return data.requests;}
 
-  // Accept or reject an influencer item request
-  async respondToInfluencerItemRequest(requestId: string, status: 'accepted' | 'rejected'): Promise<{ success: boolean; error?: string }> {
-    try {
-      const { error } = await supabase
-        .from('influencer_item_requests')
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', requestId);
-      if (error) return { success: false, error: error.message };
-      return { success: true };
-    } catch (err: any) {
-      return { success: false, error: err.message };
-    }
-  }
 
-  // Optionally: get stats for influencer item requests
-  async getInfluencerItemRequestStats(designerId: string): Promise<{ pending: number; accepted: number; rejected: number }> {
-    try {
-      const { data, error } = await supabase
-        .from('influencer_item_requests')
-        .select('status', { count: 'exact', head: false })
-        .eq('designer_id', designerId);
-      if (error || !data) return { pending: 0, accepted: 0, rejected: 0 };
-      const stats = { pending: 0, accepted: 0, rejected: 0 };
-      data.forEach((r: any) => {
-        if (r.status === 'pending') stats.pending++;
-        if (r.status === 'accepted') stats.accepted++;
-        if (r.status === 'rejected') stats.rejected++;
-      });
-      return stats;
-    } catch {
-      return { pending: 0, accepted: 0, rejected: 0 };
-    }
-  }
+  async respondToInfluencerItemRequest(requestId:string,status:'accepted'|'rejected'):Promise<{success:boolean;error?:string}>{const response=await designerFetch('/api/designer/influencer-item-requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId,status})});return response.json();}
+
+
+  async getInfluencerItemRequestStats(designerId:string):Promise<{pending:number;accepted:number;rejected:number}>{const requests=await this.getInfluencerItemRequests(designerId);return {pending:requests.filter(r=>r.status==='pending').length,accepted:requests.filter(r=>r.status==='accepted').length,rejected:requests.filter(r=>r.status==='rejected').length};}
+
+
 }
 
 export const designerService = new DesignerService();

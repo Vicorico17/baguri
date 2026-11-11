@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { User } from '@supabase/supabase-js';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/server/supabase';
 
 export type ApiAuthResult = {
   user: User;
@@ -44,7 +44,7 @@ export async function requireDesignerUser(request: NextRequest): Promise<Designe
 
   const { data, error } = await supabaseAdmin
     .from('designer_auth')
-    .select('designer_id, role, is_approved')
+    .select('designer_id, role, designers(status)')
     .eq('user_id', auth.user.id)
     .single();
 
@@ -56,6 +56,6 @@ export async function requireDesignerUser(request: NextRequest): Promise<Designe
     ...auth,
     designerId: data.designer_id,
     role: data.role,
-    isApproved: !!data.is_approved,
+    isApproved: (data.designers as unknown as {status:string})?.status === 'approved',
   };
 }

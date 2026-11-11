@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireDesignerUser } from '@/lib/apiAuth';
-import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { supabaseAdmin as supabase } from '@/lib/server/supabase';
 
 const ALLOWED_IMAGE_TYPES: Record<string, string> = {
   'image/jpeg': 'jpg',

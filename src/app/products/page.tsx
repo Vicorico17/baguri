@@ -30,7 +30,6 @@ import { BackgroundPaths } from "@/components/ui/background-paths";
 import { useDesignerAuth } from '@/contexts/DesignerAuthContext';
 import { designerService } from '@/lib/designerService';
 import { supabase } from '@/lib/supabase';
-import { addToStripeMapping } from '@/lib/stripe-automation';
 
 // Updated DesignerProduct type to match new structure
 type DesignerProduct = {
@@ -223,133 +222,10 @@ function ProductManagement() {
       setTogglingLive(productId); // Set loading state
       const newLiveStatus = !currentLiveStatus;
       
-      // If going live, create Stripe product first
-      let stripeProductId = null;
-      let stripePriceId = null;
-      let paymentLinkUrl = null;
-      
-      if (newLiveStatus) {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const accessToken = sessionData.session?.access_token;
-        if (!accessToken) {
-          throw new Error('Authentication token missing. Please sign in again.');
-        }
-
-        const product = products.find(p => p.id === productId);
-        if (!product) {
-          throw new Error('Product not found');
-        }
-
-        console.log('🚀 Creating Stripe product for:', product.name);
-
-        // Collect all images from all color variants for Stripe product
-        const allImages: string[] = [];
-        if (product.colors && Array.isArray(product.colors)) {
-          product.colors.forEach(color => {
-            if (color.images && Array.isArray(color.images)) {
-              allImages.push(...color.images);
-            }
-          });
-        }
-
-        // Create Stripe product using API route
-        const stripeProductResponse = await fetch('/api/mcp/stripe/create-product', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            name: product.name,
-            description: product.description,
-            images: allImages.length > 0 ? allImages : undefined,
-            metadata: {
-              designer_id: designerId,
-              product_id: productId,
-              baguri_product: 'true'
-            }
-          }),
-        });
-
-        if (!stripeProductResponse.ok) {
-          throw new Error('Failed to create Stripe product');
-        }
-
-        const stripeProduct = await stripeProductResponse.json();
-        stripeProductId = stripeProduct.id;
-        console.log('✅ Stripe product created:', stripeProductId);
-
-        // Create Stripe price using API route
-        const stripePriceResponse = await fetch('/api/mcp/stripe/create-price', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            product: stripeProductId,
-            unit_amount: Math.round(product.price * 100), // Convert to cents
-            currency: 'ron' // Romanian Lei
-          }),
-        });
-
-        if (!stripePriceResponse.ok) {
-          throw new Error('Failed to create Stripe price');
-        }
-
-        const stripePrice = await stripePriceResponse.json();
-        stripePriceId = stripePrice.id;
-        console.log('✅ Stripe price created:', stripePriceId);
-
-        // Create Stripe payment link using API route
-        const paymentLinkResponse = await fetch('/api/mcp/stripe/create-payment-link', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            price: stripePriceId,
-            quantity: 1
-          }),
-        });
-
-        if (!paymentLinkResponse.ok) {
-          throw new Error('Failed to create Stripe payment link');
-        }
-
-        const paymentLink = await paymentLinkResponse.json();
-        paymentLinkUrl = paymentLink.url;
-        console.log('✅ Stripe payment link created:', paymentLinkUrl);
-      }
-      
-      const { data, error } = await supabase
-        .from('designer_products')
-        .update({ 
-          is_live: newLiveStatus,
-          stripe_product_id: stripeProductId,
-          stripe_price_id: stripePriceId,
-          stripe_payment_link: paymentLinkUrl,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', productId)
-        .eq('designer_id', designerId)
-        .select()
-        .single();
-
-      if (error) {
-        throw new Error('Failed to update product status');
-      }
-
-      // Store Stripe data in mapping for cart integration
-      if (newLiveStatus && stripeProductId && stripePriceId) {
-        addToStripeMapping(productId, {
-          productId: stripeProductId,
-          priceId: stripePriceId,
-          paymentLinkUrl: paymentLinkUrl
-        });
-      }
-
+      const { data: sessionData } = await supabase.auth.getSession();
+      const response = await fetch('/api/products/publish', { method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${sessionData.session?.access_token}`}, body:JSON.stringify({productId,isLive:newLiveStatus}) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
       // Update local state
       setProducts(prev => prev.map(p => 
         p.id === productId 
@@ -359,7 +235,7 @@ function ProductManagement() {
 
       // Show success message
       if (newLiveStatus) {
-        alert('🎉 Product is now live! It will appear on your designer page and in the shop. Stripe product and payment link created successfully.');
+        alert('🎉 Product is now live! It will appear on your designer page and in the shop.');
       } else {
         alert('Product has been taken offline.');
       }

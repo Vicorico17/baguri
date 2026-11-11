@@ -66,7 +66,7 @@ export default function AdminDashboard() {
     totalOrders: 0,
     totalVolume: 0,
     totalWithdrawn: 0,
-    totalProfit: 0,
+    platformRevenue: 0,
     totalDesigners: 0,
     totalInfluencers: 0,
     totalProducts: 0,
@@ -110,7 +110,7 @@ export default function AdminDashboard() {
         totalOrders: data.analytics.totalOrders,
         totalVolume: data.analytics.totalVolume,
         totalWithdrawn: data.analytics.totalWithdrawn,
-        totalProfit: data.analytics.totalProfit,
+        platformRevenue: data.analytics.platformRevenue,
         totalDesigners: data.analytics.totalDesigners,
         totalInfluencers: data.analytics.totalInfluencers,
         totalProducts: data.analytics.totalProducts,
@@ -372,7 +372,8 @@ export default function AdminDashboard() {
       <section className="relative z-10 py-8 pt-24 bg-zinc-900/50">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold">Designer Applications</h1>
+            <nav className="flex gap-4 mb-4"><a href="/order-management">Orders & refunds</a><a href="/admin/withdrawals">Withdrawals</a><a href="/admin/influencers">Influencer approvals</a></nav>
+<h1 className="text-3xl font-bold">Designer Applications</h1>
             <button
               onClick={() => {
                 loadDesignerApplications();
@@ -424,9 +425,9 @@ export default function AdminDashboard() {
 
               <div className="bg-gradient-to-br from-purple-600/20 to-purple-800/20 border border-purple-600/30 rounded-xl p-6 text-center">
                 <div className="text-2xl font-bold text-purple-400 mb-2">
-                  {analytics.loading ? <Loader2 size={20} className="animate-spin mx-auto" /> : `${analytics.totalProfit.toFixed(2)} RON`}
+                  {analytics.loading ? <Loader2 size={20} className="animate-spin mx-auto" /> : `${analytics.platformRevenue.toFixed(2)} RON`}
                 </div>
-                <div className="text-zinc-300 text-sm">Total Profit</div>
+                <div className="text-zinc-300 text-sm">Platform revenue before costs</div>
               </div>
             </div>
 

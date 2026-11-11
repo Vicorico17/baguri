@@ -1,23 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { designerService } from '@/lib/designerService';
-
-// GET: List all influencer item requests for this designer
-export async function GET(req: NextRequest) {
-  const designerId = req.nextUrl.searchParams.get('designerId');
-  if (!designerId) {
-    return NextResponse.json({ error: 'Missing designerId' }, { status: 400 });
-  }
-  const requests = await designerService.getInfluencerItemRequests(designerId);
-  return NextResponse.json({ requests });
-}
-
-// POST: Respond to an influencer item request (accept/reject)
-export async function POST(req: NextRequest) {
-  const { requestId, status } = await req.json();
-  if (!requestId || !['accepted', 'rejected'].includes(status)) {
-    return NextResponse.json({ error: 'Missing or invalid fields' }, { status: 400 });
-  }
-  const result = await designerService.respondToInfluencerItemRequest(requestId, status);
-  if (result.success) return NextResponse.json({ success: true });
-  return NextResponse.json({ error: result.error }, { status: 500 });
-} 
+import { NextRequest,NextResponse } from 'next/server';
+import { requireDesignerUser } from '@/lib/apiAuth';
+import { supabaseAdmin as db } from '@/lib/server/supabase';
+export async function GET(req:NextRequest){const a=await requireDesignerUser(req);if(a instanceof NextResponse)return a;const {data,error}=await db.from('influencer_product_requests').select('*,influencer:influencer_accounts(display_name,username),product:designer_products(name)').eq('designer_id',a.designerId);return NextResponse.json(error?{error:'Unable to load requests'}:{requests:data},{status:error?500:200});}
+export async function POST(req:NextRequest){const a=await requireDesignerUser(req);if(a instanceof NextResponse)return a;const {requestId,status}=await req.json();if(!['accepted','rejected'].includes(status))return NextResponse.json({error:'Invalid status'},{status:400});const {data,error}=await db.from('influencer_product_requests').update({status}).eq('id',requestId).eq('designer_id',a.designerId).eq('status','pending').select('id');return NextResponse.json(error || !data?.length?{error:'Request unavailable or already processed'}:{success:true},{status:error || !data?.length?409:200});}

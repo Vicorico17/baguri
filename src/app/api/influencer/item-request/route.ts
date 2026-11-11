@@ -1,34 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { influencerService } from '@/lib/influencerService';
-
-// POST: Create a new item request
-export async function POST(req: NextRequest) {
-  const { productId, designerId, deliveryAddress, tiktokOpenId } = await req.json();
-  if (!productId || !designerId || !deliveryAddress || !tiktokOpenId) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-  }
-  const result = await influencerService.createItemRequest(productId, designerId, deliveryAddress, tiktokOpenId);
-  if (result.success) return NextResponse.json({ success: true });
-  return NextResponse.json({ error: result.error }, { status: 500 });
-}
-
-// GET: List all item requests for this influencer
-export async function GET(req: NextRequest) {
-  const tiktokOpenId = req.nextUrl.searchParams.get('tiktokOpenId');
-  if (!tiktokOpenId) {
-    return NextResponse.json({ error: 'Missing tiktokOpenId' }, { status: 400 });
-  }
-  const requests = await influencerService.getItemRequests(tiktokOpenId);
-  return NextResponse.json({ requests });
-}
-
-// DELETE: Cancel an item request
-export async function DELETE(req: NextRequest) {
-  const { requestId, tiktokOpenId } = await req.json();
-  if (!requestId || !tiktokOpenId) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-  }
-  const result = await influencerService.cancelItemRequest(requestId, tiktokOpenId);
-  if (result.success) return NextResponse.json({ success: true });
-  return NextResponse.json({ error: result.error }, { status: 500 });
-} 
+import { NextRequest,NextResponse } from 'next/server';
+import { requireInfluencer } from '@/lib/server/influencerAuth';
+import { supabaseAdmin as db } from '@/lib/server/supabase';
+export async function GET(req:NextRequest){const a=await requireInfluencer(req);if(a instanceof NextResponse)return a;const {data,error}=await db.from('influencer_product_requests').select('*,designer_products(name)').eq('influencer_id',a.id);return NextResponse.json(error?{error:'Unable to load requests'}:{requests:data},{status:error?500:200});}
+export async function POST(req:NextRequest){const a=await requireInfluencer(req);if(a instanceof NextResponse)return a;if(!a.verified)return NextResponse.json({error:'Account approval required'},{status:403});const {productId,addressId}=await req.json();const [{data:product},{data:address}]=await Promise.all([db.from('designer_products').select('designer_id').eq('id',productId).eq('is_live',true).eq('is_active',true).single(),db.from('influencer_saved_addresses').select('address').eq('id',addressId).eq('influencer_id',a.id).single()]);if(!product || !address)return NextResponse.json({error:'Product or saved address unavailable'},{status:400});const {error}=await db.from('influencer_product_requests').insert({influencer_id:a.id,designer_id:product.designer_id,product_id:productId,delivery_address:address.address});return NextResponse.json(error?{error:'A request already exists or could not be saved'}:{success:true},{status:error?409:200});}
+export async function DELETE(req:NextRequest){const a=await requireInfluencer(req);if(a instanceof NextResponse)return a;const {requestId}=await req.json();const {error}=await db.from('influencer_product_requests').delete().eq('id',requestId).eq('influencer_id',a.id).eq('status','pending');return NextResponse.json({success:!error},{status:error?500:200});}

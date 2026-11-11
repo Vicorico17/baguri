@@ -4,7 +4,8 @@ export const ADMIN_SESSION_COOKIE = 'baguri_admin_session';
 const ADMIN_SESSION_MAX_AGE_SECONDS = 60 * 60 * 8;
 
 function getAdminSessionSecret(): string | null {
-  return process.env.ADMIN_SESSION_SECRET || process.env.ADMIN_PASSWORD || null;
+  const secret=process.env.ADMIN_SESSION_SECRET;
+  return secret && secret.length>=32?secret:null;
 }
 
 function toBase64Url(value: string | Uint8Array): string {

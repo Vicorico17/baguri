@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSupabaseUser } from '@/lib/apiAuth';
-import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { supabaseAdmin as supabase } from '@/lib/server/supabase';
 
 
 export async function GET(request: NextRequest) {
@@ -84,93 +84,14 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    // Check if Supabase is properly configured
-    if (!supabase) {
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-    }
-
-    const auth = await requireSupabaseUser(request);
-    if (auth instanceof NextResponse) return auth;
-
-    const { action, amount } = await request.json();
-
-    if (action !== 'withdrawal') {
-      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-    }
-
-    if (!amount || amount < 50) {
-      return NextResponse.json({ error: 'Minimum withdrawal amount is 50 lei' }, { status: 400 });
-    }
-
-    // Get designer profile
-    const { data: designerAuth, error: designerAuthError } = await supabase
-      .from('designer_auth')
-      .select('designer_id')
-      .eq('user_id', auth.user.id)
-      .single();
-
-    if (designerAuthError || !designerAuth) {
-      return NextResponse.json({ error: 'Designer not found' }, { status: 404 });
-    }
-
-    // Get wallet
-    const { data: wallet, error: walletError } = await supabase
-      .from('designer_wallets')
-      .select('*')
-      .eq('designer_id', designerAuth.designer_id)
-      .single();
-
-    if (walletError || !wallet) {
-      return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
-    }
-
-    const currentBalance = parseFloat(wallet.balance);
-    if (currentBalance < amount) {
-      return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
-    }
-
-    // Create withdrawal transaction (pending)
-    const { data: transaction, error: transactionError } = await supabase
-      .from('wallet_transactions')
-      .insert({
-        wallet_id: wallet.id,
-        type: 'withdrawal',
-        amount: -amount, // Negative for withdrawal
-        status: 'pending',
-        description: `Withdrawal request of ${amount} lei`
-      })
-      .select()
-      .single();
-
-    if (transactionError) {
-      console.error('Error creating withdrawal transaction:', transactionError);
-      return NextResponse.json({ error: 'Failed to create withdrawal request' }, { status: 500 });
-    }
-
-    // Update wallet balance (deduct immediately but mark as pending)
-    const { error: updateError } = await supabase
-      .from('designer_wallets')
-      .update({
-        balance: currentBalance - amount,
-        pending_balance: parseFloat(wallet.pending_balance) + amount,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', wallet.id);
-
-    if (updateError) {
-      console.error('Error updating wallet balance:', updateError);
-      return NextResponse.json({ error: 'Failed to update wallet' }, { status: 500 });
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: 'Withdrawal request submitted successfully',
-      transactionId: transaction.id
-    });
-
-  } catch (error) {
-    console.error('Error in wallet POST:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
+ const auth=await requireSupabaseUser(request);if(auth instanceof NextResponse)return auth;
+ try {
+  const {action,amount,idempotencyKey}=await request.json();
+  if(action!=='withdrawal' || typeof amount!=='number' || !Number.isFinite(amount) || amount<50 || Math.abs(amount*100-Math.round(amount*100))>0.00001 || !/^[0-9a-f-]{36}$/i.test(idempotencyKey || '')) return NextResponse.json({error:'Invalid withdrawal amount or request key'},{status:400});
+  const {data:a,error}=await supabase.from('designer_auth').select('designer_id,designers(status)').eq('user_id',auth.user.id).single();
+  if(error || (a?.designers as unknown as {status:string})?.status!=='approved')return NextResponse.json({error:'Approved designer account required'},{status:403});
+  const result=await supabase.rpc('request_commerce_withdrawal',{p_type:'designer',p_owner:a.designer_id,p_amount:amount,p_key:idempotencyKey});
+  if(result.error)return NextResponse.json({error:result.error.message},{status:409});
+  return NextResponse.json({success:true,transactionId:result.data});
+ }catch{return NextResponse.json({error:'Withdrawal unavailable'},{status:503});}
 }

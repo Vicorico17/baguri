@@ -1,45 +1,4 @@
-import { NextResponse } from 'next/server';
-import { supabaseAdmin as supabase } from '@/lib/supabase';
-
-export async function POST(request: Request) {
-  try {
-    if (!supabase) {
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-    }
-
-    const { referral_code, product_id } = await request.json();
-    if (!referral_code || !product_id) {
-      return NextResponse.json({ error: 'Missing referral_code or product_id' }, { status: 400 });
-    }
-
-    // Look up influencer by tiktok_open_id (referral_code)
-    let influencerId = null;
-    const { data: influencer, error: influencerError } = await supabase
-      .from('influencers')
-      .select('id')
-      .eq('tiktok_open_id', referral_code)
-      .single();
-    if (!influencerError && influencer) {
-      influencerId = influencer.id;
-    }
-
-    const { data, error } = await supabase
-      .from('referral_clicks')
-      .insert([
-        {
-          referral_code,
-          product_id,
-          influencer_id: influencerId,
-          timestamp: new Date().toISOString(),
-        },
-      ]);
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: 'Server error: ' + err.message }, { status: 500 });
-  }
-} 
+import {NextRequest,NextResponse} from 'next/server';
+import {rateLimit} from '@/lib/server/rateLimit';
+import {supabaseAdmin as db} from '@/lib/server/supabase';
+export async function POST(req:NextRequest){const limited=await rateLimit(req,'referral',30);if(limited)return limited;const {referral_code,product_id}=await req.json();if(!/^[0-9a-f-]{36}$/i.test(referral_code || '') || !/^[0-9a-f-]{36}$/i.test(product_id || ''))return NextResponse.json({error:'Invalid referral'},{status:400});const {data}=await db.from('influencer_accounts').select('id').eq('id',referral_code).eq('verified',true).maybeSingle();if(!data)return NextResponse.json({error:'Referral unavailable'},{status:404});const {error}=await db.from('referral_clicks').insert({influencer_id:data.id,product_id});return NextResponse.json({success:!error},{status:error?500:200});}

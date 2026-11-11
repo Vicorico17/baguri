@@ -1,4 +1,5 @@
 "use client";
+import { PayoutSetup } from "@/components/PayoutSetup";
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -329,7 +330,8 @@ function WalletManagement() {
                 <div className="h-6 w-px bg-zinc-700" />
                 <div className="flex items-center gap-2">
                   <Wallet size={24} />
-                  <h1 className="text-xl font-bold">Wallet</h1>
+                  <PayoutSetup />
+                <h1 className="text-xl font-bold">Wallet</h1>
                 </div>
               </div>
             </div>

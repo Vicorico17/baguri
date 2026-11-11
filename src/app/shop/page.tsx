@@ -1,4 +1,5 @@
 "use client";
+import {getCatalog} from "@/lib/catalog";
 
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
@@ -9,7 +10,6 @@ import { CartSidebar as GlobalCartSidebar } from '@/components/CartSidebar';
 import { TierBadge, getTierBySalesTotal, COMMISSION_TIERS } from '@/lib/tierUtils';
 import { useDesignerAuth } from '@/contexts/DesignerAuthContext';
 import { supabase } from '@/lib/supabase';
-import { ScarcityNotifications } from '@/components/ui/scarcity-notifications';
 import { 
   FadeInUp, 
   AnimatedContainer, 
@@ -64,60 +64,9 @@ function PlaceholderImage({ type, className, alt }: { type: 'product' | 'logo'; 
 }
 
 // Mock data - using placeholders instead of actual images
-const mockDesigners = [
-  { id: 2, name: "Atelier Mia", logo: "atelier-mia", isActive: false },
-  { id: 3, name: "Urban Luna", logo: "urban-luna", isActive: false },
-  { id: 4, name: "Vestige Co", logo: "vestige-co", isActive: false },
-  { id: 5, name: "Nova Studio", logo: "nova-studio", isActive: false },
-];
 
-const mockProducts = [
-  {
-    id: 1,
-    name: "Silk Evening Dress",
-    price: 450,
-    originalPrice: 600,
-    image: "silk-evening-dress",
-    designer: { name: "Atelier Mia", logo: "atelier-mia" },
-    isUpcoming: false,
-    sizes: ["XS", "S", "M", "L"],
-    colors: ["Black", "Navy", "Burgundy"],
-    stockStatus: "in_stock" as const
-  },
-  {
-    id: 2,
-    name: "Oversized Blazer",
-    price: 280,
-    image: "oversized-blazer",
-    designer: { name: "Urban Luna", logo: "urban-luna" },
-    isUpcoming: false,
-    sizes: ["S", "M", "L", "XL"],
-    colors: ["Charcoal", "Camel"],
-    stockStatus: "made_to_order" as const
-  },
-  {
-    id: 3,
-    name: "Handwoven Scarf",
-    price: 120,
-    image: "handwoven-scarf",
-    designer: { name: "Vestige Co", logo: "vestige-co" },
-    isUpcoming: true,
-    sizes: ["One Size"],
-    colors: ["Terracotta", "Forest Green", "Cream"],
-    stockStatus: "coming_soon" as const
-  },
-  {
-    id: 4,
-    name: "Minimalist Tote",
-    price: 195,
-    image: "minimalist-tote",
-    designer: { name: "Nova Studio", logo: "nova-studio" },
-    isUpcoming: true,
-    sizes: ["One Size"],
-    colors: ["Black", "Tan", "White"],
-    stockStatus: "coming_soon" as const
-  },
-];
+
+
 
 function ShopContent() {
   const [selectedDesigner, setSelectedDesigner] = useState<number | null>(null);
@@ -160,39 +109,8 @@ function ShopContent() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load live products
-        const { data: productsData, error: productsError } = await supabase
-          .from('designer_products')
-          .select(`
-            *,
-            designers (
-              id,
-              brand_name,
-              logo_url,
-              sales_total,
-              current_tier
-            )
-          `)
-          .eq('is_live', true);
-
-        if (productsError) {
-          console.error('Error loading products:', productsError);
-        } else {
-          setProducts(productsData || []);
-        }
-
-        // Load approved designers
-        const { data: designersData, error: designersError } = await supabase
-          .from('designers')
-          .select('*')
-          .eq('status', 'approved')
-          .not('brand_name', 'is', null);
-
-        if (designersError) {
-          console.error('Error loading designers:', designersError);
-        } else {
-          setDesigners(designersData || []);
-        }
+        const catalog=await getCatalog();
+        setProducts(catalog.products);setDesigners(catalog.designers);
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -677,13 +595,6 @@ function ShopContent() {
           )}
         </button>
       </div>
-      
-      {/* Scarcity Marketing Notifications */}
-      <ScarcityNotifications 
-        enabled={true}
-        interval={180} // Show notification every 3 minutes (rare)
-        maxVisible={2}
-      />
     </div>
   );
 }

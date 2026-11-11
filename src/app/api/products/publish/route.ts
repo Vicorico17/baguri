@@ -1,0 +1,4 @@
+import {NextRequest,NextResponse} from 'next/server';
+import {requireDesignerUser} from '@/lib/apiAuth';
+import {supabaseAdmin as db} from '@/lib/server/supabase';
+export async function POST(req:NextRequest){const a=await requireDesignerUser(req);if(a instanceof NextResponse)return a;if(!a.isApproved)return NextResponse.json({error:'Designer approval required'},{status:403});const {productId,isLive}=await req.json();if(typeof isLive!=='boolean')return NextResponse.json({error:'Invalid status'},{status:400});const {data,error}=await db.from('designer_products').update({is_live:isLive,updated_at:new Date().toISOString()}).eq('id',productId).eq('designer_id',a.designerId).select('id');return NextResponse.json(error || !data?.length?{error:'Unable to publish product'}:{success:true},{status:error || !data?.length?400:200});}

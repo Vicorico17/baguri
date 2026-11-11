@@ -1,4 +1,5 @@
 "use client";
+import {getCatalog} from "@/lib/catalog";
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -84,14 +85,7 @@ export default function DesignersPage() {
         setLoadingDesigners(true);
         console.log('Loading approved designers...');
         
-        const { data: approvedDesigners, error } = await supabase
-          .from('designers')
-          .select(`
-            *
-          `)
-          .eq('status', 'approved')
-          .not('brand_name', 'is', null)
-          .order('created_at', { ascending: false });
+        const {designers:approvedDesigners}=await getCatalog();const error=null;
 
         if (error) {
           console.error('Error loading approved designers:', error);

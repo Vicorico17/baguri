@@ -1,34 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { influencerService } from '@/lib/influencerService';
-
-// GET: List all saved addresses for this influencer
-export async function GET(req: NextRequest) {
-  const tiktokOpenId = req.nextUrl.searchParams.get('tiktokOpenId');
-  if (!tiktokOpenId) {
-    return NextResponse.json({ error: 'Missing tiktokOpenId' }, { status: 400 });
-  }
-  const addresses = await influencerService.getSavedAddresses(tiktokOpenId);
-  return NextResponse.json({ addresses });
-}
-
-// POST: Save a new address
-export async function POST(req: NextRequest) {
-  const { address, label, tiktokOpenId } = await req.json();
-  if (!address || !tiktokOpenId) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-  }
-  const result = await influencerService.saveAddress(address, label, tiktokOpenId);
-  if (result.success) return NextResponse.json({ success: true });
-  return NextResponse.json({ error: result.error }, { status: 500 });
-}
-
-// DELETE: Delete a saved address
-export async function DELETE(req: NextRequest) {
-  const { addressId, tiktokOpenId } = await req.json();
-  if (!addressId || !tiktokOpenId) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-  }
-  const result = await influencerService.deleteAddress(addressId, tiktokOpenId);
-  if (result.success) return NextResponse.json({ success: true });
-  return NextResponse.json({ error: result.error }, { status: 500 });
-} 
+import { NextRequest,NextResponse } from 'next/server';
+import { requireInfluencer } from '@/lib/server/influencerAuth';
+import { supabaseAdmin as db } from '@/lib/server/supabase';
+export async function GET(req:NextRequest){const a=await requireInfluencer(req);if(a instanceof NextResponse)return a;const {data,error}=await db.from('influencer_saved_addresses').select('*').eq('influencer_id',a.id);return NextResponse.json(error?{error:'Unable to load addresses'}:{addresses:data},{status:error?500:200});}
+export async function POST(req:NextRequest){const a=await requireInfluencer(req);if(a instanceof NextResponse)return a;const {address,label}=await req.json();if(typeof address!=='string' || address.trim().length<10 || address.length>1000)return NextResponse.json({error:'Enter a full delivery address'},{status:400});const {error}=await db.from('influencer_saved_addresses').insert({influencer_id:a.id,address:address.trim(),label:typeof label==='string'?label.slice(0,80):null});return NextResponse.json(error?{error:'Unable to save address'}:{success:true},{status:error?500:200});}
+export async function DELETE(req:NextRequest){const a=await requireInfluencer(req);if(a instanceof NextResponse)return a;const {addressId}=await req.json();const {error}=await db.from('influencer_saved_addresses').delete().eq('id',addressId).eq('influencer_id',a.id);return NextResponse.json({success:!error},{status:error?500:200});}

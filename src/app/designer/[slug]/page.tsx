@@ -1,6 +1,7 @@
 "use client";
+import {getCatalog} from "@/lib/catalog";
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect, use } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Instagram, Globe, Heart, ShoppingCart, User, X } from 'lucide-react';
@@ -30,7 +31,8 @@ function PlaceholderImage({ type, className, alt }: { type: 'product' | 'logo' |
   );
 }
 
-export default function DesignerProfile({ params }: { params: { slug: string } }) {
+export default function DesignerProfile({ params: promisedParams }: { params: Promise<{ slug: string }> }) {
+  const params=use(promisedParams);
   const [designer, setDesigner] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,11 +49,8 @@ export default function DesignerProfile({ params }: { params: { slug: string } }
         console.log('Loading designer data for slug:', params.slug);
         
         // Query the designers table for all approved designers
-        const { data: designersData, error } = await supabase
-          .from('designers')
-          .select('*, sales_total')
-          .eq('status', 'approved')
-          .not('brand_name', 'is', null);
+        const catalog=await getCatalog();
+        const designersData=catalog.designers;const error=null;
 
         if (error) {
           console.error('Error loading designers:', error);
@@ -83,11 +82,8 @@ export default function DesignerProfile({ params }: { params: { slug: string } }
         setDesigner(transformedDesigner);
 
         // Load all active products for this designer (not just live ones)
-        const { data: productsData, error: productsError } = await supabase
-          .from('designer_products')
-          .select('*')
-          .eq('designer_id', matchingDesigner.id)
-          .eq('is_active', true); // Show all active products, not just live ones
+        const productsData=catalog.products.filter(p=>p.designer_id===matchingDesigner.id);
+        const productsError=null;
 
         if (productsError) {
           console.error('Error loading products:', productsError);
@@ -631,7 +627,7 @@ function ProductModal({ product, onClose, onAddToCart }: {
   const selectedColor = colors[selectedColorIndex];
   
   // Get available sizes for selected color
-  const availableSizes = selectedColor?.sizes || [];
+  const availableSizes = useMemo(() => selectedColor?.sizes || [], [selectedColor]);
   
   // Set default size when color changes
   useEffect(() => {

@@ -1,3 +1,5 @@
+import {createHash,timingSafeEqual} from 'node:crypto';
+import {rateLimit} from '@/lib/server/rateLimit';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   ADMIN_SESSION_COOKIE,
@@ -8,6 +10,7 @@ import {
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  const limited=await rateLimit(request,'admin-login',5);if(limited)return limited;
   const configuredPassword = process.env.ADMIN_PASSWORD;
 
   if (!configuredPassword) {
@@ -19,7 +22,7 @@ export async function POST(request: NextRequest) {
 
   const { password } = await request.json().catch(() => ({ password: '' }));
 
-  if (password !== configuredPassword) {
+  if (typeof password !== 'string' || !timingSafeEqual(createHash('sha256').update(password).digest(),createHash('sha256').update(configuredPassword).digest())) {
     return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
   }
 

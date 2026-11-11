@@ -1,4 +1,5 @@
 'use client';
+import {designerFetch} from '@/lib/designerFetch';
 import { useEffect, useState } from 'react';
 import { useDesignerAuth } from '@/contexts/DesignerAuthContext';
 import { User, Package, CheckCircle, XCircle } from 'lucide-react';
@@ -19,7 +20,7 @@ export default function DesignerInfluencerRequestsPage() {
       setLoadingRequests(true);
       setRequestError(null);
       try {
-        const res = await fetch(`/api/designer/influencer-item-requests?designerId=${designerProfile.id}`);
+        const res = await designerFetch(`/api/designer/influencer-item-requests?designerId=${designerProfile.id}`);
         const data = await res.json();
         setInfluencerRequests(data.requests || []);
       } catch (err) {
@@ -36,7 +37,7 @@ export default function DesignerInfluencerRequestsPage() {
     setActionLoading(requestId + status);
     setRequestError(null);
     try {
-      const res = await fetch('/api/designer/influencer-item-requests', {
+      const res = await designerFetch('/api/designer/influencer-item-requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId, status })
@@ -44,7 +45,7 @@ export default function DesignerInfluencerRequestsPage() {
       const data = await res.json();
       if (data.success) {
         // Refresh requests
-        const res2 = await fetch(`/api/designer/influencer-item-requests?designerId=${designerProfile.id}`);
+        const res2 = await designerFetch(`/api/designer/influencer-item-requests?designerId=${designerProfile.id}`);
         const data2 = await res2.json();
         setInfluencerRequests(data2.requests || []);
       } else {

@@ -1,24 +1,21 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY')
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-// Service role client for admin operations (webhooks, etc.).
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-export const supabaseAdmin = serviceRoleKey 
-  ? createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
-  : null as unknown as ReturnType<typeof createClient>;
+let client: SupabaseClient | undefined;
+// Delay configuration checks until use so compilation does not need production secrets.
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, property) {
+    if (!client) {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (!url || !key) throw new Error('Supabase is not configured. See .env.example.');
+      client = createClient(url, key);
+    }
+    const value = Reflect.get(client, property);
+    return typeof value === 'function' ? value.bind(client) : value;
+  }
+});
 
 // Types for our database
 export type Designer = {

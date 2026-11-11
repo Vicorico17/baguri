@@ -5,15 +5,14 @@ import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { TextLoop } from "@/components/ui/text-loop";
-import { ScarcityNotifications } from "@/components/ui/scarcity-notifications";
-import { 
-  FadeInUp, 
-  FadeInLeft, 
-  FadeInRight, 
-  ScaleIn, 
-  AnimatedContainer, 
+import {
+  FadeInUp,
+  FadeInLeft,
+  FadeInRight,
+  ScaleIn,
+  AnimatedContainer,
   AnimatedItem,
-  AnimatedButton 
+  AnimatedButton
 } from "@/components/ui/AnimatedComponents";
 
 function WaitlistModal({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess?: () => void }) {
@@ -81,7 +80,7 @@ function WaitlistModal({ open, onClose, onSuccess }: { open: boolean; onClose: (
               You just signed up for a<br />
               <span className="font-bold text-amber-200">10% lifetime discount!</span>
             </div>
-            <button 
+            <button
               className="mt-4 bg-neutral-100 text-zinc-950 font-medium rounded-full px-6 py-2 shadow-sm hover:bg-neutral-200 transition"
               onClick={onClose}
             >
@@ -218,7 +217,7 @@ export default function Home() {
               )}
             </div>
           </FadeInUp>
-          
+
           {/* Browse Link */}
           <div className="mt-6 flex justify-center">
             <Link
@@ -268,25 +267,25 @@ export default function Home() {
                     Cookie Policy
                   </Link>
                 </div>
-                
+
                 {/* Company Information */}
                 <div className="text-[10px] text-neutral-300 leading-tight space-y-0.5 mb-1">
                   <div>BAGURICO ENTERPRISE SRL</div>
                   <div>CUI: 42743310 | Reg. Com. J40/7675/2020</div>
                 </div>
-                
+
                 {/* ANPC Compliance Links */}
                 <div className="flex gap-1">
                   <a href="https://anpc.ro/ce-este-sal/" target="_blank" rel="nofollow" className="opacity-80 hover:opacity-100 transition">
-                    <img 
-                      src="/anpc-sal.png" 
+                    <Image width={120} height={60}
+                      src="/anpc-sal.png"
                       alt="ANPC SAL"
                       className="w-12 h-auto"
                     />
                   </a>
                   <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="nofollow" className="opacity-80 hover:opacity-100 transition">
-                    <img 
-                      src="/anpc-sol.png" 
+                    <Image width={120} height={60}
+                      src="/anpc-sol.png"
                       alt="ANPC SOL"
                       className="w-12 h-auto"
                     />
@@ -299,13 +298,6 @@ export default function Home() {
 
         <WaitlistModal open={modalOpen} onClose={() => setModalOpen(false)} onSuccess={() => setWaitlistJoined(true)} />
       </div>
-      
-      {/* Scarcity Marketing Notifications */}
-      <ScarcityNotifications 
-        enabled={true}
-        interval={240} // Show notification every 4 minutes (very rare)
-        maxVisible={1}
-      />
     </main>
   );
 }

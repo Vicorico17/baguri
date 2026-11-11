@@ -1,13 +1,15 @@
+import {rateLimit} from '@/lib/server/rateLimit';
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { supabaseAdmin as supabase } from '@/lib/server/supabase';
 
 export async function POST(req: NextRequest) {
+  const limited=await rateLimit(req,'waitlist',5);if(limited)return limited;
   if (!supabase) {
     return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
   }
 
   const { email } = await req.json();
-  if (!email || typeof email !== 'string') {
+  if (typeof email !== 'string' || email.length>254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return NextResponse.json({ error: 'Invalid email' }, { status: 400 });
   }
 

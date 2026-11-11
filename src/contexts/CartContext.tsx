@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 export type CartItem = {
   id: string | number; // Support both string UUIDs and numeric IDs
@@ -125,9 +125,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setCart(cart.filter(item => !(item.id === id && item.size === size && item.color === color)));
   };
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setCart([]);
-  };
+  }, []);
 
   const cartTotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
   const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);

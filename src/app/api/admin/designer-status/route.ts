@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminSession } from '@/lib/adminAuth';
 import { emailService } from '@/lib/emailService';
-import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { supabaseAdmin as supabase } from '@/lib/server/supabase';
 
 const REVIEW_STATUSES = new Set(['approved', 'rejected']);
 

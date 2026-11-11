@@ -1,4 +1,5 @@
 "use client";
+import {designerFetch} from "@/lib/designerFetch";
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -30,13 +31,7 @@ const ROMANIAN_CITIES = [
 // Using types from designerService
 
 // Mock designer profile data
-const mockDesignerProfile = {
-  id: 1,
-  userId: "user_123", // This would come from Supabase auth
-  status: "draft" as "draft" | "submitted" | "approved" | "rejected",
-  submittedAt: null as string | null,
-  completionPercentage: 15
-};
+
 
 function DesignerDashboardContent() {
   const [dashboardData, setDashboardData] = useState<DesignerDashboardData | null>(null);
@@ -402,14 +397,15 @@ function DesignerDashboardContent() {
     }
   }, [user?.id]);
 
+  const requestDesignerId=dashboardData?.wallet?.designerId;
   // Fetch influencer item requests
   useEffect(() => {
-    if (!dashboardData || !dashboardData.wallet || !dashboardData.wallet.designerId) return;
+    if (!requestDesignerId) return;
     const fetchRequests = async () => {
       setLoadingRequests(true);
       setRequestError(null);
       try {
-        const res = await fetch(`/api/designer/influencer-item-requests?designerId=${dashboardData.wallet!.designerId}`);
+        const res = await designerFetch(`/api/designer/influencer-item-requests?designerId=${requestDesignerId}`);
         const data = await res.json();
         setInfluencerRequests(data.requests || []);
       } catch (err) {
@@ -419,7 +415,7 @@ function DesignerDashboardContent() {
       }
     };
     fetchRequests();
-  }, [dashboardData && dashboardData.wallet && dashboardData.wallet.designerId ? dashboardData.wallet.designerId : null]);
+  }, [requestDesignerId]);
 
   // Handle accept/reject
   const handleRequestAction = async (requestId: string, status: 'accepted' | 'rejected') => {
@@ -427,7 +423,7 @@ function DesignerDashboardContent() {
     setActionLoading(requestId + status);
     setRequestError(null);
     try {
-      const res = await fetch('/api/designer/influencer-item-requests', {
+      const res = await designerFetch('/api/designer/influencer-item-requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId, status })
@@ -435,7 +431,7 @@ function DesignerDashboardContent() {
       const data = await res.json();
       if (data.success) {
         // Refresh requests
-        const res2 = await fetch(`/api/designer/influencer-item-requests?designerId=${dashboardData.wallet.designerId}`);
+        const res2 = await designerFetch(`/api/designer/influencer-item-requests?designerId=${dashboardData.wallet.designerId}`);
         const data2 = await res2.json();
         setInfluencerRequests(data2.requests || []);
       } else {
