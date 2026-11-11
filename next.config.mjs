@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  webpack(config, { dev }) {
+    // Avoid retaining large compilation caches after production builds.
+    if (!dev) config.cache = false;
+    return config;
+  },
   images: {
     remotePatterns: [
       {
